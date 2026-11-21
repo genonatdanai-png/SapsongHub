@@ -6,6 +6,7 @@
     <title>ระบบหลังบ้านร้านค้า - Sapsong HUB (Secure)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Firebase SDK (App + Auth + Database) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -14,6 +15,25 @@
     <style>
         body { font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; }
         #table-qr-container img, #table-qr-container canvas { margin: 0 auto; border-radius: 0.75rem; }
+
+        /* ตั้งค่าหน้ากระดาษสำหรับเครื่องปริ้นท์ใบเสร็จความร้อน (58mm / 80mm) */
+        @media print {
+            body * { visibility: hidden !important; }
+            #print-receipt-area, #print-receipt-area * { visibility: visible !important; }
+            #print-receipt-area {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 80mm !important;
+                margin: 0 !important;
+                padding: 8px !important;
+                box-shadow: none !important;
+                border: none !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen pb-20 md:pb-8">
@@ -89,9 +109,9 @@
                 <div class="hidden sm:flex flex-wrap gap-1.5">
                     <button onclick="switchTab('kitchen')" id="tab-kitchen" class="px-3 py-2 bg-amber-500 text-slate-900 font-bold rounded-xl text-xs lg:text-sm transition">ออเดอร์รายวัน</button>
                     <button onclick="switchTab('tables')" id="tab-tables" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">จัดการโต๊ะ & QR</button>
-                    <button onclick="switchTab('menu')" id="tab-menu" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">เมนู & หมวดหมู่</button>
+                    <button onclick="switchTab('menu')" id="tab-menu" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">เมนู & ไซส์</button>
                     <button onclick="switchTab('toppings')" id="tab-toppings" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">ท็อปปิ้ง</button>
-                    <button onclick="switchTab('payment')" id="tab-payment" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">พร้อมเพย์ & บัญชี</button>
+                    <button onclick="switchTab('payment')" id="tab-payment" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">พร้อมเพย์ & ส่ง</button>
                     <button onclick="switchTab('accounting')" id="tab-accounting" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">บัญชีรายรับ</button>
                     <button onclick="switchTab('bans')" id="tab-bans" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">แบน IP</button>
                 </div>
@@ -148,19 +168,19 @@
                 </div>
             </div>
 
-            <!-- 3. หน้าจัดการเมนู & หมวดหมู่ -->
+            <!-- 3. หน้าจัดการเมนู, หมวดหมู่ & ไซส์/ตัวเลือกสินค้า -->
             <div id="view-menu" class="hidden space-y-5">
                 <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 space-y-3">
                     <h2 class="text-base font-bold text-slate-800">📂 จัดการหมวดหมู่สินค้า</h2>
                     <div class="flex gap-2 max-w-md">
-                        <input type="text" id="new-category-name" placeholder="ชื่อหมวดหมู่ใหม่ (เช่น ขนมปังปิ้ง, น้ำปั่น)" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500">
+                        <input type="text" id="new-category-name" placeholder="ชื่อหมวดหมู่ใหม่ (เช่น ขนมปังปิ้ง, พิซซ่า, น้ำปั่น)" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500">
                         <button onclick="addCategory()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-700 shrink-0">+ เพิ่มหมวด</button>
                     </div>
                     <div id="admin-category-list" class="flex flex-wrap gap-2 pt-1"></div>
                 </div>
 
-                <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h2 id="form-menu-title" class="text-base sm:text-lg font-bold text-slate-800 mb-4">เพิ่มเมนูสินค้าใหม่</h2>
+                <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <h2 id="form-menu-title" class="text-base sm:text-lg font-bold text-slate-800">เพิ่มเมนูสินค้าใหม่</h2>
                     <input type="hidden" id="edit-menu-id" value="">
                     
                     <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
@@ -178,7 +198,7 @@
 
                         <div class="sm:col-span-3">
                             <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อสินค้า / เมนู</label>
-                            <input type="text" id="new-name" placeholder="เช่น ปังปิ้งเนยนม, ชาไทยเย็น..." class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+                            <input type="text" id="new-name" placeholder="เช่น พิซซ่าฮาวายเอี้ยน, ปังปิ้ง..." class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none">
                         </div>
 
                         <div class="sm:col-span-2">
@@ -187,14 +207,28 @@
                         </div>
 
                         <div class="sm:col-span-1">
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">ราคา</label>
-                            <input type="number" id="new-price" placeholder="25" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">ราคาปกติ</label>
+                            <input type="number" id="new-price" placeholder="25" class="w-full px-3 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none">
                         </div>
 
                         <div class="sm:col-span-2 sm:pt-5 flex gap-1.5">
                             <button onclick="saveMenuForm()" id="btn-save-menu" class="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold hover:bg-emerald-700 text-sm transition shadow-sm">+ เพิ่มเมนู</button>
                             <button onclick="cancelEditMenu()" id="btn-cancel-edit" class="hidden bg-gray-200 text-gray-700 px-3 py-2.5 rounded-xl font-semibold hover:bg-gray-300 text-sm">ยกเลิก</button>
                         </div>
+                    </div>
+
+                    <!-- กล่องเพิ่มไซส์ / ตัวเลือกหลัก (ไม่บังคับ) -->
+                    <div class="bg-blue-50/70 border border-blue-200 rounded-2xl p-3.5 space-y-2.5">
+                        <div class="flex justify-between items-center flex-wrap gap-2">
+                            <div>
+                                <h3 class="text-xs sm:text-sm font-bold text-blue-900">📏 ตัวเลือกขนาด / ไซส์สินค้า (ไม่บังคับ)</h3>
+                                <p class="text-[11px] text-blue-700">เช่น เล็ก 129.- / กลาง 199.- / ใหญ่ 299.- หรือ ร้อน / เย็น / ปั่น (ถ้าเมนูมีราคาเดียวให้ปล่อยว่างไว้)</p>
+                            </div>
+                            <button type="button" onclick="addSizeRow()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-xs">
+                                + เพิ่มขนาด/ตัวเลือก
+                            </button>
+                        </div>
+                        <div id="menu-sizes-container" class="space-y-2"></div>
                     </div>
                 </div>
 
@@ -254,23 +288,33 @@
                 </div>
             </div>
 
-            <!-- 5. หน้าตั้งค่าพร้อมเพย์ & ข้อมูลบัญชีร้าน -->
+            <!-- 5. หน้าตั้งค่าพร้อมเพย์, การจัดส่ง & ข้อมูลบัญชีร้าน -->
             <div id="view-payment" class="hidden grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                     <div>
-                        <h2 class="text-base sm:text-lg font-bold text-slate-800">💳 ตั้งค่าบัญชีพร้อมเพย์</h2>
-                        <p class="text-xs text-slate-500 mt-1">ระบบจะนำหมายเลขนี้ไปสร้าง QR Code พร้อมยอดเงินให้อัตโนมัติเมื่อลูกค้าเลือกขับรถไปส่ง</p>
+                        <h2 class="text-base sm:text-lg font-bold text-slate-800">💳 ตั้งค่าพร้อมเพย์ & บริการจัดส่ง</h2>
+                        <p class="text-xs text-slate-500 mt-1">ระบบจะนำข้อมูลนี้ไปสร้าง QR Code พร้อมยอดเงินและค่าจัดส่งให้อัตโนมัติ</p>
                     </div>
                     <div class="space-y-3">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์โทรศัพท์พร้อมเพย์ (10 หลัก) หรือ เลขบัตรประชาชน (13 หลัก)</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์พร้อมเพย์ (10 หลัก) หรือ เลขบัตรประชาชน (13 หลัก)</label>
                             <input type="text" id="setting-promptpay-id" placeholder="เช่น 0855750995" class="w-full px-3.5 py-2.5 border rounded-xl text-sm font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบัญชี / ชื่อร้านที่แสดงให้ลูกค้าเห็น</label>
                             <input type="text" id="setting-account-name" placeholder="เช่น ร้านปังหน้าวัด" class="w-full px-3.5 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
-                        <button onclick="savePaymentSettings()" class="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition shadow-sm">บันทึกข้อมูลพร้อมเพย์</button>
+                        <div class="pt-2 border-t space-y-3">
+                            <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                                <input type="checkbox" id="setting-enable-delivery" class="w-4 h-4 accent-blue-600 rounded">
+                                <span class="text-sm font-bold text-slate-700">🛵 เปิดให้บริการขับรถไปส่ง (Delivery)</span>
+                            </label>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">ค่าจัดส่งต่อออเดอร์ (บาท) — ใส่ 0 หากส่งฟรี</label>
+                                <input type="number" id="setting-delivery-fee" min="0" placeholder="0" class="w-full px-3.5 py-2.5 border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        <button onclick="savePaymentSettings()" class="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition shadow-sm">บันทึกการตั้งค่า</button>
                     </div>
                 </div>
 
@@ -320,7 +364,7 @@
                                 <th class="p-3">รหัสบิล</th>
                                 <th class="p-3">วัน-เวลา</th>
                                 <th class="p-3">ลูกค้า / โต๊ะ</th>
-                                <th class="p-3">รายการ, ท็อปปิ้ง & หมายเหตุ</th>
+                                <th class="p-3">รายการ, ไซส์, ท็อปปิ้ง</th>
                                 <th class="p-3">การชำระ</th>
                                 <th class="p-3">สถานะ</th>
                                 <th class="p-3 text-right">ยอดเงิน</th>
@@ -396,6 +440,26 @@
         </div>
     </div>
 
+    <!-- Modal พิมพ์ใบเสร็จ & บันทึกรูปใบเสร็จออนไลน์ -->
+    <div id="receipt-modal" onclick="closeReceiptModal()" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <!-- พื้นที่ใบเสร็จสำหรับพิมพ์และแคปภาพ -->
+            <div id="print-receipt-area" class="bg-white p-4 rounded-2xl border-2 border-dashed border-slate-300 text-slate-900 text-xs">
+                <div id="receipt-content"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-bold shadow-sm">
+                    🖨️ พิมพ์ใบเสร็จ
+                </button>
+                <button onclick="downloadAdminReceiptImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-sm font-bold shadow-sm">
+                    💾 บันทึกรูป (PNG)
+                </button>
+            </div>
+            <button onclick="closeReceiptModal()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 py-2 rounded-xl text-sm font-bold">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+
     <script>
         // =========================================================================
         // 1. ตั้งค่า FIREBASE (เชื่อมต่อโปรเจกต์ sapsonghub)
@@ -437,7 +501,6 @@
         ];
         const defaultToppings = [
             { id: 101, name: 'เพิ่มชีส', price: 10, toppingGroup: 'หน้าขนมปัง', targetCategory: 'ขนมปังปิ้ง', available: true },
-            { id: 102, name: 'เพิ่มฝอยทอง', price: 10, toppingGroup: 'หน้าขนมปัง', targetCategory: 'ขนมปังปิ้ง', available: true },
             { id: 104, name: 'เพิ่มไข่มุก', price: 5, toppingGroup: 'ท็อปปิ้งน้ำ', targetCategory: 'เครื่องดื่ม', available: true }
         ];
 
@@ -446,7 +509,7 @@
         let toppingGroups = defaultToppingGroups;
         let menus = [];
         let toppings = defaultToppings;
-        let paymentConfig = { promptpayId: '0855750995', accountName: shopDisplayName };
+        let paymentConfig = { promptpayId: '0855750995', accountName: shopDisplayName, enableDelivery: true, deliveryFee: 0 };
         let orders = [];
         let isStoreOpen = true;
         let bannedIPs = [];
@@ -458,6 +521,7 @@
         let currentUploadedImage = "";
         let selectedToppingFilter = 'ALL_VIEW';
         let currentQRTableName = '';
+        let currentReceiptOrderId = '';
 
         function saveShopKey(key, data) {
             db.ref(`shops_data/${SHOP_ID}/${key}`).set(data)
@@ -465,7 +529,7 @@
         }
 
         // =========================================================================
-        // 2. ตรวจสอบสิทธิ์ล็อกอิน FIREBASE AUTH (อนุญาตเฉพาะเจ้าของร้านหรือ Super Admin)
+        // 2. ตรวจสอบสิทธิ์ล็อกอิน FIREBASE AUTH
         // =========================================================================
         auth.onAuthStateChanged((user) => {
             const errorMsg = document.getElementById('login-error-msg');
@@ -512,9 +576,7 @@
                 });
         }
 
-        function adminSecureLogout() {
-            auth.signOut();
-        }
+        function adminSecureLogout() { auth.signOut(); }
 
         // =========================================================================
         // 3. ตรวจสอบสิทธิ์จาก SAPSONG HUB & ดึงข้อมูลร้านค้า REAL-TIME
@@ -573,13 +635,18 @@
                 toppingGroups = d.toppingGroups || defaultToppingGroups;
                 menus = d.menus || (SHOP_ID === 'pangnawat' ? defaultMenus : []);
                 toppings = d.toppings || (SHOP_ID === 'pangnawat' ? defaultToppings : []);
-                paymentConfig = d.paymentConfig || { promptpayId: '0855750995', accountName: shopDisplayName };
+                const cfg = d.paymentConfig || {};
+                paymentConfig = {
+                    promptpayId: cfg.promptpayId || '0855750995',
+                    accountName: cfg.accountName || shopDisplayName,
+                    enableDelivery: cfg.enableDelivery !== undefined ? cfg.enableDelivery : true,
+                    deliveryFee: Number(cfg.deliveryFee) || 0
+                };
                 isStoreOpen = d.isStoreOpen !== undefined ? d.isStoreOpen : true;
                 bannedIPs = d.bannedIPs || [];
                 enableTables = d.enableTables || false;
                 shopTables = d.tables || [];
 
-                // แปลง orders จาก object (ที่เกิดจาก .push()) ให้เป็น array เรียงจากใหม่ไปเก่า
                 const rawOrders = d.orders || {};
                 let parsedOrders = [];
                 if (Array.isArray(rawOrders)) {
@@ -596,6 +663,8 @@
 
                 document.getElementById('setting-promptpay-id').value = paymentConfig.promptpayId;
                 document.getElementById('setting-account-name').value = paymentConfig.accountName;
+                document.getElementById('setting-enable-delivery').checked = paymentConfig.enableDelivery;
+                document.getElementById('setting-delivery-fee').value = paymentConfig.deliveryFee;
 
                 renderStoreStatusBtn();
                 renderTableManagementUI();
@@ -618,7 +687,101 @@
         }
 
         // =========================================================================
-        // 4. ระบบจัดการโต๊ะ & QR CODE ประจำโต๊ะ
+        // 4. ระบบจัดการไซส์ / ตัวเลือกหลักของสินค้า (Sizes / Variants)
+        // =========================================================================
+        function addSizeRow(name = '', price = '') {
+            const container = document.getElementById('menu-sizes-container');
+            const row = document.createElement('div');
+            row.className = 'size-row flex gap-2 items-center';
+            row.innerHTML = `
+                <input type="text" class="size-name-input flex-1 px-3 py-2 border rounded-xl text-xs bg-white outline-none focus:ring-2 focus:ring-blue-500" placeholder="ชื่อขนาด เช่น เล็ก, กลาง, ใหญ่" value="${name}">
+                <input type="number" class="size-price-input w-24 px-3 py-2 border rounded-xl text-xs bg-white outline-none focus:ring-2 focus:ring-blue-500" placeholder="ราคา (บ.)" value="${price}">
+                <button type="button" onclick="this.parentElement.remove()" class="bg-red-100 hover:bg-red-200 text-red-600 px-2.5 py-2 rounded-xl text-xs font-bold">ลบ</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function getSizesFromForm() {
+            const rows = document.querySelectorAll('#menu-sizes-container .size-row');
+            const sizes = [];
+            rows.forEach(row => {
+                const name = row.querySelector('.size-name-input').value.trim();
+                const price = parseFloat(row.querySelector('.size-price-input').value);
+                if (name && !isNaN(price) && price >= 0) {
+                    sizes.push({ name, price });
+                }
+            });
+            return sizes;
+        }
+
+        function clearSizeRows() {
+            document.getElementById('menu-sizes-container').innerHTML = '';
+        }
+
+        // =========================================================================
+        // 5. ระบบใบเสร็จออนไลน์, พิมพ์ใบเสร็จ และบันทึกรูป (PNG)
+        // =========================================================================
+        function openReceiptModal(firebaseKey) {
+            const o = orders.find(x => x.firebaseKey === firebaseKey);
+            if (!o) return;
+            currentReceiptOrderId = o.id;
+
+            const typeTxt = o.orderType === 'delivery' ? 'จัดส่งถึงที่' : (o.orderType === 'dinein' ? `${o.tableName || 'ทานที่ร้าน'}` : 'รับหน้าร้าน');
+            const content = document.getElementById('receipt-content');
+
+            content.innerHTML = `
+                <div class="text-center border-b border-dashed border-slate-400 pb-2.5 mb-2.5">
+                    <h4 class="font-bold text-base">${shopDisplayName}</h4>
+                    <p class="text-[11px] text-slate-600">ใบเสร็จรับเงิน / Receipt</p>
+                    <p class="font-mono font-bold text-xs mt-1">${o.id}</p>
+                    <p class="text-[11px] text-slate-500">${o.date} ${o.time}</p>
+                </div>
+                <div class="space-y-1 mb-2.5 text-[11px]">
+                    <div class="flex justify-between"><span>ลูกค้า:</span><span class="font-bold">${o.customerName}</span></div>
+                    <div class="flex justify-between"><span>ประเภท:</span><span class="font-bold">${typeTxt}</span></div>
+                    ${o.address ? `<div>ที่อยู่: ${o.address}</div>` : ''}
+                </div>
+                <div class="border-t border-b border-dashed border-slate-400 py-2 my-2 space-y-1.5">
+                    ${(o.items || []).map(i => `
+                        <div>
+                            <div class="flex justify-between font-bold">
+                                <span>${i.name} x${i.qty}</span>
+                                <span>${i.price * i.qty} บ.</span>
+                            </div>
+                            ${(i.toppings && i.toppings.length > 0) ? `<div class="text-[10px] text-slate-600 pl-2">+ ${i.toppings.map(t => t.name).join(', ')}</div>` : ''}
+                            ${i.note ? `<div class="text-[10px] text-slate-600 pl-2">* ${i.note}</div>` : ''}
+                        </div>
+                    `).join('')}
+                    ${o.deliveryFee > 0 ? `<div class="flex justify-between pt-1"><span>ค่าจัดส่ง</span><span>${o.deliveryFee} บ.</span></div>` : ''}
+                </div>
+                <div class="flex justify-between items-center text-sm font-bold pt-1">
+                    <span>ยอดสุทธิ</span>
+                    <span>${o.total} บาท</span>
+                </div>
+                <div class="text-center text-[10px] text-slate-500 mt-3 pt-2 border-t border-dashed border-slate-400">
+                    ${o.paymentMethod === 'transfer' ? 'ชำระโดยการโอนเงิน' : 'ชำระเงินสด/ที่ร้าน'}<br>
+                    ขอบคุณที่อุดหนุนครับ
+                </div>
+            `;
+
+            document.getElementById('receipt-modal').classList.remove('hidden');
+        }
+
+        function closeReceiptModal() { document.getElementById('receipt-modal').classList.add('hidden'); }
+
+        function downloadAdminReceiptImage() {
+            const area = document.getElementById('print-receipt-area');
+            if (!area) return;
+            html2canvas(area, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Receipt-${currentReceiptOrderId || 'order'}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        // =========================================================================
+        // 6. ระบบจัดการโต๊ะ & QR CODE ประจำโต๊ะ
         // =========================================================================
         function toggleEnableTables() {
             enableTables = !enableTables;
@@ -737,7 +900,7 @@
         }
 
         // =========================================================================
-        // 5. ฟังก์ชันจัดการเมนู ท็อปปิ้ง ออเดอร์ และบัญชี
+        // 7. ฟังก์ชันจัดการเมนู ท็อปปิ้ง ออเดอร์ และบัญชี
         // =========================================================================
         function getTodayString() {
             const now = new Date();
@@ -760,11 +923,15 @@
         function savePaymentSettings() {
             const ppId = document.getElementById('setting-promptpay-id').value.trim().replace(/[^0-9]/g, '');
             const accName = document.getElementById('setting-account-name').value.trim();
+            const enableDelivery = document.getElementById('setting-enable-delivery').checked;
+            const deliveryFee = Math.max(0, Number(document.getElementById('setting-delivery-fee').value) || 0);
+
             if (ppId.length !== 10 && ppId.length !== 13 && ppId.length !== 15) return alert('กรุณากรอกเบอร์พร้อมเพย์ 10 หลัก หรือเลขบัตรประชาชน 13 หลักให้ถูกต้องครับ');
             if (!accName) return alert('กรุณากรอกชื่อบัญชีหรือชื่อร้านครับ');
-            paymentConfig = { promptpayId: ppId, accountName: accName };
+
+            paymentConfig = { promptpayId: ppId, accountName: accName, enableDelivery, deliveryFee };
             saveShopKey('paymentConfig', paymentConfig);
-            alert('บันทึกข้อมูลพร้อมเพย์เรียบร้อยแล้วครับ!');
+            alert('บันทึกข้อมูลพร้อมเพย์และการจัดส่งเรียบร้อยแล้วครับ!');
         }
 
         function setFilterToday() { document.getElementById('order-date-filter').value = getTodayString(); renderOrders(); }
@@ -962,7 +1129,7 @@
             `).join('');
         }
 
-        // --- เมนูสินค้า ---
+        // --- เมนูสินค้า + ไซส์ ---
         function handleImageUpload(event) {
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -989,55 +1156,102 @@
             else { imgEl.src = ""; imgEl.classList.add('hidden'); ph.classList.remove('hidden'); cb.classList.add('hidden'); }
         }
         function clearSelectedImage() { currentUploadedImage = ""; document.getElementById('new-image-file').value = ""; showPreviewImage(""); }
+
         function saveMenuForm() {
             const editId = document.getElementById('edit-menu-id').value;
             const name = document.getElementById('new-name').value.trim();
             const category = document.getElementById('new-category').value;
-            const price = parseFloat(document.getElementById('new-price').value);
-            if (!name || isNaN(price) || price < 0) return alert('กรุณากรอกชื่อและราคาให้ถูกต้องครับ');
+            const rawPrice = parseFloat(document.getElementById('new-price').value);
+            const sizes = getSizesFromForm();
+
+            if (!name) return alert('กรุณากรอกชื่อสินค้าครับ');
+            if (sizes.length === 0 && (isNaN(rawPrice) || rawPrice < 0)) {
+                return alert('กรุณากรอกราคาปกติ หรือเพิ่มขนาด/ไซส์อย่างน้อย 1 รายการครับ');
+            }
+
+            const finalPrice = sizes.length > 0 ? Math.min(...sizes.map(s => s.price)) : rawPrice;
+
             if (editId) {
                 const index = menus.findIndex(m => m.id == editId);
-                if (index !== -1) Object.assign(menus[index], { name, category, price, image: currentUploadedImage || placeholderImg });
+                if (index !== -1) {
+                    Object.assign(menus[index], {
+                        name, category, price: finalPrice,
+                        sizes: sizes.length > 0 ? sizes : null,
+                        image: currentUploadedImage || placeholderImg
+                    });
+                }
                 cancelEditMenu();
             } else {
-                menus.push({ id: Date.now(), name, category, price, image: currentUploadedImage || placeholderImg, available: true });
-                document.getElementById('new-name').value = ''; document.getElementById('new-price').value = ''; clearSelectedImage();
+                const newMenu = {
+                    id: Date.now(), name, category, price: finalPrice,
+                    image: currentUploadedImage || placeholderImg, available: true
+                };
+                if (sizes.length > 0) newMenu.sizes = sizes;
+                menus.push(newMenu);
+                document.getElementById('new-name').value = '';
+                document.getElementById('new-price').value = '';
+                clearSelectedImage();
+                clearSizeRows();
             }
             saveShopKey('menus', menus);
         }
+
         function editMenu(id) {
             const m = menus.find(item => item.id === id); if (!m) return;
-            document.getElementById('edit-menu-id').value = m.id; document.getElementById('new-name').value = m.name;
+            document.getElementById('edit-menu-id').value = m.id;
+            document.getElementById('new-name').value = m.name;
             if (m.category && categories.includes(m.category)) document.getElementById('new-category').value = m.category;
             document.getElementById('new-price').value = m.price;
-            currentUploadedImage = m.image || ""; showPreviewImage(currentUploadedImage);
+            currentUploadedImage = m.image || "";
+            showPreviewImage(currentUploadedImage);
+
+            clearSizeRows();
+            if (Array.isArray(m.sizes)) {
+                m.sizes.forEach(s => addSizeRow(s.name, s.price));
+            }
+
             document.getElementById('form-menu-title').innerText = 'แก้ไขข้อมูลสินค้า';
             const btnSave = document.getElementById('btn-save-menu');
             btnSave.innerText = 'บันทึก'; btnSave.className = 'w-full bg-amber-500 text-slate-900 py-2.5 rounded-xl font-bold text-sm';
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
         function cancelEditMenu() {
-            document.getElementById('edit-menu-id').value = ''; document.getElementById('new-name').value = ''; document.getElementById('new-price').value = ''; clearSelectedImage();
+            document.getElementById('edit-menu-id').value = '';
+            document.getElementById('new-name').value = '';
+            document.getElementById('new-price').value = '';
+            clearSelectedImage();
+            clearSizeRows();
             document.getElementById('form-menu-title').innerText = 'เพิ่มเมนูสินค้าใหม่';
             const btnSave = document.getElementById('btn-save-menu');
             btnSave.innerText = '+ เพิ่มเมนู'; btnSave.className = 'w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold text-sm';
             document.getElementById('btn-cancel-edit').classList.add('hidden');
         }
+
         function toggleMenu(id) { const m = menus.find(item => item.id === id); if (m) { m.available = !m.available; saveShopKey('menus', menus); } }
         function deleteMenu(id) { if (confirm('ยืนยันการลบสินค้านี้?')) { menus = menus.filter(item => item.id !== id); saveShopKey('menus', menus); } }
+
         function renderAdminMenu() {
             const list = document.getElementById('admin-menu-list');
             document.getElementById('menu-count').innerText = menus.length;
             if (menus.length === 0) { list.innerHTML = `<p class="text-gray-400 col-span-3 text-center py-6 text-sm">ยังไม่มีสินค้าในระบบ</p>`; return; }
-            list.innerHTML = menus.map(m => `
+            list.innerHTML = menus.map(m => {
+                const hasSizes = Array.isArray(m.sizes) && m.sizes.length > 0;
+                const priceInfo = hasSizes
+                    ? m.sizes.map(s => `${s.name} ${s.price}บ.`).join(' / ')
+                    : `${m.price} บ.`;
+                return `
                 <div class="p-3 border rounded-xl flex justify-between items-center bg-slate-50 hover:bg-white transition gap-2">
                     <div class="flex items-center gap-3 overflow-hidden">
                         <img src="${m.image || placeholderImg}" class="w-12 h-12 rounded-xl object-cover shrink-0 bg-amber-100 border">
                         <div class="truncate">
-                            <span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-semibold">${m.category || 'ทั่วไป'}</span>
+                            <div class="flex items-center gap-1">
+                                <span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-semibold">${m.category || 'ทั่วไป'}</span>
+                                ${hasSizes ? `<span class="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">${m.sizes.length} ไซส์</span>` : ''}
+                            </div>
                             <p class="font-bold text-slate-800 text-sm truncate mt-0.5">${m.name}</p>
-                            <p class="text-xs text-slate-500">${m.price} บ. • ${m.available ? '<span class="text-emerald-600 font-bold">พร้อมขาย</span>' : '<span class="text-red-500 font-bold">หมด</span>'}</p>
+                            <p class="text-[11px] text-slate-500 truncate" title="${priceInfo}">${priceInfo} • ${m.available ? '<span class="text-emerald-600 font-bold">พร้อมขาย</span>' : '<span class="text-red-500 font-bold">หมด</span>'}</p>
                         </div>
                     </div>
                     <div class="flex gap-1 shrink-0">
@@ -1046,10 +1260,10 @@
                         <button onclick="deleteMenu(${m.id})" class="px-2 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs font-semibold">ลบ</button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
-        // --- ออเดอร์ (อัปเดตผ่าน firebaseKey ของแต่ละรายการ) & บัญชีรายรับ ---
+        // --- ออเดอร์ & บัญชีรายรับ ---
         function updateOrderStatus(firebaseKey, status) {
             db.ref(`shops_data/${SHOP_ID}/orders/${firebaseKey}/status`).set(status)
                 .catch(err => alert('อัปเดตสถานะไม่สำเร็จ: ' + err.message));
@@ -1077,13 +1291,13 @@
                 let btnHTML = '', borderColor = 'border-yellow-400';
 
                 if (o.status === 'pending') {
-                    btnHTML = `<button onclick="updateOrderStatus('${o.firebaseKey}', 'cooking')" class="w-full mt-3 bg-amber-500 text-slate-900 font-bold py-2.5 rounded-xl text-sm hover:bg-amber-600 transition">รับออเดอร์ / เริ่มทำ</button>`;
+                    btnHTML = `<button onclick="updateOrderStatus('${o.firebaseKey}', 'cooking')" class="w-full bg-amber-500 text-slate-900 font-bold py-2.5 rounded-xl text-sm hover:bg-amber-600 transition">รับออเดอร์ / เริ่มทำ</button>`;
                 } else if (o.status === 'cooking') {
                     borderColor = 'border-blue-500';
-                    btnHTML = `<button onclick="updateOrderStatus('${o.firebaseKey}', 'done')" class="w-full mt-3 bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-emerald-700 transition">ทำเสร็จ / เสิร์ฟแล้ว</button>`;
+                    btnHTML = `<button onclick="updateOrderStatus('${o.firebaseKey}', 'done')" class="w-full bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-emerald-700 transition">ทำเสร็จ / เสิร์ฟแล้ว</button>`;
                 } else {
-                    borderColor = 'border-emerald-500 opacity-75';
-                    btnHTML = `<div class="mt-3 text-center text-xs font-bold text-emerald-600 bg-emerald-50 py-2 rounded-xl">ออเดอร์เสร็จสมบูรณ์</div>`;
+                    borderColor = 'border-emerald-500 opacity-85';
+                    btnHTML = `<div class="text-center text-xs font-bold text-emerald-600 bg-emerald-50 py-2 rounded-xl">ออเดอร์เสร็จสมบูรณ์</div>`;
                 }
 
                 return `
@@ -1122,13 +1336,17 @@
                                         ${i.note ? `<p class="text-xs bg-amber-100 text-amber-900 font-bold px-2 py-1 rounded-md mt-1">หมายเหตุ: ${i.note}</p>` : ''}
                                     </div>
                                 `).join('')}
+                                ${o.deliveryFee > 0 ? `<div class="flex justify-between text-xs text-slate-600 pt-1"><span>ค่าจัดส่ง</span><span class="font-bold">+${o.deliveryFee} บ.</span></div>` : ''}
                             </div>
                         </div>
-                        <div>
+                        <div class="space-y-2 mt-2">
                             <div class="flex justify-between items-center font-bold text-slate-800">
                                 <span>ยอดสุทธิ:</span>
                                 <span class="text-lg text-emerald-600">${o.total} บาท</span>
                             </div>
+                            <button onclick="openReceiptModal('${o.firebaseKey}')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2 rounded-xl text-xs transition border border-slate-200">
+                                🧾 ดูใบเสร็จ / พิมพ์ / บันทึกรูป
+                            </button>
                             ${btnHTML}
                         </div>
                     </div>
