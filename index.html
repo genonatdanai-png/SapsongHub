@@ -12,13 +12,20 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
-        body { font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --theme-color: #d97706;
+            --theme-bg: #fffbeb;
+        }
+        body { font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; background-color: var(--theme-bg); }
+        .theme-bg-main { background-color: var(--theme-color) !important; }
+        .theme-text-main { color: var(--theme-color) !important; }
+        .theme-border-main { border-color: var(--theme-color) !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         #promptpay-qr-box img, #promptpay-qr-box canvas { margin: 0 auto; border-radius: 0.75rem; }
     </style>
 </head>
-<body class="bg-amber-50 min-h-screen pb-24 md:pb-10">
+<body class="min-h-screen pb-24 md:pb-10">
 
     <!-- ================= หน้าจอระงับการใช้งาน / หมดอายุ (Sapsong HUB Lock Gate) ================= -->
     <div id="sapsong-lock-overlay" class="hidden fixed inset-0 bg-slate-950 text-white z-[99999] flex flex-col justify-center items-center text-center p-6">
@@ -30,14 +37,17 @@
     </div>
 
     <!-- Header สำหรับลูกค้า -->
-    <header class="bg-amber-600 text-white shadow-md p-4 sticky top-0 z-40">
-        <div class="max-w-5xl mx-auto flex justify-between items-center">
-            <div>
-                <h1 id="store-header-name" class="text-xl sm:text-2xl font-bold tracking-wide">กำลังโหลดชื่อร้าน...</h1>
-                <p id="store-header-sub" class="text-xs text-amber-100">สั่งอาหาร & เครื่องดื่มออนไลน์</p>
+    <header class="theme-bg-main text-white shadow-md p-3.5 sm:p-4 sticky top-0 z-40 transition-colors">
+        <div class="max-w-5xl mx-auto flex justify-between items-center gap-2">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <img id="store-header-logo" src="" alt="Logo" class="hidden w-11 h-11 rounded-xl object-cover bg-white border-2 border-white/50 shadow-sm shrink-0">
+                <div class="truncate">
+                    <h1 id="store-header-name" class="text-lg sm:text-2xl font-bold tracking-wide truncate">กำลังโหลดชื่อร้าน...</h1>
+                    <p id="store-header-sub" class="text-xs text-white/85 truncate">สั่งอาหาร & เครื่องดื่มออนไลน์</p>
+                </div>
             </div>
-            <div class="flex items-center gap-2">
-                <span id="table-header-badge" class="hidden text-xs bg-white text-amber-800 px-3 py-1.5 rounded-full font-bold shadow-sm">🍽️ โต๊ะ -</span>
+            <div class="flex items-center gap-2 shrink-0">
+                <span id="table-header-badge" class="hidden text-xs bg-white text-slate-800 px-3 py-1.5 rounded-full font-bold shadow-sm">🍽️ โต๊ะ -</span>
                 <span id="store-status-badge" class="text-xs bg-emerald-600 px-3 py-1.5 rounded-full font-semibold shadow-sm">🟢 เปิดรับออเดอร์</span>
             </div>
         </div>
@@ -53,22 +63,18 @@
 
     <main id="main-store-content" class="max-w-5xl mx-auto p-3 sm:p-4 mt-2 grid grid-cols-1 md:grid-cols-3 gap-5">
         
-        <!-- แถบช่องทางการติดต่อร้านปังหน้าวัด -->
-        <div id="pangnawat-contact-bar" class="hidden md:col-span-3 bg-white p-3.5 rounded-2xl shadow-sm border border-amber-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <!-- แถบประกาศ / โปรโมชันหน้าร้าน (ตั้งค่าได้จากหลังบ้าน) -->
+        <div id="announcement-bar" class="hidden md:col-span-3 bg-white border-l-4 theme-border-main p-3.5 rounded-2xl shadow-sm flex items-center gap-2.5 text-sm font-semibold text-slate-800">
+            <span class="text-lg shrink-0">📢</span>
+            <span id="announcement-text"></span>
+        </div>
+
+        <!-- แถบช่องทางการติดต่อร้าน (Dynamic ตั้งค่าได้เองทุกร้าน) -->
+        <div id="dynamic-contact-bar" class="hidden md:col-span-3 bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div class="text-xs sm:text-sm font-semibold text-gray-700">
-                📞 ติดต่อร้านปังหน้าวัด / สอบถามเส้นทาง:
+                📞 ติดต่อร้าน / สอบถามเพิ่มเติม:
             </div>
-            <div class="flex flex-wrap gap-2 w-full sm:w-auto">
-                <a href="tel:0855750995" class="flex-1 sm:flex-none text-center bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm">
-                    📞 โทร 085-5750995
-                </a>
-                <a href="tel:0993593398" class="flex-1 sm:flex-none text-center bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm">
-                    📞 โทร 099-3593398
-                </a>
-                <a href="https://www.facebook.com/araya.thapsong" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto text-center bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm">
-                    📘 Facebook ร้านปังหน้าวัด
-                </a>
-            </div>
+            <div id="contact-buttons-wrap" class="flex flex-wrap gap-2 w-full sm:w-auto"></div>
         </div>
 
         <!-- แบนเนอร์แจ้งเตือนเมื่อร้านปิด -->
@@ -85,7 +91,7 @@
 
         <!-- รายการเมนู -->
         <div class="md:col-span-2 space-y-4">
-            <div class="bg-white border-l-4 border-amber-500 p-3.5 rounded-xl shadow-sm text-gray-700 text-xs sm:text-sm">
+            <div class="bg-white border-l-4 theme-border-main p-3.5 rounded-xl shadow-sm text-gray-700 text-xs sm:text-sm">
                 เลือกเมนูที่ต้องการ แล้วสามารถติ๊กเพิ่มท็อปปิ้งหรือพิมพ์หมายเหตุในตะกร้าได้เลยครับ
             </div>
             
@@ -99,7 +105,7 @@
 
             <!-- ใบเสร็จออนไลน์ล่าสุดของลูกค้า (กดบันทึกรูปได้) -->
             <div id="my-order-box" class="hidden mt-6 space-y-2">
-                <div id="customer-receipt-card" class="bg-white p-5 rounded-2xl shadow-md border-2 border-dashed border-amber-400">
+                <div id="customer-receipt-card" class="bg-white p-5 rounded-2xl shadow-md border-2 border-dashed theme-border-main">
                     <div id="my-order-detail"></div>
                 </div>
                 <button onclick="saveCustomerReceiptImage()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2.5 rounded-xl text-sm font-bold shadow-sm transition active:scale-[0.99]">
@@ -112,12 +118,12 @@
         <div id="cart-section" class="bg-white p-4 sm:p-5 rounded-2xl shadow-md h-fit md:sticky md:top-24 space-y-4">
             <h2 class="text-lg font-bold text-gray-800 flex justify-between items-center">
                 <span>ตะกร้าของคุณ</span>
-                <span id="cart-count-badge" class="text-xs bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">0 รายการ</span>
+                <span id="cart-count-badge" class="text-xs bg-slate-100 text-slate-800 px-2.5 py-1 rounded-full font-bold">0 รายการ</span>
             </h2>
             
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">รูปแบบการรับสินค้า</label>
-                <select id="order-type" onchange="handleOrderTypeChange()" class="w-full px-3 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-white font-semibold">
+                <select id="order-type" onchange="handleOrderTypeChange()" class="w-full px-3 py-2.5 border rounded-xl text-sm outline-none bg-white font-semibold">
                     <option value="takeaway">🛍️ รับหน้าร้าน (จ่ายหน้าร้าน)</option>
                     <option value="delivery">🛵 ขับรถไปส่ง (โอนจ่ายก่อน)</option>
                 </select>
@@ -125,19 +131,19 @@
 
             <!-- กล่องเลือกโต๊ะ -->
             <div id="table-select-box" class="hidden">
-                <label class="block text-xs font-bold text-amber-800 mb-1">🍽️ เลือกโต๊ะที่นั่ง</label>
-                <select id="customer-table" onchange="updateOrderAvailability()" class="w-full px-3 py-2.5 border-2 border-amber-400 bg-amber-50/70 rounded-xl text-sm font-bold text-slate-800 outline-none"></select>
+                <label class="block text-xs font-bold theme-text-main mb-1">🍽️ เลือกโต๊ะที่นั่ง</label>
+                <select id="customer-table" onchange="updateOrderAvailability()" class="w-full px-3 py-2.5 border-2 theme-border-main bg-slate-50 rounded-xl text-sm font-bold text-slate-800 outline-none"></select>
             </div>
 
             <div>
                 <label id="customer-name-label" class="block text-xs font-medium text-gray-600 mb-1">ชื่อผู้สั่ง / เบอร์โทร</label>
-                <input type="text" id="customer-name" placeholder="เช่น คุณจีโน่ 081-xxx-xxxx" class="w-full px-3 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+                <input type="text" id="customer-name" placeholder="เช่น คุณจีโน่ 081-xxx-xxxx" class="w-full px-3 py-2.5 border rounded-xl text-sm outline-none">
             </div>
 
             <div id="delivery-address-box" class="hidden space-y-3">
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">จุดสังเกต / ที่อยู่จัดส่ง</label>
-                    <textarea id="customer-address" placeholder="ระบุพิกัด หรือบ้านเลขที่..." class="w-full px-3 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none" rows="2"></textarea>
+                    <textarea id="customer-address" placeholder="ระบุพิกัด หรือบ้านเลขที่..." class="w-full px-3 py-2.5 border rounded-xl text-sm outline-none" rows="2"></textarea>
                 </div>
             </div>
 
@@ -152,7 +158,7 @@
                 </div>
                 <div class="flex justify-between items-center text-base font-bold">
                     <span>ยอดรวมทั้งหมด:</span>
-                    <span id="cart-total" class="text-amber-600 text-xl">0 บาท</span>
+                    <span id="cart-total" class="theme-text-main text-xl">0 บาท</span>
                 </div>
             </div>
 
@@ -185,23 +191,23 @@
                 </div>
             </div>
 
-            <button id="btn-checkout" onclick="checkout()" class="w-full bg-amber-600 text-white py-3.5 rounded-xl font-bold text-base hover:bg-amber-700 active:scale-[0.99] transition shadow-md">
+            <button id="btn-checkout" onclick="checkout()" class="w-full theme-bg-main text-white py-3.5 rounded-xl font-bold text-base hover:opacity-90 active:scale-[0.99] transition shadow-md">
                 ยืนยันสั่งซื้อ
             </button>
         </div>
 
         <!-- Footer -->
-        <footer class="md:col-span-3 mt-4 pt-4 border-t border-amber-200 text-center text-xs text-gray-600 space-y-1">
-            <p id="footer-shop-name" class="font-bold text-amber-800 text-sm">ระบบสั่งอาหารออนไลน์</p>
+        <footer class="md:col-span-3 mt-4 pt-4 border-t border-slate-200 text-center text-xs text-gray-600 space-y-1">
+            <p id="footer-shop-name" class="font-bold theme-text-main text-sm">ระบบสั่งอาหารออนไลน์</p>
             <p class="text-[11px] text-gray-400">Powered by Sapsong HUB</p>
         </footer>
 
     </main>
 
     <!-- แถบปุ่มดูตะกร้าลอยด้านล่าง สำหรับหน้าจอมือถือ/ไอแพด -->
-    <div id="mobile-cart-bar" onclick="scrollToCart()" class="md:hidden fixed bottom-0 left-0 right-0 bg-amber-600 text-white p-3.5 shadow-lg z-50 flex justify-between items-center cursor-pointer active:bg-amber-700">
+    <div id="mobile-cart-bar" onclick="scrollToCart()" class="md:hidden fixed bottom-0 left-0 right-0 theme-bg-main text-white p-3.5 shadow-lg z-50 flex justify-between items-center cursor-pointer">
         <div class="flex items-center gap-2">
-            <span id="mobile-cart-qty" class="bg-white text-amber-700 font-bold text-xs px-2.5 py-1 rounded-full">0</span>
+            <span id="mobile-cart-qty" class="bg-white theme-text-main font-bold text-xs px-2.5 py-1 rounded-full">0</span>
             <span class="font-semibold text-sm">ดูตะกร้า / เลือกท็อปปิ้ง</span>
         </div>
         <span id="mobile-cart-total" class="font-bold text-base">0 บาท</span>
@@ -211,7 +217,7 @@
     <div id="size-modal" onclick="closeSizeModal()" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
         <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
             <div class="flex items-center gap-3 border-b pb-3">
-                <img id="size-modal-img" src="" class="w-14 h-14 rounded-xl object-cover bg-amber-50 border">
+                <img id="size-modal-img" src="" class="w-14 h-14 rounded-xl object-cover bg-slate-50 border">
                 <div class="flex-1">
                     <h3 id="size-modal-title" class="font-bold text-slate-800 text-base">ชื่อสินค้า</h3>
                     <p class="text-xs text-slate-500">กรุณาเลือกขนาด / ตัวเลือกที่ต้องการ</p>
@@ -246,6 +252,16 @@
         const SHOP_ID = (urlParams.get('shop') || 'pangnawat').toLowerCase();
         const SCANNED_TABLE_ID = urlParams.get('table') || '';
 
+        const THEME_BG_MAP = {
+            '#d97706': '#fffbeb', // ส้มทอง
+            '#dc2626': '#fef2f2', // แดง
+            '#059669': '#ecfdf5', // เขียว
+            '#2563eb': '#eff6ff', // น้ำเงิน
+            '#7c3aed': '#f5f3ff', // ม่วง
+            '#db2777': '#fdf2f8', // ชมพู
+            '#0f172a': '#f8fafc'  // ดำมินิมอล
+        };
+
         const placeholderToast = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23fef3c7'/%3E%3Crect x='45' y='55' width='110' height='95' rx='20' fill='%23d97706'/%3E%3Crect x='55' y='65' width='90' height='75' rx='14' fill='%23fcd34d'/%3E%3C/svg%3E";
         const placeholderDrink = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23ffedd5'/%3E%3Cpolygon points='65,60 135,60 125,155 75,155' fill='%23ea580c'/%3E%3Crect x='60' y='52' width='80' height='10' rx='5' fill='%239a3412'/%3E%3C/svg%3E";
 
@@ -264,7 +280,19 @@
         let categories = defaultCategories;
         let menus = defaultMenus;
         let toppings = defaultToppings;
-        let paymentConfig = { promptpayId: '0855750995', accountName: shopDisplayName, enableDelivery: true, deliveryFee: 0 };
+        let paymentConfig = {
+            promptpayId: '0855750995',
+            accountName: shopDisplayName,
+            enableDelivery: true,
+            deliveryFee: 0,
+            shopLogo: '',
+            themeColor: '#d97706',
+            announcement: '',
+            contactPhone: '',
+            contactFb: '',
+            contactLine: '',
+            receiptFooter: ''
+        };
         let isStoreOpen = true;
         let bannedIPs = [];
         let enableTables = false;
@@ -329,11 +357,66 @@
             document.getElementById('footer-shop-name').innerText = `ร้าน${name}`;
             if (SHOP_ID === 'pangnawat') {
                 document.getElementById('store-header-sub').innerText = 'ขนมปังปิ้งเตาถ่าน & เครื่องดื่มเย็น';
-                document.getElementById('pangnawat-contact-bar').classList.remove('hidden');
             } else {
                 document.getElementById('store-header-sub').innerText = 'สั่งอาหาร & เครื่องดื่มออนไลน์';
-                document.getElementById('pangnawat-contact-bar').classList.add('hidden');
             }
+        }
+
+        function applyStoreCustomization() {
+            // 1. สีธีม
+            const color = paymentConfig.themeColor || '#d97706';
+            document.documentElement.style.setProperty('--theme-color', color);
+            document.documentElement.style.setProperty('--theme-bg', THEME_BG_MAP[color] || '#f8fafc');
+
+            // 2. โลโก้ร้าน
+            const logoEl = document.getElementById('store-header-logo');
+            if (paymentConfig.shopLogo) {
+                logoEl.src = paymentConfig.shopLogo;
+                logoEl.classList.remove('hidden');
+            } else {
+                logoEl.classList.add('hidden');
+            }
+
+            // 3. แถบประกาศหน้าร้าน
+            const annBar = document.getElementById('announcement-bar');
+            if (paymentConfig.announcement && paymentConfig.announcement.trim()) {
+                document.getElementById('announcement-text').innerText = paymentConfig.announcement.trim();
+                annBar.classList.remove('hidden');
+            } else {
+                annBar.classList.add('hidden');
+            }
+
+            // 4. ปุ่มติดต่อร้าน (Dynamic + Fallback สำหรับปังหน้าวัด)
+            const contactBar = document.getElementById('dynamic-contact-bar');
+            const wrap = document.getElementById('contact-buttons-wrap');
+            let btns = [];
+
+            const phone = paymentConfig.contactPhone || (SHOP_ID === 'pangnawat' ? '085-5750995' : '');
+            const fb = paymentConfig.contactFb || (SHOP_ID === 'pangnawat' ? 'https://www.facebook.com/araya.thapsong' : '');
+            const line = paymentConfig.contactLine || '';
+
+            if (phone) {
+                const cleanTel = phone.replace(/[^0-9+]/g, '');
+                btns.push(`<a href="tel:${cleanTel}" class="flex-1 sm:flex-none text-center bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm">📞 โทร ${phone}</a>`);
+            }
+            if (fb) {
+                const fbUrl = fb.startsWith('http') ? fb : 'https://' + fb;
+                btns.push(`<a href="${fbUrl}" target="_blank" rel="noopener noreferrer" class="flex-1 sm:flex-none text-center bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm">📘 Facebook</a>`);
+            }
+            if (line) {
+                const lineUrl = line.startsWith('http') ? line : `https://line.me/ti/p/~${line.replace('@', '')}`;
+                btns.push(`<a href="${lineUrl}" target="_blank" rel="noopener noreferrer" class="flex-1 sm:flex-none text-center bg-green-500 hover:bg-green-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm">💬 LINE</a>`);
+            }
+
+            if (btns.length > 0) {
+                wrap.innerHTML = btns.join('');
+                contactBar.classList.remove('hidden');
+            } else {
+                contactBar.classList.add('hidden');
+            }
+
+            renderCategoryTabs();
+            renderLastSavedOrder();
         }
 
         // =========================================================================
@@ -362,8 +445,16 @@
                 promptpayId: cfg.promptpayId || '0855750995',
                 accountName: cfg.accountName || shopDisplayName,
                 enableDelivery: cfg.enableDelivery !== undefined ? cfg.enableDelivery : true,
-                deliveryFee: Number(cfg.deliveryFee) || 0
+                deliveryFee: Number(cfg.deliveryFee) || 0,
+                shopLogo: cfg.shopLogo || '',
+                themeColor: cfg.themeColor || '#d97706',
+                announcement: cfg.announcement || '',
+                contactPhone: cfg.contactPhone || '',
+                contactFb: cfg.contactFb || '',
+                contactLine: cfg.contactLine || '',
+                receiptFooter: cfg.receiptFooter || ''
             };
+            applyStoreCustomization();
             renderTableOptions();
             renderCart();
         });
@@ -516,7 +607,7 @@
                 tableBanner.classList.add('hidden');
                 btnCheckout.disabled = false;
                 btnCheckout.innerText = 'ยืนยันสั่งซื้อ';
-                btnCheckout.className = 'w-full bg-amber-600 text-white py-3.5 rounded-xl font-bold text-base hover:bg-amber-700 active:scale-[0.99] transition shadow-md';
+                btnCheckout.className = 'w-full theme-bg-main text-white py-3.5 rounded-xl font-bold text-base hover:opacity-90 active:scale-[0.99] transition shadow-md';
             }
         }
 
@@ -662,7 +753,7 @@
             container.innerHTML = allCats.map(cat => {
                 const isActive = selectedCategory === cat;
                 const label = cat === 'ALL' ? 'ทั้งหมด' : cat;
-                return `<button onclick="selectCategory('${cat.replace(/'/g, "\'")}')" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition ${isActive ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-gray-700 border border-amber-200 hover:bg-amber-100'}">${label}</button>`;
+                return `<button onclick="selectCategory('${cat.replace(/'/g, "\'")}')" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition ${isActive ? 'theme-bg-main text-white shadow-sm' : 'bg-white text-gray-700 border border-slate-200 hover:bg-slate-50'}">${label}</button>`;
             }).join('');
         }
 
@@ -684,21 +775,21 @@
                 const btnLabel = hasSizes ? '+ เลือกขนาด/ตัวเลือก' : '+ เพิ่มลงตะกร้า';
 
                 return `
-                <div class="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between border border-amber-100 ${blocked ? 'opacity-60' : ''}">
+                <div class="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between border border-slate-100 ${blocked ? 'opacity-60' : ''}">
                     <div>
-                        <div class="relative w-full h-32 sm:h-40 bg-amber-100 overflow-hidden">
+                        <div class="relative w-full h-32 sm:h-40 bg-slate-100 overflow-hidden">
                             <img src="${m.image || placeholderToast}" alt="${m.name}" class="w-full h-full object-cover">
                             ${m.category ? `<span class="absolute top-2 left-2 bg-black/60 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 rounded-full">${m.category}</span>` : ''}
-                            ${hasSizes ? `<span class="absolute bottom-2 right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">มี ${m.sizes.length} ขนาด</span>` : ''}
+                            ${hasSizes ? `<span class="absolute bottom-2 right-2 theme-bg-main text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">มี ${m.sizes.length} ขนาด</span>` : ''}
                         </div>
                         <div class="p-3">
                             <h3 class="font-semibold text-gray-800 text-sm line-clamp-2">${m.name}</h3>
-                            <p class="text-amber-600 font-bold text-base mt-1">${priceLabel}</p>
+                            <p class="theme-text-main font-bold text-base mt-1">${priceLabel}</p>
                         </div>
                     </div>
                     <div class="px-3 pb-3">
                         ${!blocked 
-                            ? `<button onclick="handleMenuClick(${m.id})" class="w-full bg-amber-100 text-amber-800 py-2 rounded-xl text-xs sm:text-sm font-bold hover:bg-amber-600 hover:text-white active:scale-95 transition">${btnLabel}</button>`
+                            ? `<button onclick="handleMenuClick(${m.id})" class="w-full bg-slate-100 hover:opacity-90 theme-text-main py-2 rounded-xl text-xs sm:text-sm font-bold active:scale-95 transition border border-slate-200">${btnLabel}</button>`
                             : `<button disabled class="w-full bg-gray-200 text-gray-400 py-2 rounded-xl text-xs font-semibold cursor-not-allowed">ปิดรับออเดอร์</button>`
                         }
                     </div>
@@ -723,9 +814,9 @@
             document.getElementById('size-modal-img').src = menu.image || placeholderToast;
             document.getElementById('size-modal-title').innerText = menu.name;
             document.getElementById('size-modal-options').innerHTML = menu.sizes.map((s, idx) => `
-                <button onclick="selectMenuSize(${menu.id}, ${idx})" class="w-full flex justify-between items-center p-3.5 border-2 border-amber-200 hover:border-amber-500 hover:bg-amber-50 rounded-2xl transition active:scale-[0.98]">
+                <button onclick="selectMenuSize(${menu.id}, ${idx})" class="w-full flex justify-between items-center p-3.5 border-2 border-slate-200 hover:bg-slate-50 rounded-2xl transition active:scale-[0.98]">
                     <span class="font-bold text-slate-800 text-sm">${s.name}</span>
-                    <span class="font-bold text-amber-600 text-base">${s.price} บ.</span>
+                    <span class="font-bold theme-text-main text-base">${s.price} บ.</span>
                 </button>
             `).join('');
             document.getElementById('size-modal').classList.remove('hidden');
@@ -813,13 +904,13 @@
                     <div class="py-3 space-y-2 text-sm">
                         <div class="flex justify-between items-center gap-2">
                             <div class="flex items-center gap-2.5 overflow-hidden">
-                                <img src="${item.image}" class="w-10 h-10 rounded-lg object-cover shrink-0 bg-amber-50">
+                                <img src="${item.image}" class="w-10 h-10 rounded-lg object-cover shrink-0 bg-slate-50">
                                 <div class="truncate">
                                     <div class="flex items-center gap-1 flex-wrap">
                                         <p class="font-bold text-gray-800 truncate">${item.name}</p>
                                         ${item.sizeName ? `<span class="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">${item.sizeName}</span>` : ''}
                                     </div>
-                                    <p class="text-xs text-gray-500">${unitPriceWithToppings} บ. x ${item.qty} = <span class="text-amber-700 font-bold">${unitPriceWithToppings * item.qty} บ.</span></p>
+                                    <p class="text-xs text-gray-500">${unitPriceWithToppings} บ. x ${item.qty} = <span class="theme-text-main font-bold">${unitPriceWithToppings * item.qty} บ.</span></p>
                                 </div>
                             </div>
                             <div class="flex items-center space-x-2 shrink-0">
@@ -838,8 +929,8 @@
                                             ${groupItems.map(t => {
                                                 const isChecked = (item.selectedToppings || []).some(st => st.id === t.id);
                                                 return `
-                                                    <label class="cursor-pointer inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs border transition select-none ${isChecked ? 'bg-amber-100 border-amber-500 text-amber-900 font-bold' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100'}">
-                                                        <input type="checkbox" onchange="toggleCartTopping(${idx}, ${t.id})" ${isChecked ? 'checked' : ''} class="accent-amber-600 rounded">
+                                                    <label class="cursor-pointer inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs border transition select-none ${isChecked ? 'bg-slate-800 border-slate-800 text-white font-bold' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100'}">
+                                                        <input type="checkbox" onchange="toggleCartTopping(${idx}, ${t.id})" ${isChecked ? 'checked' : ''} class="rounded">
                                                         <span>${t.name} (+${t.price}บ.)</span>
                                                     </label>
                                                 `;
@@ -851,7 +942,7 @@
                         ` : ''}
 
                         <div>
-                            <input type="text" value="${item.note || ''}" oninput="updateItemNote(${idx}, this.value)" placeholder="รายละเอียดเพิ่ม (เช่น นมข้นเยอะๆ, หวานน้อย)" class="w-full px-2.5 py-1.5 bg-amber-50/70 border border-amber-200 rounded-lg text-xs text-gray-700 placeholder-gray-400 focus:outline-none focus:border-amber-500">
+                            <input type="text" value="${item.note || ''}" oninput="updateItemNote(${idx}, this.value)" placeholder="รายละเอียดเพิ่ม (เช่น นมข้นเยอะๆ, หวานน้อย)" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-gray-700 placeholder-gray-400 focus:outline-none">
                         </div>
                     </div>
                 `;
@@ -952,12 +1043,15 @@
             box.classList.remove('hidden');
 
             const typeTxt = o.orderType === 'delivery' ? '🛵 จัดส่งถึงที่' : (o.orderType === 'dinein' ? `🍽️ ${o.tableName}` : '🛍️ รับหน้าร้าน');
+            const logoHTML = paymentConfig.shopLogo ? `<img src="${paymentConfig.shopLogo}" class="w-12 h-12 rounded-xl object-cover mx-auto mb-2 border">` : '';
+            const footerTxt = paymentConfig.receiptFooter ? `<div class="mt-1 font-semibold text-slate-600">${paymentConfig.receiptFooter}</div>` : '';
 
             detail.innerHTML = `
                 <div class="text-center border-b border-dashed border-gray-300 pb-3 mb-3">
+                    ${logoHTML}
                     <h4 class="font-bold text-lg text-slate-800">${o.shopName || shopDisplayName}</h4>
                     <p class="text-xs text-gray-500">ใบเสร็จรับเงินออนไลน์ (E-Receipt)</p>
-                    <p class="text-xs font-mono font-bold text-amber-700 mt-1">${o.id} • ${o.date} ${o.time}</p>
+                    <p class="text-xs font-mono font-bold theme-text-main mt-1">${o.id} • ${o.date} ${o.time}</p>
                 </div>
                 <div class="text-xs text-gray-700 space-y-1 mb-3">
                     <div class="flex justify-between"><span>ลูกค้า:</span><span class="font-semibold">${o.customerName}</span></div>
@@ -982,10 +1076,11 @@
                 </div>
                 <div class="flex justify-between items-center text-base font-bold text-slate-900 pt-1">
                     <span>ยอดสุทธิ</span>
-                    <span class="text-amber-600">${o.total} บาท</span>
+                    <span class="theme-text-main">${o.total} บาท</span>
                 </div>
                 <div class="text-center text-[11px] text-gray-400 mt-3 pt-2 border-t border-dashed">
                     ${o.paymentMethod === 'transfer' ? '✅ แนบสลิปโอนเงินแล้ว' : '💵 ชำระเงินที่ร้าน'} • ขอบคุณที่อุดหนุนครับ
+                    ${footerTxt}
                 </div>
             `;
         }
