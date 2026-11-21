@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>เรียนออนไลน์ - Sapsong HUB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+        #qr-box img, #qr-box canvas { margin: 0 auto; border-radius: 0.75rem; }
+    </style>
+</head>
+<body class="bg-indigo-50/40 min-h-screen pb-14">
+
+    <!-- Lock Gate -->
+    <div id="sapsong-lock-overlay" class="hidden fixed inset-0 bg-slate-950 text-white z-[99999] flex flex-col justify-center items-center text-center p-6">
+        <div class="bg-slate-900 border border-slate-700 max-w-md w-full p-8 rounded-3xl shadow-2xl space-y-3">
+            <div class="text-5xl">🔒</div>
+            <h2 id="sapsong-lock-title" class="text-xl font-bold">ปิดให้บริการชั่วคราว</h2>
+            <p id="sapsong-lock-msg" class="text-sm text-slate-400">ระบบเรียนออนไลน์ปิดให้บริการชั่วคราว</p>
+        </div>
+    </div>
+
+    <header class="bg-indigo-900 text-white shadow-md p-4 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto flex justify-between items-center gap-2">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <img id="hdr-logo" src="" class="hidden w-11 h-11 rounded-xl object-cover bg-white border">
+                <div class="truncate">
+                    <h1 id="hdr-title" class="text-lg sm:text-xl font-bold truncate">กำลังโหลดคอร์สเรียน...</h1>
+                    <p class="text-xs text-indigo-200">ระบบเรียนวิดีโอออนไลน์</p>
+                </div>
+            </div>
+            <button onclick="openStudentLogin()" id="btn-student-auth" class="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl shrink-0 transition">
+                🔐 เข้าห้องเรียนของฉัน
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-3 sm:p-5 space-y-6">
+
+        <!-- แถบแจ้งเตือนนักเรียนที่ล็อกอินแล้ว -->
+        <div id="student-banner" class="hidden bg-emerald-600 text-white p-3.5 rounded-2xl shadow-sm flex justify-between items-center text-xs sm:text-sm">
+            <div>
+                ยินดีต้อนรับคุณ <strong id="st-name-disp">-</strong> (<span id="st-phone-disp">-</span>)
+            </div>
+            <button onclick="studentLogout()" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-xs font-bold">ออกจากห้องเรียน</button>
+        </div>
+
+        <!-- ห้องเรียนวิดีโอ (แสดงเมื่อเปิดดูคอร์ส) -->
+        <div id="classroom-panel" class="hidden bg-white p-4 sm:p-6 rounded-3xl shadow-lg border-2 border-indigo-200 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <div>
+                    <span class="text-xs bg-indigo-100 text-indigo-800 font-bold px-2.5 py-0.5 rounded-full">กำลังเรียน</span>
+                    <h2 id="cls-course-title" class="text-lg font-bold text-slate-800 mt-1">ชื่อคอร์ส</h2>
+                </div>
+                <button onclick="document.getElementById('classroom-panel').classList.add('hidden')" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold">✕ ปิดห้องเรียน</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <div class="lg:col-span-2 space-y-3">
+                    <div id="video-player-box" class="aspect-video bg-slate-950 rounded-2xl overflow-hidden flex items-center justify-center text-white text-sm">
+                        เลือกบทเรียนทางขวามือเพื่อเริ่มเรียน
+                    </div>
+                    <div class="flex justify-between items-center flex-wrap gap-2">
+                        <h3 id="cls-lesson-title" class="font-bold text-slate-800 text-base">-</h3>
+                        <a id="cls-doc-link" href="#" target="_blank" class="hidden bg-indigo-100 text-indigo-800 px-3 py-1.5 rounded-xl text-xs font-bold">📄 ดาวน์โหลดชีท/เอกสาร</a>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <h3 class="font-bold text-sm text-slate-700">📋 บทเรียนทั้งหมด</h3>
+                    <div id="cls-lesson-list" class="space-y-1.5 max-h-96 overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- รายการคอร์สทั้งหมด -->
+        <div>
+            <h2 class="text-lg font-bold text-slate-800 mb-3">📚 คอร์สเรียนทั้งหมด</h2>
+            <div id="course-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+    </main>
+
+    <!-- Modal สมัครเรียน & สแกนจ่าย QR -->
+    <div id="enroll-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-bold text-slate-800 text-base">สมัครเรียนคอร์ส</h3>
+                <button onclick="document.getElementById('enroll-modal').classList.add('hidden')" class="text-xl font-bold text-gray-400 px-2">&times;</button>
+            </div>
+
+            <div class="bg-indigo-50 p-3 rounded-2xl">
+                <p id="enr-course-name" class="font-bold text-indigo-950 text-sm">-</p>
+                <p id="enr-course-price" class="font-bold text-indigo-700 text-base mt-0.5">0 บาท</p>
+            </div>
+
+            <div class="space-y-2.5 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">ชื่อ-นามสกุล ผู้เรียน *</label>
+                    <input type="text" id="enr-name" placeholder="เช่น น้องจีโน่" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">เบอร์โทร (ใช้ล็อกอิน) *</label>
+                        <input type="tel" id="enr-phone" placeholder="0812345678" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">ตั้งรหัสผ่านเข้าเรียน *</label>
+                        <input type="password" id="enr-pass" placeholder="อย่างน้อย 4 ตัว" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <div id="enr-pay-box" class="bg-blue-50 border border-blue-200 rounded-2xl p-3 space-y-2 text-center">
+                <p class="text-xs font-bold text-slate-800">สแกนพร้อมเพย์: <span id="enr-pp-id" class="font-mono text-blue-700">-</span></p>
+                <p class="text-[11px] text-slate-600">บัญชี: <span id="enr-acc-name">-</span></p>
+                <div id="qr-box" class="py-1"></div>
+                <div class="text-left bg-white p-2.5 rounded-xl border">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">📎 แนบสลิปโอนเงิน *</label>
+                    <input type="file" accept="image/*" onchange="handleSlipFile(event)" class="text-xs">
+                    <img id="enr-slip-prev" src="" class="hidden w-full max-h-32 object-contain mt-2 rounded-lg border">
+                </div>
+            </div>
+
+            <button onclick="submitEnrollment()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-sm shadow-md">
+                ยืนยันสมัครเรียน
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal ล็อกอินเข้าห้องเรียน -->
+    <div id="st-login-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <h3 class="font-bold text-slate-800 text-base text-center">🔐 เข้าห้องเรียนของฉัน</h3>
+            <div class="space-y-2.5">
+                <input type="tel" id="st-login-phone" placeholder="เบอร์โทรที่สมัครไว้" class="w-full px-3.5 py-2.5 border rounded-xl text-sm outline-none">
+                <input type="password" id="st-login-pass" placeholder="รหัสผ่านที่ตั้งไว้" class="w-full px-3.5 py-2.5 border rounded-xl text-sm outline-none">
+            </div>
+            <button onclick="doStudentLogin()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold text-sm">เข้าสู่ระบบ</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhtvwqgAP-5-ITl1TIopqIWEFrZ2deQtg",
+            authDomain: "sapsonghub.firebaseapp.com",
+            databaseURL: "https://sapsonghub-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "sapsonghub",
+            storageBucket: "sapsonghub.firebasestorage.app",
+            messagingSenderId: "448301529212",
+            appId: "1:448301529212:web:7366898a663dcbd556f1f9",
+            measurementId: "G-0SPWW0K3WD"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const SHOP_ID = (urlParams.get('shop') || 'demo-course').toLowerCase();
+
+        const defaultCover = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='180' viewBox='0 0 300 180'%3E%3Crect width='300' height='180' fill='%23eef2ff'/%3E%3Ccircle cx='150' cy='90' r='34' fill='%234f46e5'/%3E%3Cpolygon points='142,75 166,90 142,105' fill='%23ffffff'/%3E%3C/svg%3E";
+
+        let configData = { shopLogo: '', instName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID };
+        let courses = [];
+        let enrollments = [];
+        let selectedCourse = null;
+        let slipBase64 = '';
+        let currentStudent = JSON.parse(localStorage.getItem('st_session_' + SHOP_ID) || 'null');
+
+        function isExpired(d) {
+            if (!d || d === '9999-12-31') return false;
+            const t = new Date(); t.setHours(0,0,0,0);
+            const e = new Date(d); e.setHours(0,0,0,0);
+            return t > e;
+        }
+
+        function showLock(title, msg) {
+            document.getElementById('sapsong-lock-title').innerText = title;
+            document.getElementById('sapsong-lock-msg').innerText = msg;
+            document.getElementById('sapsong-lock-overlay').classList.remove('hidden');
+        }
+
+        db.ref('sapsong_hub_shops/' + SHOP_ID).on('value', snap => {
+            const m = snap.val();
+            if (!m) return showLock('ไม่พบข้อมูลคอร์สเรียน', `รหัส "${SHOP_ID}" ยังไม่ได้ลงทะเบียนในระบบ`);
+            if (m.isSuspended) return showLock('ปิดให้บริการชั่วคราว', `คอร์สของ "${m.name}" งดให้บริการชั่วคราว`);
+            if (m.planKey !== 'lifetime' && isExpired(m.expireDate)) return showLock('ปิดให้บริการชั่วคราว', `ระบบของ "${m.name}" ปิดให้บริการชั่วคราว`);
+            document.getElementById('sapsong-lock-overlay').classList.add('hidden');
+            document.getElementById('hdr-title').innerText = m.name;
+            document.title = m.name;
+        });
+
+        db.ref(`courses_data/${SHOP_ID}/config`).on('value', snap => {
+            const c = snap.val() || {};
+            configData = {
+                shopLogo: c.shopLogo || '',
+                instName: c.instName || SHOP_ID,
+                promptpayId: c.promptpayId || '0855750995',
+                accountName: c.accountName || SHOP_ID
+            };
+            if (configData.shopLogo) {
+                const logo = document.getElementById('hdr-logo');
+                logo.src = configData.shopLogo;
+                logo.classList.remove('hidden');
+            }
+        });
+
+        db.ref(`courses_data/${SHOP_ID}/courses`).on('value', snap => {
+            courses = snap.val() || [];
+            renderCourses();
+        });
+
+        db.ref(`courses_data/${SHOP_ID}/enrollments`).on('value', snap => {
+            enrollments = Object.values(snap.val() || {});
+            renderStudentBanner();
+            renderCourses();
+        });
+
+        function renderStudentBanner() {
+            const ban = document.getElementById('student-banner');
+            const btn = document.getElementById('btn-student-auth');
+            if (currentStudent) {
+                ban.classList.remove('hidden');
+                btn.classList.add('hidden');
+                document.getElementById('st-name-disp').innerText = currentStudent.studentName;
+                document.getElementById('st-phone-disp').innerText = currentStudent.phone;
+            } else {
+                ban.classList.add('hidden');
+                btn.classList.remove('hidden');
+            }
+        }
+
+        function openStudentLogin() { document.getElementById('st-login-modal').classList.remove('hidden'); }
+
+        function doStudentLogin() {
+            const ph = document.getElementById('st-login-phone').value.trim();
+            const pw = document.getElementById('st-login-pass').value.trim();
+            const found = enrollments.find(e => e.phone === ph && e.passcode === pw);
+            if (!found) return alert('เบอร์โทรหรือรหัสผ่านไม่ถูกต้องครับ');
+            if (found.status !== 'approved') return alert('ผู้สอนกำลังตรวจสอบสลิปของคุณอยู่ครับ รออนุมัติสักครู่');
+            currentStudent = found;
+            localStorage.setItem('st_session_' + SHOP_ID, JSON.stringify(found));
+            document.getElementById('st-login-modal').classList.add('hidden');
+            renderStudentBanner();
+            renderCourses();
+            alert('เข้าสู่ห้องเรียนสำเร็จแล้วครับ');
+        }
+
+        function studentLogout() {
+            currentStudent = null;
+            localStorage.removeItem('st_session_' + SHOP_ID);
+            document.getElementById('classroom-panel').classList.add('hidden');
+            renderStudentBanner();
+            renderCourses();
+        }
+
+        function hasCourseAccess(courseId) {
+            if (!currentStudent) return false;
+            return enrollments.some(e =>
+                e.phone === currentStudent.phone &&
+                e.passcode === currentStudent.passcode &&
+                e.status === 'approved' &&
+                String(e.courseId) === String(courseId)
+            );
+        }
+
+        function renderCourses() {
+            const grid = document.getElementById('course-grid');
+            if (courses.length === 0) {
+                grid.innerHTML = `<p class="text-slate-400 text-sm col-span-3 text-center py-10 bg-white rounded-2xl">ยังไม่มีคอร์สเรียนเปิดสอนในขณะนี้</p>`;
+                return;
+            }
+
+            grid.innerHTML = courses.map(c => {
+                const unlocked = hasCourseAccess(c.id) || c.price === 0;
+                return `
+                <div class="bg-white rounded-3xl overflow-hidden shadow-sm border flex flex-col justify-between">
+                    <div>
+                        <img src="${c.cover || defaultCover}" class="w-full h-44 object-cover bg-indigo-100">
+                        <div class="p-4">
+                            <div class="flex justify-between items-start gap-2">
+                                <h3 class="font-bold text-slate-800 text-base">${c.title}</h3>
+                                <span class="bg-indigo-100 text-indigo-800 font-bold text-xs px-2.5 py-1 rounded-full shrink-0">
+                                    ${c.price === 0 ? 'เรียนฟรี' : c.price + ' บ.'}
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1.5 line-clamp-2">${c.desc || ''}</p>
+                            <p class="text-xs font-semibold text-slate-600 mt-2">🎬 ${(c.lessons || []).length} บทเรียน</p>
+                        </div>
+                    </div>
+                    <div class="px-4 pb-4 flex gap-2">
+                        ${unlocked
+                            ? `<button onclick="openClassroom('${c.id}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">▶️ เข้าเรียนเลย</button>`
+                            : `<button onclick="openEnrollModal('${c.id}')" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">🛒 สมัครเรียน (${c.price} บ.)</button>`
+                        }
+                        <button onclick="openClassroom('${c.id}', true)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2.5 rounded-xl text-xs font-bold">ทดลองดู</button>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function crc16(data) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < data.length; i++) {
+                crc ^= data.charCodeAt(i) << 8;
+                for (let j = 0; j < 8; j++) crc = ((crc & 0x8000) !== 0) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+            }
+            return crc.toString(16).toUpperCase().padStart(4, '0');
+        }
+        function tlv(t, v) { return `${t}${v.length.toString().padStart(2,'0')}${v}`; }
+        function buildQR(id, amt) {
+            const clean = id.replace(/[^0-9]/g, '');
+            const target = (clean.length === 10 && clean.startsWith('0')) ? tlv('01', '0066' + clean.substring(1)) : tlv('02', clean);
+            const m = tlv('00', 'A000000677010111') + target;
+            let p = tlv('00','01') + tlv('01', amt>0?'12':'11') + tlv('29', m) + tlv('53','764');
+            if (amt > 0) p += tlv('54', Number(amt).toFixed(2));
+            p += tlv('58','TH') + '6304';
+            return p + crc16(p);
+        }
+
+        function openEnrollModal(courseId) {
+            selectedCourse = courses.find(c => String(c.id) === String(courseId));
+            if (!selectedCourse) return;
+            slipBase64 = '';
+            document.getElementById('enr-slip-prev').classList.add('hidden');
+            document.getElementById('enr-course-name').innerText = selectedCourse.title;
+            document.getElementById('enr-course-price').innerText = `${selectedCourse.price} บาท`;
+            document.getElementById('enr-pp-id').innerText = configData.promptpayId;
+            document.getElementById('enr-acc-name').innerText = configData.accountName;
+
+            const payBox = document.getElementById('enr-pay-box');
+            const qrBox = document.getElementById('qr-box');
+            qrBox.innerHTML = '';
+            if (selectedCourse.price > 0) {
+                payBox.classList.remove('hidden');
+                new QRCode(qrBox, { text: buildQR(configData.promptpayId, selectedCourse.price), width: 150, height: 150 });
+            } else {
+                payBox.classList.add('hidden');
+            }
+            document.getElementById('enroll-modal').classList.remove('hidden');
+        }
+
+        function handleSlipFile(e) {
+            const f = e.target.files[0]; if (!f) return;
+            const r = new FileReader();
+            r.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    const c = document.createElement('canvas');
+                    const w = 500, h = Math.round((img.height / img.width) * 500) || 500;
+                    c.width = w; c.height = h;
+                    c.getContext('2d').drawImage(img, 0, 0, w, h);
+                    slipBase64 = c.toDataURL('image/jpeg', 0.75);
+                    const prev = document.getElementById('enr-slip-prev');
+                    prev.src = slipBase64; prev.classList.remove('hidden');
+                };
+                img.src = ev.target.result;
+            };
+            r.readAsDataURL(f);
+        }
+
+        function submitEnrollment() {
+            const name = document.getElementById('enr-name').value.trim();
+            const phone = document.getElementById('enr-phone').value.trim();
+            const pass = document.getElementById('enr-pass').value.trim();
+            if (!name || !phone || !pass) return alert('กรุณากรอกชื่อ เบอร์โทร และรหัสผ่านให้ครบครับ');
+            if (selectedCourse.price > 0 && !slipBase64) return alert('กรุณาแนบรูปสลิปโอนเงินก่อนครับ');
+
+            const isFree = selectedCourse.price === 0;
+            const rec = {
+                courseId: selectedCourse.id,
+                courseTitle: selectedCourse.title,
+                amount: selectedCourse.price,
+                studentName: name,
+                phone: phone,
+                passcode: pass,
+                slipImage: isFree ? '' : slipBase64,
+                status: isFree ? 'approved' : 'pending',
+                createdAt: Date.now()
+            };
+
+            db.ref(`courses_data/${SHOP_ID}/enrollments`).push(rec).then(() => {
+                document.getElementById('enroll-modal').classList.add('hidden');
+                if (isFree) {
+                    currentStudent = rec;
+                    localStorage.setItem('st_session_' + SHOP_ID, JSON.stringify(rec));
+                    renderStudentBanner();
+                    renderCourses();
+                    openClassroom(selectedCourse.id);
+                } else {
+                    alert(`สมัครเรียนเรียบร้อยแล้วครับ!\nใช้เบอร์ ${phone} และรหัสผ่านที่ตั้งไว้ เข้าสู่ระบบหลังผู้สอนอนุมัติสลิปครับ`);
+                }
+            });
+        }
+
+        function extractEmbedUrl(url) {
+            if (!url) return '';
+            const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/);
+            if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+            return url;
+        }
+
+        function openClassroom(courseId, previewOnly = false) {
+            const c = courses.find(x => String(x.id) === String(courseId));
+            if (!c) return;
+            const fullAccess = hasCourseAccess(c.id) || c.price === 0;
+            const lessons = c.lessons || [];
+
+            document.getElementById('cls-course-title').innerText = c.title + (previewOnly && !fullAccess ? ' (โหมดทดลองดู)' : '');
+            document.getElementById('classroom-panel').classList.remove('hidden');
+
+            const listEl = document.getElementById('cls-lesson-list');
+            listEl.innerHTML = lessons.map((ls, idx) => {
+                const canPlay = fullAccess || ls.isFree;
+                return `
+                    <button onclick="${canPlay ? `playLesson(${idx}, '${c.id}')` : `alert('บทเรียนนี้สำหรับผู้เรียนที่ชำระเงินแล้วครับ')`}"
+                        class="w-full text-left p-2.5 rounded-xl border text-xs flex justify-between items-center ${canPlay ? 'bg-indigo-50/60 hover:bg-indigo-100 border-indigo-200 font-semibold text-slate-800' : 'bg-slate-100 text-slate-400'}">
+                        <span>${idx + 1}. ${ls.title}</span>
+                        <span>${canPlay ? (ls.isFree && !fullAccess ? '🆓' : '▶️') : '🔒'}</span>
+                    </button>
+                `;
+            }).join('');
+
+            const firstPlayableIdx = lessons.findIndex(ls => fullAccess || ls.isFree);
+            if (firstPlayableIdx !== -1) playLesson(firstPlayableIdx, c.id);
+            else document.getElementById('video-player-box').innerHTML = 'ยังไม่มีคลิปตัวอย่างฟรีสำหรับคอร์สนี้ครับ';
+
+            document.getElementById('classroom-panel').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function playLesson(idx, courseId) {
+            const c = courses.find(x => String(x.id) === String(courseId));
+            if (!c || !c.lessons || !c.lessons[idx]) return;
+            const ls = c.lessons[idx];
+            const embed = extractEmbedUrl(ls.videoUrl);
+            const wmText = currentStudent ? `${currentStudent.studentName} • ${currentStudent.phone}` : 'ตัวอย่างการเรียน';
+
+            document.getElementById('cls-lesson-title').innerText = ls.title;
+            document.getElementById('video-player-box').innerHTML = `
+                <div class="relative w-full h-full">
+                    <iframe src="${embed}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+                    <div class="pointer-events-none absolute top-3 right-3 bg-black/45 text-white/80 text-[10px] px-2.5 py-1 rounded-lg">${wmText}</div>
+                </div>
+            `;
+
+            const docBtn = document.getElementById('cls-doc-link');
+            if (ls.docUrl) {
+                docBtn.href = ls.docUrl;
+                docBtn.classList.remove('hidden');
+            } else {
+                docBtn.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
