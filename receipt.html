@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ใบเสร็จรับเงินออนไลน์ - Sapsong HUB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        :root { --theme-color: #d97706; --theme-bg: #fffbeb; }
+        body { font-family: 'Prompt', sans-serif; background-color: var(--theme-bg); -webkit-tap-highlight-color: transparent; }
+        .theme-bg-main { background-color: var(--theme-color) !important; }
+        .theme-text-main { color: var(--theme-color) !important; }
+        .theme-border-main { border-color: var(--theme-color) !important; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-md space-y-4">
+        <!-- แถบแจ้งเตือนสั่งซื้อสำเร็จ -->
+        <div id="success-banner" class="hidden bg-emerald-600 text-white p-3.5 rounded-2xl shadow-md text-center">
+            <p class="font-bold text-base">✅ สั่งซื้อสำเร็จเรียบร้อยแล้ว!</p>
+            <p class="text-xs text-emerald-100 mt-0.5">ร้านได้รับออเดอร์ของคุณแล้ว สามารถบันทึกรูปใบเสร็จเก็บไว้ได้ครับ</p>
+        </div>
+
+        <!-- การ์ดใบเสร็จ (ส่วนที่จะถูกแคปเป็นรูป PNG) -->
+        <div id="receipt-card" class="bg-white p-6 rounded-3xl shadow-lg border-2 border-dashed theme-border-main">
+            <div id="receipt-content" class="text-center py-8 text-gray-400 text-sm">
+                กำลังโหลดใบเสร็จ...
+            </div>
+        </div>
+
+        <!-- ปุ่มจัดการ -->
+        <div id="receipt-actions" class="hidden space-y-2.5">
+            <button id="btn-save-receipt" onclick="saveReceiptImage()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition active:scale-[0.99]">
+                💾 บันทึกรูปใบเสร็จลงเครื่อง (PNG)
+            </button>
+            <a id="btn-back-order" href="index.html" class="block w-full text-center theme-bg-main text-white py-3.5 rounded-2xl font-bold text-sm shadow-md hover:opacity-90 transition active:scale-[0.99]">
+                🛒 กลับไปหน้าสั่งอาหาร
+            </a>
+        </div>
+
+        <p class="text-center text-[11px] text-gray-400 pt-2">Powered by Sapsong HUB</p>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhtvwqgAP-5-ITl1TIopqIWEFrZ2deQtg",
+            authDomain: "sapsonghub.firebaseapp.com",
+            databaseURL: "https://sapsonghub-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "sapsonghub",
+            storageBucket: "sapsonghub.firebasestorage.app",
+            messagingSenderId: "448301529212",
+            appId: "1:448301529212:web:7366898a663dcbd556f1f9",
+            measurementId: "G-0SPWW0K3WD"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const SHOP_ID = (urlParams.get('shop') || 'pangnawat').toLowerCase();
+        const IS_NEW = urlParams.get('new') === '1';
+
+        const THEME_BG_MAP = {
+            '#d97706': '#fffbeb', '#dc2626': '#fef2f2', '#059669': '#ecfdf5',
+            '#2563eb': '#eff6ff', '#7c3aed': '#f5f3ff', '#db2777': '#fdf2f8', '#0f172a': '#f8fafc'
+        };
+
+        document.getElementById('btn-back-order').href = `index.html?shop=${SHOP_ID}`;
+        if (IS_NEW) document.getElementById('success-banner').classList.remove('hidden');
+
+        let shopLogo = '';
+        let receiptFooter = '';
+        let shopDisplayName = SHOP_ID === 'pangnawat' ? 'ปังหน้าวัด' : SHOP_ID;
+
+        // ดึงโลโก้ สีธีม และข้อความท้ายใบเสร็จของร้าน
+        db.ref(`shops_data/${SHOP_ID}/paymentConfig`).once('value', snap => {
+            const cfg = snap.val() || {};
+            const color = cfg.themeColor || '#d97706';
+            document.documentElement.style.setProperty('--theme-color', color);
+            document.documentElement.style.setProperty('--theme-bg', THEME_BG_MAP[color] || '#f8fafc');
+            shopLogo = cfg.shopLogo || '';
+            receiptFooter = cfg.receiptFooter || '';
+            renderReceipt();
+        });
+
+        function renderReceipt() {
+            const raw = localStorage.getItem('my_last_order_data_' + SHOP_ID);
+            const content = document.getElementById('receipt-content');
+            const actions = document.getElementById('receipt-actions');
+            const btnSave = document.getElementById('btn-save-receipt');
+
+            if (!raw) {
+                content.innerHTML = `
+                    <div class="py-8 space-y-3">
+                        <div class="text-4xl">🧾</div>
+                        <p class="font-bold text-slate-700 text-base">ยังไม่มีรายการใบเสร็จล่าสุด</p>
+                        <p class="text-xs text-gray-500">เมื่อคุณสั่งอาหารแล้ว ใบเสร็จจะแสดงที่หน้านี้ครับ</p>
+                    </div>
+                `;
+                actions.classList.remove('hidden');
+                btnSave.classList.add('hidden');
+                return;
+            }
+
+            const o = JSON.parse(raw);
+            actions.classList.remove('hidden');
+            btnSave.classList.remove('hidden');
+
+            const typeTxt = o.orderType === 'delivery' ? '🛵 จัดส่งถึงที่' : (o.orderType === 'dinein' ? `🍽️ ${o.tableName}` : '🛍️ รับหน้าร้าน');
+            const logoHTML = shopLogo ? `<img src="${shopLogo}" class="w-14 h-14 rounded-2xl object-cover mx-auto mb-2 border shadow-xs">` : '';
+            const footerTxt = receiptFooter ? `<div class="mt-1.5 font-semibold text-slate-700">${receiptFooter}</div>` : '';
+
+            content.innerHTML = `
+                <div class="text-center border-b border-dashed border-gray-300 pb-3.5 mb-3.5">
+                    ${logoHTML}
+                    <h1 class="font-bold text-xl text-slate-800">${o.shopName || shopDisplayName}</h1>
+                    <p class="text-xs text-gray-500">ใบเสร็จรับเงินออนไลน์ (E-Receipt)</p>
+                    <p class="text-xs font-mono font-bold theme-text-main mt-1">${o.id} • ${o.date} ${o.time}</p>
+                </div>
+
+                <div class="text-xs text-gray-700 space-y-1.5 mb-3.5 text-left">
+                    <div class="flex justify-between"><span>ลูกค้า:</span><span class="font-semibold">${o.customerName}</span></div>
+                    <div class="flex justify-between"><span>ประเภท:</span><span class="font-semibold">${typeTxt}</span></div>
+                    ${o.address ? `<div class="text-gray-500 bg-slate-50 p-2 rounded-lg mt-1">ที่อยู่จัดส่ง: ${o.address}</div>` : ''}
+                </div>
+
+                <div class="border-t border-b border-dashed border-gray-300 py-3 my-2.5 space-y-2.5 text-xs text-left">
+                    ${(o.items || []).map(i => {
+                        const topTxt = (i.toppings && i.toppings.length > 0) ? `<div class="text-[11px] text-gray-500 pl-3">+ ${i.toppings.map(t => t.name).join(', ')}</div>` : '';
+                        const noteTxt = i.note ? `<div class="text-[11px] text-amber-700 pl-3">* ${i.note}</div>` : '';
+                        return `
+                            <div>
+                                <div class="flex justify-between font-semibold text-slate-800">
+                                    <span>${i.name} x${i.qty}</span>
+                                    <span>${i.price * i.qty} บ.</span>
+                                </div>
+                                ${topTxt}${noteTxt}
+                            </div>
+                        `;
+                    }).join('')}
+                    ${o.deliveryFee > 0 ? `<div class="flex justify-between text-gray-600 pt-1"><span>ค่าจัดส่ง</span><span>${o.deliveryFee} บ.</span></div>` : ''}
+                </div>
+
+                <div class="flex justify-between items-center text-lg font-bold text-slate-900 pt-1">
+                    <span>ยอดสุทธิ</span>
+                    <span class="theme-text-main">${o.total} บาท</span>
+                </div>
+
+                <div class="text-center text-[11px] text-gray-400 mt-4 pt-3 border-t border-dashed">
+                    ${o.paymentMethod === 'transfer' ? '✅ แนบสลิปโอนเงินแล้ว' : '💵 ชำระเงินที่ร้าน'} • ขอบคุณที่อุดหนุนครับ
+                    ${footerTxt}
+                </div>
+            `;
+        }
+
+        function saveReceiptImage() {
+            const card = document.getElementById('receipt-card');
+            if (!card) return;
+            html2canvas(card, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                const raw = localStorage.getItem('my_last_order_data_' + SHOP_ID);
+                const orderId = raw ? JSON.parse(raw).id : 'receipt';
+                const link = document.createElement('a');
+                link.download = `Receipt-${orderId}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>
