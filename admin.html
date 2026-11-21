@@ -526,9 +526,6 @@
     </div>
 
     <script>
-        // =========================================================================
-        // 1. ตั้งค่า FIREBASE (เชื่อมต่อโปรเจกต์ sapsonghub)
-        // =========================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyAhtvwqgAP-5-ITl1TIopqIWEFrZ2deQtg",
             authDomain: "sapsonghub.firebaseapp.com",
@@ -611,7 +608,6 @@
         let currentQRTableName = '';
         let currentReceiptOrderId = '';
 
-        // โหลดโลโก้ร้านมาโชว์บนหน้าล็อกอินตั้งแต่แรก (อ่านได้สาธารณะตาม Security Rules)
         db.ref(`shops_data/${SHOP_ID}/paymentConfig/shopLogo`).once('value', snap => {
             const logo = snap.val();
             if (logo) applyLogoToAdminUI(logo);
@@ -635,9 +631,6 @@
                 .catch(err => alert('ไม่มีสิทธิ์บันทึกข้อมูล: ' + err.message));
         }
 
-        // =========================================================================
-        // 2. ตรวจสอบสิทธิ์ล็อกอิน FIREBASE AUTH
-        // =========================================================================
         auth.onAuthStateChanged((user) => {
             const errorMsg = document.getElementById('login-error-msg');
             if (user) {
@@ -685,9 +678,6 @@
 
         function adminSecureLogout() { auth.signOut(); }
 
-        // =========================================================================
-        // 3. ตรวจสอบสิทธิ์จาก SAPSONG HUB & ดึงข้อมูลร้านค้า REAL-TIME
-        // =========================================================================
         function isDateExpired(expireDateStr) {
             if (!expireDateStr || expireDateStr === '9999-12-31') return false;
             const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -777,7 +767,6 @@
                 orders = parsedOrders;
                 isFirstLoad = false;
 
-                // อัปเดตค่าในหน้าตั้งค่า
                 document.getElementById('setting-promptpay-id').value = paymentConfig.promptpayId;
                 document.getElementById('setting-account-name').value = paymentConfig.accountName;
                 document.getElementById('setting-enable-delivery').checked = paymentConfig.enableDelivery;
@@ -814,9 +803,6 @@
             document.getElementById('admin-expire-badge').innerText = expLabel;
         }
 
-        // =========================================================================
-        // 4. ระบบอัปโหลดโลโก้ร้าน & เลือกสีธีม
-        // =========================================================================
         function handleLogoUpload(event) {
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -875,9 +861,6 @@
             }).join('');
         }
 
-        // =========================================================================
-        // 5. ระบบจัดการไซส์ / ตัวเลือกหลักของสินค้า (Sizes / Variants)
-        // =========================================================================
         function addSizeRow(name = '', price = '') {
             const container = document.getElementById('menu-sizes-container');
             const row = document.createElement('div');
@@ -905,9 +888,6 @@
 
         function clearSizeRows() { document.getElementById('menu-sizes-container').innerHTML = ''; }
 
-        // =========================================================================
-        // 6. ระบบใบเสร็จออนไลน์, พิมพ์ใบเสร็จ และบันทึกรูป (PNG)
-        // =========================================================================
         function openReceiptModal(firebaseKey) {
             const o = orders.find(x => x.firebaseKey === firebaseKey);
             if (!o) return;
@@ -971,9 +951,6 @@
             });
         }
 
-        // =========================================================================
-        // 7. ระบบจัดการโต๊ะ & QR CODE ประจำโต๊ะ
-        // =========================================================================
         function toggleEnableTables() {
             enableTables = !enableTables;
             saveShopKey('enableTables', enableTables);
@@ -1090,9 +1067,6 @@
             link.click();
         }
 
-        // =========================================================================
-        // 8. ฟังก์ชันจัดการเมนู ท็อปปิ้ง ออเดอร์ และบัญชี
-        // =========================================================================
         function getTodayString() {
             const now = new Date();
             return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
@@ -1192,7 +1166,6 @@
         }
         function testSound() { playDingSound(); }
 
-        // --- หมวดหมู่สินค้า ---
         function addCategory() {
             const name = document.getElementById('new-category-name').value.trim();
             if (!name || categories.includes(name)) return;
@@ -1215,7 +1188,6 @@
             document.getElementById('new-topping-target-category').innerHTML = `<option value="ALL">🌟 ใช้ได้ทุกหมวดสินค้า</option>` + categories.map(c => `<option value="${c}">เฉพาะ: ${c}</option>`).join('');
         }
 
-        // --- ท็อปปิ้ง ---
         function addToppingGroup() {
             const name = document.getElementById('new-topping-group-name').value.trim();
             if (!name || toppingGroups.includes(name)) return;
@@ -1311,7 +1283,6 @@
             `}).join('');
         }
 
-        // --- แบน IP ---
         function banCustomerIP(ip, customerName) {
             if (!ip || ip === 'กำลังตรวจสอบ...' || bannedIPs.some(b => b.ip === ip)) return;
             const reason = prompt(`ยืนยันการแบน IP: ${ip} (${customerName})\nระบุสาเหตุ:`, 'สั่งเล่น');
@@ -1340,7 +1311,6 @@
             `).join('');
         }
 
-        // --- เมนูสินค้า + ไซส์ ---
         function handleImageUpload(event) {
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -1474,7 +1444,6 @@
             `}).join('');
         }
 
-        // --- ออเดอร์ & บัญชีรายรับ ---
         function updateOrderStatus(firebaseKey, status) {
             db.ref(`shops_data/${SHOP_ID}/orders/${firebaseKey}/status`).set(status)
                 .catch(err => alert('อัปเดตสถานะไม่สำเร็จ: ' + err.message));
