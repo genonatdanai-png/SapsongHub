@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sapsong HUB - ระบบควบคุมร้านค้าเช่า (Secure)</title>
+  <title>Sapsong HUB - ศูนย์ควบคุมกลางหลายธุรกิจ (Multi-Business SaaS)</title>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Firebase SDK (App + Auth + Database) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -62,6 +62,11 @@
     .btn-outline { background: white; border: 1px solid var(--border); color: var(--text); }
     .btn-outline:hover { background: #f8fafc; }
 
+    /* Filter Pills */
+    .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .filter-pill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: white; color: var(--muted); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.15s; }
+    .filter-pill.active { background: var(--primary); color: white; border-color: var(--primary); }
+
     /* Stats Grid */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .stat-card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
@@ -70,8 +75,8 @@
 
     /* Table Card */
     .card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-    .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-    .search-box { padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; width: 280px; font-size: 0.9rem; }
+    .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .search-box { padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; width: 250px; font-size: 0.9rem; }
     .table-responsive { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; text-align: left; }
     th, td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
@@ -85,6 +90,8 @@
     .badge-expired { background: #fee2e2; color: #991b1b; }
     .badge-suspended { background: #e2e8f0; color: #475569; }
     .badge-lifetime { background: #ede9fe; color: #5b21b6; }
+    .biz-food { background: #ffedd5; color: #9a3412; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-top: 3px; }
+    .biz-course { background: #e0e7ff; color: #3730a3; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-top: 3px; }
 
     /* Modal */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 16px; }
@@ -110,7 +117,7 @@
   <div class="auth-card">
     <div class="auth-logo">SH</div>
     <div class="auth-title">Sapsong HUB</div>
-    <div class="auth-sub">เข้าสู่ระบบผู้ดูแลหลัก (Super Admin)</div>
+    <div class="auth-sub">ศูนย์ควบคุมกลางหลายธุรกิจ (Super Admin)</div>
 
     <form onsubmit="handleSecureLogin(event)">
       <div class="form-group">
@@ -138,14 +145,14 @@
       </div>
     </div>
     <div class="header-actions">
-      <button class="btn btn-primary" onclick="openAddModal()">+ เพิ่มร้านค้าใหม่</button>
+      <button class="btn btn-primary" onclick="openAddModal()">+ เพิ่มลูกค้า / ธุรกิจใหม่</button>
       <button class="btn btn-danger" onclick="secureLogout()">🚪 ออกจากระบบ</button>
     </div>
   </div>
 
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-title">ร้านค้าในเครือทั้งหมด</div>
+      <div class="stat-title">สมาชิกในเครือทั้งหมด</div>
       <div class="stat-value" id="stat-total">0</div>
     </div>
     <div class="stat-card">
@@ -164,15 +171,19 @@
 
   <div class="card">
     <div class="card-header">
-      <h3 style="font-size: 1.05rem;">รายชื่อร้านค้าภายใต้ Sapsong HUB</h3>
-      <input type="text" class="search-box" id="searchInput" placeholder="ค้นหาชื่อร้าน หรือ Shop ID..." onkeyup="renderTable()">
+      <div class="filter-row">
+        <button class="filter-pill active" id="pill-ALL" onclick="setBizFilter('ALL')">ทั้งหมด</button>
+        <button class="filter-pill" id="pill-food" onclick="setBizFilter('food')">🍜 ร้านอาหาร</button>
+        <button class="filter-pill" id="pill-course" onclick="setBizFilter('course')">🎓 คอร์สเรียนออนไลน์</button>
+      </div>
+      <input type="text" class="search-box" id="searchInput" placeholder="ค้นหาชื่อ หรือ ID..." onkeyup="renderTable()">
     </div>
     <div class="table-responsive">
       <table>
         <thead>
           <tr>
-            <th>รหัสร้าน (Shop ID)</th>
-            <th>ร้านค้า / เจ้าของ</th>
+            <th>รหัส (ID)</th>
+            <th>ธุรกิจ / เจ้าของ</th>
             <th>แพ็กเกจล่าสุด</th>
             <th>วันหมดอายุ</th>
             <th>สถานะ</th>
@@ -186,22 +197,30 @@
   </div>
 </div>
 
+<!-- Modal เพิ่มลูกค้า / ธุรกิจใหม่ -->
 <div class="modal-overlay" id="addModal">
   <div class="modal">
-    <h2>➕ เพิ่มร้านค้าใหม่เข้า Sapsong HUB</h2>
+    <h2>➕ เพิ่มลูกค้าเข้า Sapsong HUB</h2>
     <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 12px; border-radius: 8px; font-size: 0.78rem; color: #1e40af; margin-bottom: 14px;">
-      💡 <strong>หมายเหตุความปลอดภัย:</strong> หลังสร้างร้านที่นี่แล้ว อย่าลืมไปกด <em>Add user</em> ใน Firebase Authentication โดยตั้งอีเมลเป็น <strong>[Shop ID]@ss.com</strong> เพื่อให้เจ้าของร้านล็อกอินหลังบ้านได้ครับ
+      💡 <strong>หมายเหตุ:</strong> หลังสร้างรายการแล้ว อย่าลืมไปกด <em>Add user</em> ใน Firebase Authentication โดยตั้งอีเมลเป็น <strong>[ID]@ss.com</strong> เพื่อให้เจ้าของระบบเข้าหลังบ้านได้ครับ
     </div>
     <div class="form-group">
-      <label>รหัสร้าน (Shop ID - ภาษาอังกฤษห้ามเว้นวรรค)</label>
-      <input type="text" id="inp-id" placeholder="เช่น pangnawat">
+      <label>ประเภทระบบธุรกิจ</label>
+      <select id="inp-biztype">
+        <option value="food">🍜 ระบบสั่งอาหารออนไลน์ (index.html / admin.html)</option>
+        <option value="course">🎓 ระบบเรียนออนไลน์อัปคลิปขาย (course.html / course-admin.html)</option>
+      </select>
     </div>
     <div class="form-group">
-      <label>ชื่อร้านค้า</label>
-      <input type="text" id="inp-name" placeholder="เช่น ปังหน้าวัด">
+      <label>รหัสใช้งาน (ID - ภาษาอังกฤษห้ามเว้นวรรค)</label>
+      <input type="text" id="inp-id" placeholder="เช่น pangnawat หรือ math-kru-geno">
     </div>
     <div class="form-group">
-      <label>เบอร์โทร / LINE เจ้าของร้าน</label>
+      <label>ชื่อร้าน / ชื่อสถาบันหรือผู้สอน</label>
+      <input type="text" id="inp-name" placeholder="เช่น ปังหน้าวัด หรือ คอร์สคณิตพี่จีโน่">
+    </div>
+    <div class="form-group">
+      <label>เบอร์โทร / LINE ติดต่อ</label>
       <input type="text" id="inp-contact" placeholder="เช่น 081-234-5678">
     </div>
     <div class="form-group">
@@ -216,24 +235,32 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('addModal')">ยกเลิก</button>
-      <button class="btn btn-primary" onclick="addShop()">สร้างร้านค้า</button>
+      <button class="btn btn-primary" onclick="addShop()">สร้างรายการ</button>
     </div>
   </div>
 </div>
 
+<!-- Modal แก้ไขข้อมูล -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <h2>✏️ แก้ไขข้อมูลและวันหมดอายุ</h2>
     <div class="form-group">
-      <label>รหัสร้าน (Shop ID)</label>
+      <label>รหัส (ID)</label>
       <input type="text" id="edit-id" disabled style="background: #f1f5f9; color: var(--muted);">
     </div>
     <div class="form-group">
-      <label>ชื่อร้านค้า</label>
+      <label>ประเภทธุรกิจ</label>
+      <select id="edit-biztype">
+        <option value="food">🍜 ระบบสั่งอาหารออนไลน์</option>
+        <option value="course">🎓 ระบบเรียนออนไลน์อัปคลิปขาย</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>ชื่อร้าน / ชื่อสถาบัน</label>
       <input type="text" id="edit-name">
     </div>
     <div class="form-group">
-      <label>เบอร์โทร / LINE เจ้าของร้าน</label>
+      <label>เบอร์โทร / LINE</label>
       <input type="text" id="edit-contact">
     </div>
     <div class="form-group">
@@ -247,7 +274,7 @@
       </select>
     </div>
     <div class="form-group" id="editDateGroup">
-      <label>วันหมดอายุ (เลือกวันใหม่ หรือกดปุ่มลดวันด้านล่าง)</label>
+      <label>วันหมดอายุ</label>
       <input type="date" id="edit-expire">
       <div class="deduct-bar">
         <button type="button" class="btn btn-sm btn-danger" onclick="adjustEditDays(-1)">-1 วัน</button>
@@ -263,27 +290,16 @@
   </div>
 </div>
 
+<!-- Modal ต่ออายุ -->
 <div class="modal-overlay" id="renewModal">
   <div class="modal">
-    <h2>🔄 ต่ออายุการใช้งานร้านค้า</h2>
+    <h2>🔄 ต่ออายุการใช้งาน</h2>
     <p id="renewShopTitle" style="font-size: 0.9rem; color: var(--muted); margin-bottom: 12px;"></p>
     <div class="plan-grid">
-      <button class="plan-btn" onclick="confirmRenew('1m')">
-        <strong>1 เดือน (+30 วัน)</strong>
-        <span>500 บาท</span>
-      </button>
-      <button class="plan-btn" onclick="confirmRenew('3m')">
-        <strong>3 เดือน (+90 วัน)</strong>
-        <span>1,400 บาท</span>
-      </button>
-      <button class="plan-btn" onclick="confirmRenew('6m')">
-        <strong>6 เดือน (+180 วัน)</strong>
-        <span>2,700 บาท</span>
-      </button>
-      <button class="plan-btn" onclick="confirmRenew('1y')">
-        <strong>1 ปี (+365 วัน)</strong>
-        <span>5,000 บาท</span>
-      </button>
+      <button class="plan-btn" onclick="confirmRenew('1m')"><strong>1 เดือน (+30 วัน)</strong><span>500 บาท</span></button>
+      <button class="plan-btn" onclick="confirmRenew('3m')"><strong>3 เดือน (+90 วัน)</strong><span>1,400 บาท</span></button>
+      <button class="plan-btn" onclick="confirmRenew('6m')"><strong>6 เดือน (+180 วัน)</strong><span>2,700 บาท</span></button>
+      <button class="plan-btn" onclick="confirmRenew('1y')"><strong>1 ปี (+365 วัน)</strong><span>5,000 บาท</span></button>
       <button class="plan-btn" style="grid-column: span 2; background: #f5f3ff; border-color: #ddd6fe;" onclick="confirmRenew('lifetime')">
         <strong style="color: var(--purple);">♾️ เปลี่ยนเป็น ฟรีตลอดชีพ (Lifetime)</strong>
         <span style="color: var(--purple);">0 บาท (ไม่จำกัดวันใช้งาน)</span>
@@ -318,6 +334,7 @@
   const SUPER_ADMIN_EMAIL = 'admingeno@ss.com';
   let shopLogos = {};
   let logoListeners = {};
+  let currentBizFilter = 'ALL';
 
   auth.onAuthStateChanged((user) => {
     if (user && user.email.toLowerCase() === SUPER_ADMIN_EMAIL) {
@@ -347,13 +364,8 @@
     err.innerText = '';
 
     auth.signInWithEmailAndPassword(email, pass)
-      .catch(() => {
-        err.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
-      })
-      .finally(() => {
-        btn.disabled = false;
-        btn.innerText = 'เข้าสู่ระบบอย่างปลอดภัย';
-      });
+      .catch(() => { err.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'; })
+      .finally(() => { btn.disabled = false; btn.innerText = 'เข้าสู่ระบบอย่างปลอดภัย'; });
   }
 
   function secureLogout() { auth.signOut(); }
@@ -367,7 +379,7 @@
   };
 
   const defaultShops = [{
-    id: 'pangnawat', name: 'ปังหน้าวัด', contact: '085-5750995 (ร้านต้นแบบ)',
+    id: 'pangnawat', bizType: 'food', name: 'ปังหน้าวัด', contact: '085-5750995 (ร้านต้นแบบ)',
     planKey: 'lifetime', expireDate: '9999-12-31', isSuspended: false
   }];
 
@@ -375,11 +387,19 @@
   let currentRenewIndex = null;
   let currentEditIndex = null;
 
+  function setBizFilter(type) {
+    currentBizFilter = type;
+    ['ALL', 'food', 'course'].forEach(k => {
+      document.getElementById('pill-' + k).classList.toggle('active', k === type);
+    });
+    renderTable();
+  }
+
   function loadShops() {
     db.ref('sapsong_hub_shops').on('value', (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        shops = Object.values(data);
+        shops = Object.values(data).map(s => ({ bizType: 'food', ...s }));
       } else {
         shops = defaultShops;
         saveShops();
@@ -387,7 +407,10 @@
       shops.forEach(s => {
         if (!logoListeners[s.id]) {
           logoListeners[s.id] = true;
-          db.ref(`shops_data/${s.id}/paymentConfig/shopLogo`).on('value', snap => {
+          const logoPath = s.bizType === 'course'
+            ? `courses_data/${s.id}/config/shopLogo`
+            : `shops_data/${s.id}/paymentConfig/shopLogo`;
+          db.ref(logoPath).on('value', snap => {
             shopLogos[s.id] = snap.val() || '';
             renderTable();
           });
@@ -431,11 +454,12 @@
     const baseDir = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
 
     shops.forEach((shop, index) => {
+      const bizType = shop.bizType || 'food';
       const plan = PLANS[shop.planKey] || PLANS['1m'];
       const isLifetime = shop.planKey === 'lifetime';
       const daysLeft = isLifetime ? 99999 : getDaysRemaining(shop.expireDate);
       let statusBadge = '';
-      
+
       if (shop.isSuspended) {
         statusBadge = `<span class="badge badge-suspended">ระงับชั่วคราว</span>`;
         alertCount++;
@@ -453,10 +477,22 @@
         activeCount++; totalMonthlyAvg += plan.monthlyAvg;
       }
 
+      if (currentBizFilter !== 'ALL' && bizType !== currentBizFilter) return;
       if (!shop.name.toLowerCase().includes(keyword) && !shop.id.toLowerCase().includes(keyword)) return;
 
-      const orderUrl = `${baseDir}/index.html?shop=${shop.id}`;
-      const adminUrl = `${baseDir}/admin.html?shop=${shop.id}`;
+      const frontUrl = bizType === 'course'
+        ? `${baseDir}/course.html?shop=${shop.id}`
+        : `${baseDir}/index.html?shop=${shop.id}`;
+      const backUrl = bizType === 'course'
+        ? `${baseDir}/course-admin.html?shop=${shop.id}`
+        : `${baseDir}/admin.html?shop=${shop.id}`;
+
+      const frontLabel = bizType === 'course' ? '🎓 หน้าเรียน' : '🛒 หน้าร้าน';
+      const backLabel = bizType === 'course' ? '🎬 ผู้สอน' : '⚙️ หลังบ้าน';
+      const bizBadge = bizType === 'course'
+        ? `<span class="biz-course">🎓 คอร์สเรียนออนไลน์</span>`
+        : `<span class="biz-food">🍜 ร้านอาหาร</span>`;
+
       const logoImg = shopLogos[shop.id];
       const avatarHTML = logoImg
         ? `<img src="${logoImg}" alt="${shop.name}">`
@@ -471,6 +507,7 @@
             <div>
               <div style="font-weight:600;">${shop.name}</div>
               <div style="font-size:0.8rem; color:var(--muted);">${shop.contact}</div>
+              ${bizBadge}
             </div>
           </div>
         </td>
@@ -479,8 +516,8 @@
         <td>${statusBadge}</td>
         <td>
           <div style="display:flex; gap:4px; flex-wrap:wrap;">
-            <button class="btn btn-sm btn-outline" onclick="copyLink('${orderUrl}', 'ลิงก์หน้าร้าน')">🛒 หน้าร้าน</button>
-            <button class="btn btn-sm btn-outline" onclick="copyLink('${adminUrl}', 'ลิงก์หลังบ้าน')">⚙️ หลังบ้าน</button>
+            <button class="btn btn-sm btn-outline" onclick="copyLink('${frontUrl}', '${frontLabel}')">${frontLabel}</button>
+            <button class="btn btn-sm btn-outline" onclick="copyLink('${backUrl}', '${backLabel}')">${backLabel}</button>
           </div>
         </td>
         <td>
@@ -507,6 +544,7 @@
     currentEditIndex = index;
     const shop = shops[index];
     document.getElementById('edit-id').value = shop.id;
+    document.getElementById('edit-biztype').value = shop.bizType || 'food';
     document.getElementById('edit-name').value = shop.name;
     document.getElementById('edit-contact').value = shop.contact;
     document.getElementById('edit-plan').value = shop.planKey;
@@ -531,8 +569,9 @@
     if (currentEditIndex === null) return;
     const shop = shops[currentEditIndex];
     const name = document.getElementById('edit-name').value.trim();
-    if (!name) return alert('กรุณากรอกชื่อร้านค้าครับ');
+    if (!name) return alert('กรุณากรอกชื่อครับ');
 
+    shop.bizType = document.getElementById('edit-biztype').value;
     shop.name = name;
     shop.contact = document.getElementById('edit-contact').value.trim() || '-';
     shop.planKey = document.getElementById('edit-plan').value;
@@ -540,12 +579,12 @@
 
     saveShops();
     closeModal('editModal');
-    showToast(`บันทึกการแก้ไขร้าน "${shop.name}" เรียบร้อย!`);
+    showToast(`บันทึกการแก้ไข "${shop.name}" เรียบร้อย!`);
   }
 
   function openRenewModal(index) {
     currentRenewIndex = index;
-    document.getElementById('renewShopTitle').innerText = `ร้าน: ${shops[index].name} (${shops[index].id})`;
+    document.getElementById('renewShopTitle').innerText = `รายการ: ${shops[index].name} (${shops[index].id})`;
     document.getElementById('renewModal').style.display = 'flex';
   }
 
@@ -566,20 +605,20 @@
 
     saveShops();
     closeModal('renewModal');
-    showToast(`อัปเดตแพ็กเกจร้าน "${shop.name}" เป็น ${plan.label} เรียบร้อย!`);
+    showToast(`อัปเดตแพ็กเกจ "${shop.name}" เป็น ${plan.label} เรียบร้อย!`);
   }
 
   function toggleSuspend(index) {
     shops[index].isSuspended = !shops[index].isSuspended;
     saveShops();
-    showToast(shops[index].isSuspended ? 'ระงับการใช้งานร้านค้าแล้ว' : 'เปิดใช้งานร้านค้าแล้ว');
+    showToast(shops[index].isSuspended ? 'ระงับการใช้งานแล้ว' : 'เปิดใช้งานแล้ว');
   }
 
   function deleteShop(index) {
-    if (confirm(`ยืนยันการลบร้าน "${shops[index].name}" ออกจาก Sapsong HUB?`)) {
+    if (confirm(`ยืนยันการลบ "${shops[index].name}" ออกจาก Sapsong HUB?`)) {
       shops.splice(index, 1);
       saveShops();
-      showToast('ลบร้านค้าเรียบร้อย');
+      showToast('ลบเรียบร้อย');
     }
   }
 
@@ -588,17 +627,18 @@
   function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
   function addShop() {
+    const bizType = document.getElementById('inp-biztype').value;
     const id = document.getElementById('inp-id').value.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '');
     const name = document.getElementById('inp-name').value.trim();
     const contact = document.getElementById('inp-contact').value.trim();
     const planKey = document.getElementById('inp-plan').value;
     const plan = PLANS[planKey];
 
-    if (!id || !name) return alert('กรุณากรอกรหัสร้าน (Shop ID) และชื่อร้านค้าครับ');
-    if (shops.some(s => s.id === id)) return alert('รหัสร้าน (Shop ID) นี้มีในระบบแล้ว กรุณาใช้ชื่ออื่นครับ');
+    if (!id || !name) return alert('กรุณากรอกรหัส (ID) และชื่อครับ');
+    if (shops.some(s => s.id === id)) return alert('รหัส (ID) นี้มีในระบบแล้ว กรุณาใช้ชื่ออื่นครับ');
 
     shops.push({
-      id, name, contact: contact || '-', planKey,
+      id, bizType, name, contact: contact || '-', planKey,
       expireDate: planKey === 'lifetime' ? '9999-12-31' : addDaysToDate(new Date(), plan.days),
       isSuspended: false
     });
@@ -608,7 +648,7 @@
     document.getElementById('inp-id').value = '';
     document.getElementById('inp-name').value = '';
     document.getElementById('inp-contact').value = '';
-    showToast(`เพิ่มร้าน "${name}" (${plan.label}) เรียบร้อย!`);
+    showToast(`เพิ่ม "${name}" (${plan.label}) เรียบร้อย!`);
   }
 </script>
 </body>
