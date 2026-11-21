@@ -106,7 +106,6 @@
 </head>
 <body>
 
-<!-- หน้าล็อกอิน Firebase Auth -->
 <div class="auth-wrapper" id="authWrapper">
   <div class="auth-card">
     <div class="auth-logo">SH</div>
@@ -129,7 +128,6 @@
   </div>
 </div>
 
-<!-- หน้าบอร์ดหลัก -->
 <div class="container" id="mainDashboard" style="display: none;">
   <div class="header">
     <div class="brand-box">
@@ -145,7 +143,6 @@
     </div>
   </div>
 
-  <!-- สรุปภาพรวม -->
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-title">ร้านค้าในเครือทั้งหมด</div>
@@ -165,7 +162,6 @@
     </div>
   </div>
 
-  <!-- ตารางรายชื่อร้าน -->
   <div class="card">
     <div class="card-header">
       <h3 style="font-size: 1.05rem;">รายชื่อร้านค้าภายใต้ Sapsong HUB</h3>
@@ -190,7 +186,6 @@
   </div>
 </div>
 
-<!-- Modal เพิ่มร้านค้าใหม่ -->
 <div class="modal-overlay" id="addModal">
   <div class="modal">
     <h2>➕ เพิ่มร้านค้าใหม่เข้า Sapsong HUB</h2>
@@ -226,7 +221,6 @@
   </div>
 </div>
 
-<!-- Modal แก้ไขข้อมูล & ปรับลดวันหมดอายุ -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <h2>✏️ แก้ไขข้อมูลและวันหมดอายุ</h2>
@@ -269,7 +263,6 @@
   </div>
 </div>
 
-<!-- Modal ต่ออายุร้านค้า -->
 <div class="modal-overlay" id="renewModal">
   <div class="modal">
     <h2>🔄 ต่ออายุการใช้งานร้านค้า</h2>
@@ -391,7 +384,6 @@
         shops = defaultShops;
         saveShops();
       }
-      // ดึงโลโก้ของแต่ละร้านแบบ Real-time
       shops.forEach(s => {
         if (!logoListeners[s.id]) {
           logoListeners[s.id] = true;
