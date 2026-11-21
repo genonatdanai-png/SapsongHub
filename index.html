@@ -6,6 +6,7 @@
     <title>สั่งอาหารออนไลน์ - Sapsong HUB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -96,10 +97,14 @@
 
             <div id="menu-list" class="grid grid-cols-2 sm:grid-cols-2 gap-3"></div>
 
-            <!-- สรุปรายการสั่งซื้อล่าสุดของลูกค้า (เก็บในเครื่องลูกค้าเอง ปลอดภัยจากการแอบดูบิลคนอื่น) -->
-            <div id="my-order-box" class="hidden mt-6 bg-white p-4 sm:p-5 rounded-2xl shadow-md border-2 border-amber-400">
-                <h3 class="font-bold text-gray-800 mb-2 text-sm sm:text-base">🧾 รายการสั่งซื้อล่าสุดของคุณ</h3>
-                <div id="my-order-detail"></div>
+            <!-- ใบเสร็จออนไลน์ล่าสุดของลูกค้า (กดบันทึกรูปได้) -->
+            <div id="my-order-box" class="hidden mt-6 space-y-2">
+                <div id="customer-receipt-card" class="bg-white p-5 rounded-2xl shadow-md border-2 border-dashed border-amber-400">
+                    <div id="my-order-detail"></div>
+                </div>
+                <button onclick="saveCustomerReceiptImage()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2.5 rounded-xl text-sm font-bold shadow-sm transition active:scale-[0.99]">
+                    💾 บันทึกรูปใบเสร็จลงเครื่อง (PNG)
+                </button>
             </div>
         </div>
 
@@ -118,7 +123,7 @@
                 </select>
             </div>
 
-            <!-- กล่องเลือกโต๊ะ (แสดงเฉพาะร้านที่เปิดใช้ระบบโต๊ะ และเลือกรูปแบบ "ทานที่ร้าน") -->
+            <!-- กล่องเลือกโต๊ะ -->
             <div id="table-select-box" class="hidden">
                 <label class="block text-xs font-bold text-amber-800 mb-1">🍽️ เลือกโต๊ะที่นั่ง</label>
                 <select id="customer-table" onchange="updateOrderAvailability()" class="w-full px-3 py-2.5 border-2 border-amber-400 bg-amber-50/70 rounded-xl text-sm font-bold text-slate-800 outline-none"></select>
@@ -140,9 +145,15 @@
                 <p class="text-gray-400 text-center py-4 text-sm">ยังไม่มีสินค้าในตะกร้า</p>
             </div>
 
-            <div class="border-t pt-3 flex justify-between items-center text-base font-bold">
-                <span>ยอดรวมทั้งหมด:</span>
-                <span id="cart-total" class="text-amber-600 text-xl">0 บาท</span>
+            <div class="border-t pt-3 space-y-1.5">
+                <div id="delivery-fee-row" class="hidden flex justify-between items-center text-xs text-gray-600">
+                    <span>ค่าจัดส่ง:</span>
+                    <span id="cart-delivery-fee" class="font-bold text-slate-800">0 บาท</span>
+                </div>
+                <div class="flex justify-between items-center text-base font-bold">
+                    <span>ยอดรวมทั้งหมด:</span>
+                    <span id="cart-total" class="text-amber-600 text-xl">0 บาท</span>
+                </div>
             </div>
 
             <!-- กล่องชำระเงิน QR Code พร้อมเพย์ & แนบสลิป -->
@@ -196,6 +207,21 @@
         <span id="mobile-cart-total" class="font-bold text-base">0 บาท</span>
     </div>
 
+    <!-- Modal เลือกไซส์ / ตัวเลือกสินค้า -->
+    <div id="size-modal" onclick="closeSizeModal()" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center gap-3 border-b pb-3">
+                <img id="size-modal-img" src="" class="w-14 h-14 rounded-xl object-cover bg-amber-50 border">
+                <div class="flex-1">
+                    <h3 id="size-modal-title" class="font-bold text-slate-800 text-base">ชื่อสินค้า</h3>
+                    <p class="text-xs text-slate-500">กรุณาเลือกขนาด / ตัวเลือกที่ต้องการ</p>
+                </div>
+                <button onclick="closeSizeModal()" class="text-gray-400 hover:text-gray-700 text-2xl font-bold px-1">&times;</button>
+            </div>
+            <div id="size-modal-options" class="space-y-2 max-h-64 overflow-y-auto"></div>
+        </div>
+    </div>
+
     <script>
         // =========================================================================
         // 1. ตั้งค่า FIREBASE (เชื่อมต่อโปรเจกต์ sapsonghub)
@@ -227,24 +253,18 @@
         const defaultMenus = [
             { id: 1, name: 'ปังปิ้ง เนยนมน้ำตาล', price: 25, category: 'ขนมปังปิ้ง', image: placeholderToast, available: true },
             { id: 2, name: 'ปังปิ้ง สังขยาใบเตย', price: 30, category: 'ขนมปังปิ้ง', image: placeholderToast, available: true },
-            { id: 3, name: 'ปังปิ้ง ช็อกโกแลตอัลมอนด์', price: 35, category: 'ขนมปังปิ้ง', image: placeholderToast, available: true },
-            { id: 4, name: 'ชาไทยเย็น', price: 35, category: 'เครื่องดื่ม', image: placeholderDrink, available: true },
-            { id: 5, name: 'นมสดฮอกไกโดเย็น', price: 35, category: 'เครื่องดื่ม', image: placeholderDrink, available: true },
-            { id: 6, name: 'โกโก้ปั่นเข้มข้น', price: 45, category: 'เครื่องดื่ม', image: placeholderDrink, available: true }
+            { id: 3, name: 'ชาไทยเย็น', price: 35, category: 'เครื่องดื่ม', image: placeholderDrink, available: true }
         ];
         const defaultToppings = [
             { id: 101, name: 'เพิ่มชีส', price: 10, toppingGroup: 'หน้าขนมปัง', targetCategory: 'ขนมปังปิ้ง', available: true },
-            { id: 102, name: 'เพิ่มฝอยทอง', price: 10, toppingGroup: 'หน้าขนมปัง', targetCategory: 'ขนมปังปิ้ง', available: true },
-            { id: 103, name: 'เพิ่มกล้วยหอม', price: 10, toppingGroup: 'หน้าขนมปัง', targetCategory: 'ขนมปังปิ้ง', available: true },
-            { id: 104, name: 'เพิ่มไข่มุก', price: 5, toppingGroup: 'ท็อปปิ้งน้ำ', targetCategory: 'เครื่องดื่ม', available: true },
-            { id: 105, name: 'เพิ่มวิปครีม', price: 10, toppingGroup: 'ท็อปปิ้งพิเศษ', targetCategory: 'ALL', available: true }
+            { id: 104, name: 'เพิ่มไข่มุก', price: 5, toppingGroup: 'ท็อปปิ้งน้ำ', targetCategory: 'เครื่องดื่ม', available: true }
         ];
 
         let shopDisplayName = SHOP_ID === 'pangnawat' ? 'ปังหน้าวัด' : SHOP_ID;
         let categories = defaultCategories;
         let menus = defaultMenus;
         let toppings = defaultToppings;
-        let paymentConfig = { promptpayId: '0855750995', accountName: shopDisplayName };
+        let paymentConfig = { promptpayId: '0855750995', accountName: shopDisplayName, enableDelivery: true, deliveryFee: 0 };
         let isStoreOpen = true;
         let bannedIPs = [];
         let enableTables = false;
@@ -317,7 +337,7 @@
         }
 
         // =========================================================================
-        // 3. ดึงข้อมูลสาธารณะของร้านค้า (แยกดึงเฉพาะ Path ที่ Security Rules อนุญาต)
+        // 3. ดึงข้อมูลสาธารณะของร้านค้า
         // =========================================================================
         const shopBaseRef = db.ref(`shops_data/${SHOP_ID}`);
 
@@ -337,8 +357,15 @@
         });
 
         shopBaseRef.child('paymentConfig').on('value', snap => {
-            paymentConfig = snap.val() || { promptpayId: '0855750995', accountName: shopDisplayName };
-            updatePaymentQR();
+            const cfg = snap.val() || {};
+            paymentConfig = {
+                promptpayId: cfg.promptpayId || '0855750995',
+                accountName: cfg.accountName || shopDisplayName,
+                enableDelivery: cfg.enableDelivery !== undefined ? cfg.enableDelivery : true,
+                deliveryFee: Number(cfg.deliveryFee) || 0
+            };
+            renderTableOptions();
+            renderCart();
         });
 
         shopBaseRef.child('isStoreOpen').on('value', snap => {
@@ -376,10 +403,11 @@
             if (enableTables && shopTables.length > 0) {
                 optionsHTML += `<option value="dinein">🍽️ ทานที่ร้าน (ระบุโต๊ะ)</option>`;
             }
-            optionsHTML += `
-                <option value="takeaway">🛍️ รับหน้าร้าน (จ่ายหน้าร้าน)</option>
-                <option value="delivery">🛵 ขับรถไปส่ง (โอนจ่ายก่อน)</option>
-            `;
+            optionsHTML += `<option value="takeaway">🛍️ รับหน้าร้าน (จ่ายหน้าร้าน)</option>`;
+            if (paymentConfig.enableDelivery !== false) {
+                const feeTxt = paymentConfig.deliveryFee > 0 ? ` +ค่าส่ง ${paymentConfig.deliveryFee}บ.` : '';
+                optionsHTML += `<option value="delivery">🛵 ขับรถไปส่ง (โอนจ่ายก่อน${feeTxt})</option>`;
+            }
             orderTypeSelect.innerHTML = optionsHTML;
 
             if (enableTables && SCANNED_TABLE_ID && !tableAutoSelected) {
@@ -430,7 +458,7 @@
             }
 
             updateOrderAvailability();
-            updatePaymentQR();
+            renderCart();
         }
 
         function isCurrentTableBlocked() {
@@ -439,9 +467,7 @@
             const selectedId = document.getElementById('customer-table').value || SCANNED_TABLE_ID;
             if (type === 'dinein' || SCANNED_TABLE_ID) {
                 const targetTable = shopTables.find(t => t.id === selectedId);
-                if (targetTable && !targetTable.isOpen) {
-                    return targetTable;
-                }
+                if (targetTable && !targetTable.isOpen) return targetTable;
             }
             return false;
         }
@@ -524,8 +550,14 @@
             return payload + crc16(payload);
         }
 
+        function getActiveDeliveryFee() {
+            const orderType = document.getElementById('order-type').value;
+            return (orderType === 'delivery' && cart.length > 0) ? (Number(paymentConfig.deliveryFee) || 0) : 0;
+        }
+
         function calculateCartTotal() {
-            return cart.reduce((sum, item) => sum + ((item.price + (item.selectedToppings || []).reduce((tSum, t) => tSum + t.price, 0)) * item.qty), 0);
+            const itemsTotal = cart.reduce((sum, item) => sum + ((item.price + (item.selectedToppings || []).reduce((tSum, t) => tSum + t.price, 0)) * item.qty), 0);
+            return itemsTotal + getActiveDeliveryFee();
         }
 
         function updatePaymentQR() {
@@ -591,7 +623,7 @@
         }
 
         // =========================================================================
-        // 5. ตรวจสอบ IP & ส่งออเดอร์แบบ SECURE PUSH
+        // 5. ตรวจสอบ IP, เลือกไซส์, ตะกร้า และใบเสร็จออนไลน์
         // =========================================================================
         async function fetchClientIP() {
             try {
@@ -645,34 +677,82 @@
             }
 
             const blocked = !isStoreOpen || Boolean(isCurrentTableBlocked());
-            menuList.innerHTML = availableMenus.map(m => `
+            menuList.innerHTML = availableMenus.map(m => {
+                const hasSizes = Array.isArray(m.sizes) && m.sizes.length > 0;
+                const minPrice = hasSizes ? Math.min(...m.sizes.map(s => Number(s.price))) : m.price;
+                const priceLabel = hasSizes ? `เริ่มต้น ${minPrice} บ.` : `${m.price} บ.`;
+                const btnLabel = hasSizes ? '+ เลือกขนาด/ตัวเลือก' : '+ เพิ่มลงตะกร้า';
+
+                return `
                 <div class="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between border border-amber-100 ${blocked ? 'opacity-60' : ''}">
                     <div>
                         <div class="relative w-full h-32 sm:h-40 bg-amber-100 overflow-hidden">
                             <img src="${m.image || placeholderToast}" alt="${m.name}" class="w-full h-full object-cover">
                             ${m.category ? `<span class="absolute top-2 left-2 bg-black/60 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 rounded-full">${m.category}</span>` : ''}
+                            ${hasSizes ? `<span class="absolute bottom-2 right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">มี ${m.sizes.length} ขนาด</span>` : ''}
                         </div>
                         <div class="p-3">
                             <h3 class="font-semibold text-gray-800 text-sm line-clamp-2">${m.name}</h3>
-                            <p class="text-amber-600 font-bold text-base mt-1">${m.price} บ.</p>
+                            <p class="text-amber-600 font-bold text-base mt-1">${priceLabel}</p>
                         </div>
                     </div>
                     <div class="px-3 pb-3">
                         ${!blocked 
-                            ? `<button onclick="addToCart(${m.id})" class="w-full bg-amber-100 text-amber-800 py-2 rounded-xl text-sm font-bold hover:bg-amber-600 hover:text-white active:scale-95 transition">+ เพิ่มลงตะกร้า</button>`
+                            ? `<button onclick="handleMenuClick(${m.id})" class="w-full bg-amber-100 text-amber-800 py-2 rounded-xl text-xs sm:text-sm font-bold hover:bg-amber-600 hover:text-white active:scale-95 transition">${btnLabel}</button>`
                             : `<button disabled class="w-full bg-gray-200 text-gray-400 py-2 rounded-xl text-xs font-semibold cursor-not-allowed">ปิดรับออเดอร์</button>`
                         }
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
-        function addToCart(id) {
+        function handleMenuClick(id) {
             if (!isStoreOpen) return alert('ขณะนี้ร้านปิดรับออเดอร์ครับ');
             if (isCurrentTableBlocked()) return alert('โต๊ะนี้ปิดรับออเดอร์ชั่วคราว กรุณาติดต่อพนักงานครับ');
             const menu = menus.find(m => m.id === id);
             if (!menu) return;
-            cart.push({ id: menu.id, name: menu.name, price: menu.price, category: menu.category || 'ทั่วไป', image: menu.image || placeholderToast, qty: 1, selectedToppings: [], note: '' });
+
+            if (Array.isArray(menu.sizes) && menu.sizes.length > 0) {
+                openSizeModal(menu);
+            } else {
+                addToCartDirect(menu, '', menu.price);
+            }
+        }
+
+        function openSizeModal(menu) {
+            document.getElementById('size-modal-img').src = menu.image || placeholderToast;
+            document.getElementById('size-modal-title').innerText = menu.name;
+            document.getElementById('size-modal-options').innerHTML = menu.sizes.map((s, idx) => `
+                <button onclick="selectMenuSize(${menu.id}, ${idx})" class="w-full flex justify-between items-center p-3.5 border-2 border-amber-200 hover:border-amber-500 hover:bg-amber-50 rounded-2xl transition active:scale-[0.98]">
+                    <span class="font-bold text-slate-800 text-sm">${s.name}</span>
+                    <span class="font-bold text-amber-600 text-base">${s.price} บ.</span>
+                </button>
+            `).join('');
+            document.getElementById('size-modal').classList.remove('hidden');
+        }
+
+        function closeSizeModal() { document.getElementById('size-modal').classList.add('hidden'); }
+
+        function selectMenuSize(menuId, sizeIdx) {
+            const menu = menus.find(m => m.id === menuId);
+            if (!menu || !menu.sizes || !menu.sizes[sizeIdx]) return;
+            const s = menu.sizes[sizeIdx];
+            addToCartDirect(menu, s.name, Number(s.price));
+            closeSizeModal();
+        }
+
+        function addToCartDirect(menu, sizeName, unitPrice) {
+            cart.push({
+                id: menu.id,
+                name: menu.name,
+                sizeName: sizeName || '',
+                price: Number(unitPrice),
+                category: menu.category || 'ทั่วไป',
+                image: menu.image || placeholderToast,
+                qty: 1,
+                selectedToppings: [],
+                note: ''
+            });
             renderCart();
         }
 
@@ -692,12 +772,21 @@
         function renderCart() {
             const cartItems = document.getElementById('cart-items');
             const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+            const deliveryFee = getActiveDeliveryFee();
             const total = calculateCartTotal();
 
             document.getElementById('cart-count-badge').innerText = `${totalQty} รายการ`;
             document.getElementById('mobile-cart-qty').innerText = totalQty;
             document.getElementById('cart-total').innerText = `${total} บาท`;
             document.getElementById('mobile-cart-total').innerText = `${total} บาท`;
+
+            const feeRow = document.getElementById('delivery-fee-row');
+            if (deliveryFee > 0) {
+                feeRow.classList.remove('hidden');
+                document.getElementById('cart-delivery-fee').innerText = `+${deliveryFee} บาท`;
+            } else {
+                feeRow.classList.add('hidden');
+            }
 
             if (cart.length === 0) {
                 cartItems.innerHTML = `<p class="text-gray-400 text-center py-4 text-sm">ยังไม่มีสินค้าในตะกร้า</p>`;
@@ -726,9 +815,9 @@
                             <div class="flex items-center gap-2.5 overflow-hidden">
                                 <img src="${item.image}" class="w-10 h-10 rounded-lg object-cover shrink-0 bg-amber-50">
                                 <div class="truncate">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-semibold">${itemCategory}</span>
+                                    <div class="flex items-center gap-1 flex-wrap">
                                         <p class="font-bold text-gray-800 truncate">${item.name}</p>
+                                        ${item.sizeName ? `<span class="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">${item.sizeName}</span>` : ''}
                                     </div>
                                     <p class="text-xs text-gray-500">${unitPriceWithToppings} บ. x ${item.qty} = <span class="text-amber-700 font-bold">${unitPriceWithToppings * item.qty} บ.</span></p>
                                 </div>
@@ -799,40 +888,53 @@
 
             const now = new Date();
             const localDate = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            const deliveryFee = getActiveDeliveryFee();
 
-            let orderGrandTotal = 0;
+            let itemsTotal = 0;
             const formattedItems = cart.map(c => {
                 const toppingsPrice = (c.selectedToppings || []).reduce((sum, t) => sum + t.price, 0);
                 const unitTotal = c.price + toppingsPrice;
-                orderGrandTotal += unitTotal * c.qty;
+                itemsTotal += unitTotal * c.qty;
                 return {
-                    id: c.id, name: c.name, category: c.category || 'ทั่วไป',
-                    basePrice: c.price, price: unitTotal, qty: c.qty,
-                    toppings: c.selectedToppings || [], note: (c.note || '').trim()
+                    id: c.id,
+                    name: c.sizeName ? `${c.name} (${c.sizeName})` : c.name,
+                    sizeName: c.sizeName || '',
+                    category: c.category || 'ทั่วไป',
+                    basePrice: c.price,
+                    price: unitTotal,
+                    qty: c.qty,
+                    toppings: c.selectedToppings || [],
+                    note: (c.note || '').trim()
                 };
             });
 
             const newOrder = {
                 id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
-                customerName: name, customerIP: clientIP, orderType: orderType,
-                tableName: tableName, address: address,
+                shopName: shopDisplayName,
+                customerName: name,
+                customerIP: clientIP,
+                orderType: orderType,
+                tableName: tableName,
+                address: address,
+                deliveryFee: deliveryFee,
                 paymentMethod: orderType === 'delivery' ? 'transfer' : 'cash',
                 slipImage: orderType === 'delivery' ? uploadedSlipBase64 : '',
-                items: formattedItems, total: orderGrandTotal, status: 'pending',
+                items: formattedItems,
+                total: itemsTotal + deliveryFee,
+                status: 'pending',
                 time: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
                 date: localDate,
                 createdAt: Date.now()
             };
 
-            // ส่งออเดอร์ขึ้น Firebase ด้วย .push() (เขียนอย่างเดียว ปลอดภัยตาม Security Rules)
             shopBaseRef.child('orders').push(newOrder)
                 .then(() => {
-                    // บันทึกสำเนาออเดอร์ล่าสุดไว้ในเครื่องลูกค้าเพื่อแสดงผล
                     localStorage.setItem('my_last_order_data_' + SHOP_ID, JSON.stringify(newOrder));
                     cart = [];
                     clearSlip();
                     renderCart();
                     renderLastSavedOrder();
+                    document.getElementById('my-order-box').scrollIntoView({ behavior: 'smooth' });
                     alert(`สั่งซื้อสำเร็จ! ร้าน${shopDisplayName}ได้รับออเดอร์เรียบร้อยแล้วครับ`);
                 })
                 .catch(err => {
@@ -846,28 +948,59 @@
             const detail = document.getElementById('my-order-detail');
             if (!raw) { box.classList.add('hidden'); return; }
 
-            const myOrder = JSON.parse(raw);
+            const o = JSON.parse(raw);
             box.classList.remove('hidden');
 
+            const typeTxt = o.orderType === 'delivery' ? '🛵 จัดส่งถึงที่' : (o.orderType === 'dinein' ? `🍽️ ${o.tableName}` : '🛍️ รับหน้าร้าน');
+
             detail.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
-                    <div>
-                        <span class="font-bold text-amber-600">${myOrder.id}</span>
-                        ${myOrder.tableName ? `<span class="ml-1.5 text-xs bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-bold">🍽️ ${myOrder.tableName}</span>` : ''}
-                    </div>
-                    <span class="px-3 py-1 rounded-full text-xs font-bold text-emerald-700 bg-emerald-100">ส่งออเดอร์สำเร็จ (${myOrder.time})</span>
+                <div class="text-center border-b border-dashed border-gray-300 pb-3 mb-3">
+                    <h4 class="font-bold text-lg text-slate-800">${o.shopName || shopDisplayName}</h4>
+                    <p class="text-xs text-gray-500">ใบเสร็จรับเงินออนไลน์ (E-Receipt)</p>
+                    <p class="text-xs font-mono font-bold text-amber-700 mt-1">${o.id} • ${o.date} ${o.time}</p>
                 </div>
-                <div class="text-xs text-gray-600 mb-2 space-y-1">
-                    ${myOrder.items.map(i => {
-                        const topTxt = (i.toppings && i.toppings.length > 0) ? ` [+${i.toppings.map(t => t.name).join(', ')}]` : '';
-                        return `<div>• ${i.name}${topTxt} x${i.qty} ${i.note ? `<span class="text-amber-700 font-semibold">(${i.note})</span>` : ''}</div>`;
+                <div class="text-xs text-gray-700 space-y-1 mb-3">
+                    <div class="flex justify-between"><span>ลูกค้า:</span><span class="font-semibold">${o.customerName}</span></div>
+                    <div class="flex justify-between"><span>ประเภท:</span><span class="font-semibold">${typeTxt}</span></div>
+                    ${o.address ? `<div class="text-gray-500">ที่อยู่: ${o.address}</div>` : ''}
+                </div>
+                <div class="border-t border-b border-dashed border-gray-300 py-2.5 my-2 space-y-2 text-xs">
+                    ${o.items.map(i => {
+                        const topTxt = (i.toppings && i.toppings.length > 0) ? `<div class="text-[11px] text-gray-500 pl-3">+ ${i.toppings.map(t => t.name).join(', ')}</div>` : '';
+                        const noteTxt = i.note ? `<div class="text-[11px] text-amber-700 pl-3">* ${i.note}</div>` : '';
+                        return `
+                            <div>
+                                <div class="flex justify-between font-semibold text-slate-800">
+                                    <span>${i.name} x${i.qty}</span>
+                                    <span>${i.price * i.qty} บ.</span>
+                                </div>
+                                ${topTxt}${noteTxt}
+                            </div>
+                        `;
                     }).join('')}
+                    ${o.deliveryFee > 0 ? `<div class="flex justify-between text-gray-600 pt-1"><span>ค่าจัดส่ง</span><span>${o.deliveryFee} บ.</span></div>` : ''}
                 </div>
-                <div class="flex justify-between items-center text-sm font-bold text-gray-800">
-                    <span>ยอดชำระ: ${myOrder.total} บาท</span>
-                    ${myOrder.paymentMethod === 'transfer' ? '<span class="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">แนบสลิปโอนแล้ว</span>' : '<span class="text-xs text-gray-500">ชำระเงินที่ร้าน</span>'}
+                <div class="flex justify-between items-center text-base font-bold text-slate-900 pt-1">
+                    <span>ยอดสุทธิ</span>
+                    <span class="text-amber-600">${o.total} บาท</span>
+                </div>
+                <div class="text-center text-[11px] text-gray-400 mt-3 pt-2 border-t border-dashed">
+                    ${o.paymentMethod === 'transfer' ? '✅ แนบสลิปโอนเงินแล้ว' : '💵 ชำระเงินที่ร้าน'} • ขอบคุณที่อุดหนุนครับ
                 </div>
             `;
+        }
+
+        function saveCustomerReceiptImage() {
+            const card = document.getElementById('customer-receipt-card');
+            if (!card) return;
+            html2canvas(card, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                const raw = localStorage.getItem('my_last_order_data_' + SHOP_ID);
+                const orderId = raw ? JSON.parse(raw).id : 'receipt';
+                const link = document.createElement('a');
+                link.download = `Receipt-${orderId}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
         }
     </script>
 </body>
