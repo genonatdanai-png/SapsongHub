@@ -30,7 +30,7 @@
     /* Login Screen */
     .auth-wrapper { position: fixed; inset: 0; background: linear-gradient(135deg, #0f172a, #1e3a8a); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 16px; }
     .auth-card { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 32px 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: center; }
-    .auth-logo { width: 64px; height: 64px; border-radius: 16px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.5rem; margin: 0 auto 16px; }
+    .auth-logo { width: 64px; height: 64px; border-radius: 16px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.5rem; margin: 0 auto 16px; overflow: hidden; }
     .auth-title { font-size: 1.4rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
     .auth-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
     .auth-error { color: var(--danger); font-size: 0.85rem; margin-top: 12px; min-height: 20px; font-weight: 500; }
@@ -38,10 +38,15 @@
     /* Brand Header */
     .header { background: var(--card); padding: 18px 24px; border-radius: 14px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
     .brand-box { display: flex; align-items: center; gap: 14px; }
-    .brand-logo { width: 52px; height: 52px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.3rem; flex-shrink: 0; }
+    .brand-logo { width: 52px; height: 52px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.3rem; flex-shrink: 0; overflow: hidden; }
     .brand-title h1 { font-size: 1.45rem; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
     .brand-title p { font-size: 0.85rem; color: var(--muted); }
     .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* Shop Row Logo */
+    .shop-cell { display: flex; align-items: center; gap: 10px; }
+    .shop-avatar { width: 40px; height: 40px; border-radius: 10px; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem; flex-shrink: 0; overflow: hidden; border: 1px solid var(--border); }
+    .shop-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
     /* Buttons */
     .btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
@@ -171,7 +176,7 @@
         <thead>
           <tr>
             <th>รหัสร้าน (Shop ID)</th>
-            <th>ชื่อร้าน / เจ้าของ</th>
+            <th>ร้านค้า / เจ้าของ</th>
             <th>แพ็กเกจล่าสุด</th>
             <th>วันหมดอายุ</th>
             <th>สถานะ</th>
@@ -318,6 +323,8 @@
   const db = firebase.database();
 
   const SUPER_ADMIN_EMAIL = 'admingeno@ss.com';
+  let shopLogos = {};
+  let logoListeners = {};
 
   auth.onAuthStateChanged((user) => {
     if (user && user.email.toLowerCase() === SUPER_ADMIN_EMAIL) {
@@ -347,7 +354,7 @@
     err.innerText = '';
 
     auth.signInWithEmailAndPassword(email, pass)
-      .catch((error) => {
+      .catch(() => {
         err.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
       })
       .finally(() => {
@@ -356,9 +363,7 @@
       });
   }
 
-  function secureLogout() {
-    auth.signOut();
-  }
+  function secureLogout() { auth.signOut(); }
 
   const PLANS = {
     '1m': { label: '1 เดือน (500 ฿)', days: 30, price: 500, monthlyAvg: 500 },
@@ -386,6 +391,16 @@
         shops = defaultShops;
         saveShops();
       }
+      // ดึงโลโก้ของแต่ละร้านแบบ Real-time
+      shops.forEach(s => {
+        if (!logoListeners[s.id]) {
+          logoListeners[s.id] = true;
+          db.ref(`shops_data/${s.id}/paymentConfig/shopLogo`).on('value', snap => {
+            shopLogos[s.id] = snap.val() || '';
+            renderTable();
+          });
+        }
+      });
       renderTable();
     });
   }
@@ -450,13 +465,22 @@
 
       const orderUrl = `${baseDir}/index.html?shop=${shop.id}`;
       const adminUrl = `${baseDir}/admin.html?shop=${shop.id}`;
+      const logoImg = shopLogos[shop.id];
+      const avatarHTML = logoImg
+        ? `<img src="${logoImg}" alt="${shop.name}">`
+        : shop.name.substring(0, 2).toUpperCase();
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><strong>${shop.id}</strong></td>
         <td>
-          <div style="font-weight:600;">${shop.name}</div>
-          <div style="font-size:0.8rem; color:var(--muted);">${shop.contact}</div>
+          <div class="shop-cell">
+            <div class="shop-avatar">${avatarHTML}</div>
+            <div>
+              <div style="font-weight:600;">${shop.name}</div>
+              <div style="font-size:0.8rem; color:var(--muted);">${shop.contact}</div>
+            </div>
+          </div>
         </td>
         <td>${plan.label}</td>
         <td>${isLifetime ? '<span style="color:var(--purple); font-weight:500;">ไม่มีวันหมดอายุ</span>' : shop.expireDate}</td>
