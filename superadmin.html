@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sapsong HUB - ระบบควบคุมร้านค้าเช่า</title>
+  <title>Sapsong HUB - ระบบควบคุมร้านค้าเช่า (Secure)</title>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Firebase SDK -->
+  <!-- Firebase SDK (App + Auth + Database) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
     :root {
@@ -32,12 +33,7 @@
     .auth-logo { width: 64px; height: 64px; border-radius: 16px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.5rem; margin: 0 auto 16px; }
     .auth-title { font-size: 1.4rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
     .auth-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
-    .pin-input { text-align: center; font-size: 1.5rem; letter-spacing: 8px; font-weight: 700; }
-    .step-dots { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; transition: 0.2s; }
-    .dot.active { background: var(--primary); width: 24px; border-radius: 6px; }
-    .auth-error { color: var(--danger); font-size: 0.85rem; margin-top: 10px; min-height: 20px; font-weight: 500; }
-    .switch-user-link { display: inline-block; margin-top: 16px; font-size: 0.8rem; color: var(--muted); text-decoration: underline; cursor: pointer; }
+    .auth-error { color: var(--danger); font-size: 0.85rem; margin-top: 12px; min-height: 20px; font-weight: 500; }
 
     /* Brand Header */
     .header { background: var(--card); padding: 18px 24px; border-radius: 14px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
@@ -100,57 +96,31 @@
     .plan-btn strong { display: block; font-size: 0.95rem; color: var(--text); }
     .plan-btn span { font-size: 0.8rem; color: var(--primary); font-weight: 600; }
 
-    /* Toast */
     .toast { position: fixed; bottom: 20px; right: 20px; background: #0f172a; color: white; padding: 12px 20px; border-radius: 8px; font-size: 0.9rem; display: none; z-index: 2000; }
   </style>
 </head>
 <body>
 
-<!-- หน้าล็อกอิน / ปลดล็อกหน้าจอ -->
+<!-- หน้าล็อกอิน Firebase Auth -->
 <div class="auth-wrapper" id="authWrapper">
   <div class="auth-card">
     <div class="auth-logo">SH</div>
     <div class="auth-title">Sapsong HUB</div>
-    <div class="auth-sub" id="authStepText">ยืนยันตัวตนผู้ดูแลระบบ (ขั้นที่ 1/3)</div>
-    
-    <div class="step-dots" id="stepDots">
-      <div class="dot active" id="dot-1"></div>
-      <div class="dot" id="dot-2"></div>
-      <div class="dot" id="dot-3"></div>
-    </div>
+    <div class="auth-sub">เข้าสู่ระบบผู้ดูแลหลัก (Super Admin)</div>
 
-    <div id="step-1">
+    <form onsubmit="handleSecureLogin(event)">
       <div class="form-group">
-        <label>รหัสผู้ใช้งาน (Admin ID)</label>
-        <input type="text" id="auth-id" autocomplete="off">
+        <label>อีเมลผู้ดูแลระบบ</label>
+        <input type="email" id="auth-email" required placeholder="admingeno@ss.com">
       </div>
       <div class="form-group">
-        <label>รหัสผ่าน (Password)</label>
-        <input type="password" id="auth-pass" onkeyup="if(event.key==='Enter') verifyStep1()">
+        <label>รหัสผ่าน</label>
+        <input type="password" id="auth-pass" required placeholder="••••••••">
       </div>
-      <button class="btn btn-primary" style="width: 100%; margin-top: 8px;" onclick="verifyStep1()">ถัดไป</button>
-    </div>
-
-    <div id="step-2" style="display: none;">
-      <div class="form-group">
-        <label style="text-align: center;">กรอกรหัส PIN ชั้นที่ 1</label>
-        <input type="password" inputmode="numeric" maxlength="4" class="pin-input" id="auth-pin1" onkeyup="if(event.key==='Enter') verifyStep2()">
-      </div>
-      <button class="btn btn-primary" style="width: 100%; margin-top: 8px;" onclick="verifyStep2()">ยืนยัน PIN ชั้นที่ 1</button>
-    </div>
-
-    <div id="step-3" style="display: none;">
-      <div class="form-group">
-        <label style="text-align: center;">กรอกรหัส PIN ชั้นที่ 2</label>
-        <input type="password" inputmode="numeric" maxlength="4" class="pin-input" id="auth-pin2" onkeyup="if(event.key==='Enter') verifyStep3()">
-      </div>
-      <button class="btn btn-primary" style="width: 100%; margin-top: 8px;" onclick="verifyStep3()">เข้าสู่ระบบ</button>
-    </div>
+      <button type="submit" id="btn-login" class="btn btn-primary" style="width: 100%; margin-top: 8px;">เข้าสู่ระบบอย่างปลอดภัย</button>
+    </form>
 
     <div class="auth-error" id="authError"></div>
-    <div id="switchAccountBox" style="display: none;">
-      <span class="switch-user-link" onclick="fullLogout()">สลับบัญชี / ล้างการจดจำเครื่องนี้</span>
-    </div>
   </div>
 </div>
 
@@ -161,13 +131,12 @@
       <div class="brand-logo">SH</div>
       <div class="brand-title">
         <h1>Sapsong HUB</h1>
-        <p>ระบบบริหารจัดการร้านค้าเช่า & ควบคุมสิทธิ์การใช้งาน (Super Admin)</p>
+        <p id="loggedAdminEmail" style="font-size: 0.8rem; color: var(--success); font-weight: 600;">กำลังตรวจสอบสิทธิ์...</p>
       </div>
     </div>
     <div class="header-actions">
       <button class="btn btn-primary" onclick="openAddModal()">+ เพิ่มร้านค้าใหม่</button>
-      <button class="btn btn-outline" onclick="lockScreen()">🔒 ล็อกหน้าจอ</button>
-      <button class="btn btn-danger" onclick="fullLogout()">🚪 ออกจากระบบ</button>
+      <button class="btn btn-danger" onclick="secureLogout()">🚪 ออกจากระบบ</button>
     </div>
   </div>
 
@@ -220,6 +189,9 @@
 <div class="modal-overlay" id="addModal">
   <div class="modal">
     <h2>➕ เพิ่มร้านค้าใหม่เข้า Sapsong HUB</h2>
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 12px; border-radius: 8px; font-size: 0.78rem; color: #1e40af; margin-bottom: 14px;">
+      💡 <strong>หมายเหตุความปลอดภัย:</strong> หลังสร้างร้านที่นี่แล้ว อย่าลืมไปกด <em>Add user</em> ใน Firebase Authentication โดยตั้งอีเมลเป็น <strong>[Shop ID]@ss.com</strong> เพื่อให้เจ้าของร้านล็อกอินหลังบ้านได้ครับ
+    </div>
     <div class="form-group">
       <label>รหัสร้าน (Shop ID - ภาษาอังกฤษห้ามเว้นวรรค)</label>
       <input type="text" id="inp-id" placeholder="เช่น pangnawat">
@@ -328,144 +300,66 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  // =========================================================================
-  // 1. ตั้งค่า FIREBASE (เชื่อมต่อโปรเจกต์ pang-862d0 เรียบร้อยแล้ว)
-  // =========================================================================
   const firebaseConfig = {
-    apiKey: "AIzaSyDhLoPg926qn_6G5DlyY6VhLJPKkcDc548",
-    authDomain: "pang-862d0.firebaseapp.com",
-    databaseURL: "https://pang-862d0-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "pang-862d0",
-    storageBucket: "pang-862d0.firebasestorage.app",
-    messagingSenderId: "416519193519",
-    appId: "1:416519193519:web:6053fd2420b95d735a655a",
-    measurementId: "G-57CPF0GJRH"
+    apiKey: "AIzaSyAhtvwqgAP-5-ITl1TIopqIWEFrZ2deQtg",
+    authDomain: "sapsonghub.firebaseapp.com",
+    databaseURL: "https://sapsonghub-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "sapsonghub",
+    storageBucket: "sapsonghub.firebasestorage.app",
+    messagingSenderId: "448301529212",
+    appId: "1:448301529212:web:7366898a663dcbd556f1f9",
+    measurementId: "G-0SPWW0K3WD"
   };
 
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
   }
+  const auth = firebase.auth();
   const db = firebase.database();
 
-  // =========================================================================
-  // 2. ระบบตรวจสอบสิทธิ์ 3 ชั้น & ล็อกหน้าจอ PIN 2 ชั้น
-  // =========================================================================
-  const AUTH_CONFIG = { id: 'sapsong', pass: 'geno3006', pin1: '6968', pin2: '3006' };
+  const SUPER_ADMIN_EMAIL = 'admingeno@ss.com';
 
-  function initAuth() {
-    const isLoggedIn = localStorage.getItem('sapsong_hub_logged_in') === 'true';
-    const isLocked = localStorage.getItem('sapsong_hub_locked') === 'true';
+  auth.onAuthStateChanged((user) => {
+    if (user && user.email.toLowerCase() === SUPER_ADMIN_EMAIL) {
+      document.getElementById('authWrapper').style.display = 'none';
+      document.getElementById('mainDashboard').style.display = 'block';
+      document.getElementById('loggedAdminEmail').innerText = `🛡️ ยืนยันสิทธิ์แล้ว: ${user.email}`;
+      loadShops();
+    } else {
+      if (user) {
+        auth.signOut();
+        document.getElementById('authError').innerText = 'บัญชีนี้ไม่มีสิทธิ์เข้าถึง Sapsong HUB';
+      }
+      document.getElementById('authWrapper').style.display = 'flex';
+      document.getElementById('mainDashboard').style.display = 'none';
+    }
+  });
 
-    if (isLoggedIn && !isLocked) showDashboard();
-    else if (isLoggedIn && isLocked) showPinOnlyMode();
-    else showFullLoginMode();
-  }
-
-  function showDashboard() {
-    document.getElementById('authWrapper').style.display = 'none';
-    document.getElementById('mainDashboard').style.display = 'block';
-    renderTable();
-  }
-
-  function showFullLoginMode() {
-    document.getElementById('authWrapper').style.display = 'flex';
-    document.getElementById('mainDashboard').style.display = 'none';
-    document.getElementById('step-1').style.display = 'block';
-    document.getElementById('step-2').style.display = 'none';
-    document.getElementById('step-3').style.display = 'none';
-    document.getElementById('switchAccountBox').style.display = 'none';
-    document.getElementById('dot-1').style.display = 'block';
-    document.getElementById('dot-1').className = 'dot active';
-    document.getElementById('dot-2').className = 'dot';
-    document.getElementById('dot-3').className = 'dot';
-    document.getElementById('authStepText').innerText = 'ยืนยันตัวตนผู้ดูแลระบบ (ขั้นที่ 1/3)';
-  }
-
-  function showPinOnlyMode() {
-    document.getElementById('authWrapper').style.display = 'flex';
-    document.getElementById('mainDashboard').style.display = 'none';
-    document.getElementById('step-1').style.display = 'none';
-    document.getElementById('step-2').style.display = 'block';
-    document.getElementById('step-3').style.display = 'none';
-    document.getElementById('switchAccountBox').style.display = 'block';
-    document.getElementById('dot-1').style.display = 'none';
-    document.getElementById('dot-2').className = 'dot active';
-    document.getElementById('dot-3').className = 'dot';
-    document.getElementById('authStepText').innerText = 'ปลดล็อกหน้าจอ (PIN ชั้นที่ 1/2)';
-    document.getElementById('auth-pin1').value = '';
-    document.getElementById('auth-pin2').value = '';
-    setTimeout(() => document.getElementById('auth-pin1').focus(), 100);
-  }
-
-  function verifyStep1() {
-    const id = document.getElementById('auth-id').value.trim();
+  function handleSecureLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('auth-email').value.trim();
     const pass = document.getElementById('auth-pass').value;
+    const btn = document.getElementById('btn-login');
     const err = document.getElementById('authError');
-    if (id === AUTH_CONFIG.id && pass === AUTH_CONFIG.pass) {
-      err.innerText = '';
-      document.getElementById('step-1').style.display = 'none';
-      document.getElementById('step-2').style.display = 'block';
-      document.getElementById('dot-1').classList.remove('active');
-      document.getElementById('dot-2').classList.add('active');
-      document.getElementById('authStepText').innerText = 'ยืนยันตัวตนผู้ดูแลระบบ (ขั้นที่ 2/3)';
-      document.getElementById('auth-pin1').focus();
-    } else {
-      err.innerText = 'ID หรือ รหัสผ่าน ไม่ถูกต้อง';
-    }
+
+    btn.disabled = true;
+    btn.innerText = 'กำลังตรวจสอบ...';
+    err.innerText = '';
+
+    auth.signInWithEmailAndPassword(email, pass)
+      .catch((error) => {
+        err.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerText = 'เข้าสู่ระบบอย่างปลอดภัย';
+      });
   }
 
-  function verifyStep2() {
-    const pin1 = document.getElementById('auth-pin1').value.trim();
-    const err = document.getElementById('authError');
-    const isLockedMode = localStorage.getItem('sapsong_hub_locked') === 'true';
-    if (pin1 === AUTH_CONFIG.pin1) {
-      err.innerText = '';
-      document.getElementById('step-2').style.display = 'none';
-      document.getElementById('step-3').style.display = 'block';
-      document.getElementById('dot-2').classList.remove('active');
-      document.getElementById('dot-3').classList.add('active');
-      document.getElementById('authStepText').innerText = isLockedMode ? 'ปลดล็อกหน้าจอ (PIN ชั้นที่ 2/2)' : 'ยืนยันตัวตนผู้ดูแลระบบ (ขั้นที่ 3/3)';
-      document.getElementById('auth-pin2').focus();
-    } else {
-      err.innerText = 'รหัส PIN ชั้นที่ 1 ไม่ถูกต้อง';
-      document.getElementById('auth-pin1').value = '';
-    }
+  function secureLogout() {
+    auth.signOut();
   }
 
-  function verifyStep3() {
-    const pin2 = document.getElementById('auth-pin2').value.trim();
-    const err = document.getElementById('authError');
-    if (pin2 === AUTH_CONFIG.pin2) {
-      err.innerText = '';
-      localStorage.setItem('sapsong_hub_logged_in', 'true');
-      localStorage.setItem('sapsong_hub_locked', 'false');
-      showDashboard();
-    } else {
-      err.innerText = 'รหัส PIN ชั้นที่ 2 ไม่ถูกต้อง';
-      document.getElementById('auth-pin2').value = '';
-    }
-  }
-
-  function lockScreen() {
-    localStorage.setItem('sapsong_hub_locked', 'true');
-    document.getElementById('authError').innerText = '';
-    showPinOnlyMode();
-  }
-
-  function fullLogout() {
-    localStorage.removeItem('sapsong_hub_logged_in');
-    localStorage.removeItem('sapsong_hub_locked');
-    document.getElementById('auth-id').value = '';
-    document.getElementById('auth-pass').value = '';
-    document.getElementById('auth-pin1').value = '';
-    document.getElementById('auth-pin2').value = '';
-    document.getElementById('authError').innerText = '';
-    showFullLoginMode();
-  }
-
-  // =========================================================================
-  // 3. ระบบจัดการร้านค้า & ซิงค์กับ FIREBASE REALTIME DATABASE
-  // =========================================================================
   const PLANS = {
     '1m': { label: '1 เดือน (500 ฿)', days: 30, price: 500, monthlyAvg: 500 },
     '3m': { label: '3 เดือน (1,400 ฿)', days: 90, price: 1400, monthlyAvg: Math.round(1400 / 3) },
@@ -474,16 +368,10 @@
     'lifetime': { label: 'ฟรีตลอดชีพ (VIP)', days: 0, price: 0, monthlyAvg: 0 }
   };
 
-  const defaultShops = [
-    {
-      id: 'pangnawat',
-      name: 'ปังหน้าวัด',
-      contact: '085-5750995 (ร้านต้นแบบ)',
-      planKey: 'lifetime',
-      expireDate: '9999-12-31',
-      isSuspended: false
-    }
-  ];
+  const defaultShops = [{
+    id: 'pangnawat', name: 'ปังหน้าวัด', contact: '085-5750995 (ร้านต้นแบบ)',
+    planKey: 'lifetime', expireDate: '9999-12-31', isSuspended: false
+  }];
 
   let shops = [];
   let currentRenewIndex = null;
@@ -505,7 +393,8 @@
   function saveShops() {
     const shopsObj = {};
     shops.forEach(s => { shopsObj[s.id] = s; });
-    db.ref('sapsong_hub_shops').set(shopsObj);
+    db.ref('sapsong_hub_shops').set(shopsObj)
+      .catch(err => alert('เกิดข้อผิดพลาดในการบันทึก: ' + err.message));
   }
 
   function addDaysToDate(dateObj, days) {
@@ -515,17 +404,14 @@
   }
 
   function getDaysRemaining(expireStr) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const exp = new Date(expireStr);
-    exp.setHours(0, 0, 0, 0);
-    return Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const exp = new Date(expireStr); exp.setHours(0, 0, 0, 0);
+    return Math.ceil((exp - today) / 86400000);
   }
 
   function showToast(msg) {
     const t = document.getElementById('toast');
-    t.innerText = msg;
-    t.style.display = 'block';
+    t.innerText = msg; t.style.display = 'block';
     setTimeout(() => t.style.display = 'none', 3000);
   }
 
@@ -615,34 +501,26 @@
   }
 
   function handleEditPlanChange() {
-    const planKey = document.getElementById('edit-plan').value;
-    document.getElementById('editDateGroup').style.display = (planKey === 'lifetime') ? 'none' : 'block';
+    document.getElementById('editDateGroup').style.display = (document.getElementById('edit-plan').value === 'lifetime') ? 'none' : 'block';
   }
 
   function adjustEditDays(days) {
     const dateInput = document.getElementById('edit-expire');
-    const baseDate = dateInput.value ? new Date(dateInput.value) : new Date();
-    dateInput.value = addDaysToDate(baseDate, days);
+    dateInput.value = addDaysToDate(dateInput.value ? new Date(dateInput.value) : new Date(), days);
   }
 
-  function setExpireToday() {
-    document.getElementById('edit-expire').value = addDaysToDate(new Date(), 0);
-  }
+  function setExpireToday() { document.getElementById('edit-expire').value = addDaysToDate(new Date(), 0); }
 
   function saveEditShop() {
     if (currentEditIndex === null) return;
     const shop = shops[currentEditIndex];
     const name = document.getElementById('edit-name').value.trim();
-    const contact = document.getElementById('edit-contact').value.trim();
-    const planKey = document.getElementById('edit-plan').value;
-    const expireDate = document.getElementById('edit-expire').value;
-
     if (!name) return alert('กรุณากรอกชื่อร้านค้าครับ');
 
     shop.name = name;
-    shop.contact = contact || '-';
-    shop.planKey = planKey;
-    shop.expireDate = (planKey === 'lifetime') ? '9999-12-31' : expireDate;
+    shop.contact = document.getElementById('edit-contact').value.trim() || '-';
+    shop.planKey = document.getElementById('edit-plan').value;
+    shop.expireDate = (shop.planKey === 'lifetime') ? '9999-12-31' : document.getElementById('edit-expire').value;
 
     saveShops();
     closeModal('editModal');
@@ -651,8 +529,7 @@
 
   function openRenewModal(index) {
     currentRenewIndex = index;
-    const shop = shops[index];
-    document.getElementById('renewShopTitle').innerText = `ร้าน: ${shop.name} (${shop.id})`;
+    document.getElementById('renewShopTitle').innerText = `ร้าน: ${shops[index].name} (${shops[index].id})`;
     document.getElementById('renewModal').style.display = 'flex';
   }
 
@@ -668,8 +545,7 @@
       shop.expireDate = '9999-12-31';
     } else {
       const daysLeft = shop.expireDate === '9999-12-31' ? -1 : getDaysRemaining(shop.expireDate);
-      const baseDate = daysLeft < 0 ? new Date() : new Date(shop.expireDate);
-      shop.expireDate = addDaysToDate(baseDate, plan.days);
+      shop.expireDate = addDaysToDate(daysLeft < 0 ? new Date() : new Date(shop.expireDate), plan.days);
     }
 
     saveShops();
@@ -691,11 +567,7 @@
     }
   }
 
-  function copyLink(url, label) {
-    navigator.clipboard.writeText(url);
-    showToast(`คัดลอก${label}แล้ว: ${url}`);
-  }
-
+  function copyLink(url, label) { navigator.clipboard.writeText(url); showToast(`คัดลอก${label}แล้ว: ${url}`); }
   function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
   function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
@@ -710,10 +582,7 @@
     if (shops.some(s => s.id === id)) return alert('รหัสร้าน (Shop ID) นี้มีในระบบแล้ว กรุณาใช้ชื่ออื่นครับ');
 
     shops.push({
-      id,
-      name,
-      contact: contact || '-',
-      planKey,
+      id, name, contact: contact || '-', planKey,
       expireDate: planKey === 'lifetime' ? '9999-12-31' : addDaysToDate(new Date(), plan.days),
       isSuspended: false
     });
@@ -725,9 +594,6 @@
     document.getElementById('inp-contact').value = '';
     showToast(`เพิ่มร้าน "${name}" (${plan.label}) เรียบร้อย!`);
   }
-
-  initAuth();
-  loadShops();
 </script>
 </body>
 </html>
