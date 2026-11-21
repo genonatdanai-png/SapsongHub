@@ -53,7 +53,7 @@
     <!-- ================= หน้าจอล็อกอิน Firebase Auth (Secure Login Gate) ================= -->
     <div id="admin-login-screen" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-8 shadow-2xl space-y-5 text-center">
-            <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-inner">
+            <div id="admin-login-logo-wrap" class="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-inner overflow-hidden">
                 🛡️
             </div>
             <div>
@@ -86,13 +86,16 @@
         <!-- Navbar เจ้าของร้าน -->
         <nav class="bg-slate-800 text-white shadow-md p-3.5 sm:p-4 sticky top-0 z-40">
             <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
-                <div class="w-full sm:w-auto flex justify-between sm:justify-start items-center gap-2">
-                    <div>
-                        <h1 id="admin-nav-title" class="text-lg sm:text-xl font-bold">หลังบ้านร้านค้า</h1>
-                        <p id="admin-expire-badge" class="text-[11px] text-amber-300 font-medium"></p>
+                <div class="w-full sm:w-auto flex justify-between sm:justify-start items-center gap-2.5">
+                    <div class="flex items-center gap-2.5 overflow-hidden">
+                        <img id="admin-nav-logo" src="" alt="Logo" class="hidden w-10 h-10 rounded-xl object-cover bg-white border border-slate-600 shrink-0">
+                        <div class="truncate">
+                            <h1 id="admin-nav-title" class="text-lg sm:text-xl font-bold truncate">หลังบ้านร้านค้า</h1>
+                            <p id="admin-expire-badge" class="text-[11px] text-amber-300 font-medium"></p>
+                        </div>
                     </div>
                     
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex items-center gap-1.5 shrink-0">
                         <button onclick="toggleStoreStatus()" id="btn-store-status" class="text-xs bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1.5 rounded-lg font-bold transition shadow">
                             🟢 เปิดร้าน
                         </button>
@@ -111,7 +114,7 @@
                     <button onclick="switchTab('tables')" id="tab-tables" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">จัดการโต๊ะ & QR</button>
                     <button onclick="switchTab('menu')" id="tab-menu" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">เมนู & ไซส์</button>
                     <button onclick="switchTab('toppings')" id="tab-toppings" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">ท็อปปิ้ง</button>
-                    <button onclick="switchTab('payment')" id="tab-payment" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">พร้อมเพย์ & ส่ง</button>
+                    <button onclick="switchTab('payment')" id="tab-payment" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">ตั้งค่าร้าน & โลโก้</button>
                     <button onclick="switchTab('accounting')" id="tab-accounting" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">บัญชีรายรับ</button>
                     <button onclick="switchTab('bans')" id="tab-bans" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition">แบน IP</button>
                 </div>
@@ -208,7 +211,7 @@
 
                         <div class="sm:col-span-1">
                             <label class="block text-xs font-semibold text-slate-600 mb-1">ราคาปกติ</label>
-                            <input type="number" id="new-price" placeholder="25" class="w-full px-3 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+                            <input type="number" id="new-price" placeholder="25" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none">
                         </div>
 
                         <div class="sm:col-span-2 sm:pt-5 flex gap-1.5">
@@ -288,49 +291,112 @@
                 </div>
             </div>
 
-            <!-- 5. หน้าตั้งค่าพร้อมเพย์, การจัดส่ง & ข้อมูลบัญชีร้าน -->
-            <div id="view-payment" class="hidden grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- 5. หน้าตั้งค่าร้าน: โลโก้, ธีมสี, ช่องทางติดต่อ, พร้อมเพย์ & จัดส่ง -->
+            <div id="view-payment" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <!-- การ์ดตกแต่งร้าน & โลโก้ -->
                 <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                     <div>
-                        <h2 class="text-base sm:text-lg font-bold text-slate-800">💳 ตั้งค่าพร้อมเพย์ & บริการจัดส่ง</h2>
-                        <p class="text-xs text-slate-500 mt-1">ระบบจะนำข้อมูลนี้ไปสร้าง QR Code พร้อมยอดเงินและค่าจัดส่งให้อัตโนมัติ</p>
+                        <h2 class="text-base sm:text-lg font-bold text-slate-800">🎨 โลโก้ร้าน, สีธีม & ช่องทางติดต่อ</h2>
+                        <p class="text-xs text-slate-500 mt-1">ปรับแต่งหน้าตาร้านค้าและโลโก้ที่จะแสดงบนหน้าร้าน, ใบเสร็จ และ Sapsong HUB</p>
                     </div>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์พร้อมเพย์ (10 หลัก) หรือ เลขบัตรประชาชน (13 หลัก)</label>
-                            <input type="text" id="setting-promptpay-id" placeholder="เช่น 0855750995" class="w-full px-3.5 py-2.5 border rounded-xl text-sm font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500">
+
+                    <!-- อัปโหลดโลโก้ -->
+                    <div class="flex items-center gap-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                        <div class="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-300 bg-white overflow-hidden shrink-0 flex items-center justify-center">
+                            <img id="setting-logo-preview" src="" alt="โลโก้ร้าน" class="w-full h-full object-cover hidden">
+                            <span id="setting-logo-placeholder" class="text-[11px] text-slate-400 text-center px-1">ยังไม่มีโลโก้</span>
                         </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบัญชี / ชื่อร้านที่แสดงให้ลูกค้าเห็น</label>
-                            <input type="text" id="setting-account-name" placeholder="เช่น ร้านปังหน้าวัด" class="w-full px-3.5 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        <div class="w-full space-y-1.5">
+                            <label class="block text-xs font-bold text-slate-700">🖼️ รูปโลโก้ร้าน (แนะนำสี่เหลี่ยมจัตุรัส)</label>
+                            <input type="file" id="setting-logo-file" accept="image/*" onchange="handleLogoUpload(event)" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer">
+                            <button type="button" onclick="clearShopLogo()" id="btn-clear-logo" class="hidden text-xs text-red-600 underline font-semibold">ลบโลโก้ร้าน</button>
                         </div>
-                        <div class="pt-2 border-t space-y-3">
-                            <label class="flex items-center gap-2.5 cursor-pointer select-none">
-                                <input type="checkbox" id="setting-enable-delivery" class="w-4 h-4 accent-blue-600 rounded">
-                                <span class="text-sm font-bold text-slate-700">🛵 เปิดให้บริการขับรถไปส่ง (Delivery)</span>
-                            </label>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">ค่าจัดส่งต่อออเดอร์ (บาท) — ใส่ 0 หากส่งฟรี</label>
-                                <input type="number" id="setting-delivery-fee" min="0" placeholder="0" class="w-full px-3.5 py-2.5 border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-                        </div>
-                        <button onclick="savePaymentSettings()" class="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition shadow-sm">บันทึกการตั้งค่า</button>
                     </div>
+
+                    <!-- เลือกสีธีมประจำร้าน -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-2">🎨 สีธีมหลักของหน้าร้านลูกค้า</label>
+                        <input type="hidden" id="setting-theme-color" value="#d97706">
+                        <div id="theme-color-picker" class="flex flex-wrap gap-2.5"></div>
+                    </div>
+
+                    <!-- แถบประกาศหน้าร้าน -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">📢 ข้อความประกาศ / โปรโมชันหน้าร้าน (ปล่อยว่างได้)</label>
+                        <input type="text" id="setting-announcement" placeholder="เช่น สั่งครบ 200 บาท ส่งฟรี! / เปิดบริการ 10:00 - 21:00 น." class="w-full px-3.5 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- ช่องทางติดต่อร้าน -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">📞 เบอร์โทรร้าน</label>
+                            <input type="text" id="setting-contact-phone" placeholder="08x-xxxxxxx" class="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">📘 ลิงก์ Facebook</label>
+                            <input type="text" id="setting-contact-fb" placeholder="https://fb.com/..." class="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">💬 LINE ID / ลิงก์</label>
+                            <input type="text" id="setting-contact-line" placeholder="@shopid หรือลิงก์" class="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- ข้อความท้ายใบเสร็จ -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">🧾 ข้อความท้ายใบเสร็จ (เช่น รหัส Wi-Fi หรือคำขอบคุณ)</label>
+                        <input type="text" id="setting-receipt-footer" placeholder="เช่น Wi-Fi: MyShop / Pass: 12345678" class="w-full px-3.5 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <button onclick="savePaymentSettings()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-sm transition shadow-sm">
+                        💾 บันทึกการตั้งค่าร้านทั้งหมด
+                    </button>
                 </div>
 
-                <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                    <div>
-                        <h2 class="text-base sm:text-lg font-bold text-slate-800">🛡️ ข้อมูลความปลอดภัยของร้านค้า</h2>
-                        <p class="text-xs text-slate-500 mt-1">บัญชีนี้ได้รับการป้องกันด้วยระบบ Firebase Authentication & Security Rules</p>
+                <!-- การ์ดพร้อมเพย์, การจัดส่ง & ความปลอดภัย -->
+                <div class="space-y-5">
+                    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-bold text-slate-800">💳 ตั้งค่าพร้อมเพย์ & บริการจัดส่ง</h2>
+                            <p class="text-xs text-slate-500 mt-1">ระบบจะนำข้อมูลนี้ไปสร้าง QR Code พร้อมยอดเงินและค่าจัดส่งให้อัตโนมัติ</p>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์พร้อมเพย์ (10 หลัก) หรือ เลขบัตรประชาชน (13 หลัก)</label>
+                                <input type="text" id="setting-promptpay-id" placeholder="เช่น 0855750995" class="w-full px-3.5 py-2.5 border rounded-xl text-sm font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบัญชี / ชื่อร้านที่แสดงให้ลูกค้าเห็น</label>
+                                <input type="text" id="setting-account-name" placeholder="เช่น ร้านปังหน้าวัด" class="w-full px-3.5 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="pt-2 border-t space-y-3">
+                                <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                                    <input type="checkbox" id="setting-enable-delivery" class="w-4 h-4 accent-blue-600 rounded">
+                                    <span class="text-sm font-bold text-slate-700">🛵 เปิดให้บริการขับรถไปส่ง (Delivery)</span>
+                                </label>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">ค่าจัดส่งต่อออเดอร์ (บาท) — ใส่ 0 หากส่งฟรี</label>
+                                    <input type="number" id="setting-delivery-fee" min="0" placeholder="0" class="w-full px-3.5 py-2.5 border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                            <button onclick="savePaymentSettings()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition shadow-sm">บันทึกข้อมูลพร้อมเพย์ & การจัดส่ง</button>
+                        </div>
                     </div>
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
-                        <p><span class="text-slate-500">รหัสร้าน (Shop ID):</span> <strong id="info-shop-id" class="text-slate-800">-</strong></p>
-                        <p><span class="text-slate-500">อีเมลที่ล็อกอินอยู่:</span> <strong id="info-logged-email" class="text-emerald-700">-</strong></p>
-                        <p class="text-slate-500 pt-2">หากต้องการเปลี่ยนรหัสผ่านเข้าสู่ระบบ กรุณาติดต่อผู้ดูแลระบบ <strong>Sapsong HUB</strong> ครับ</p>
+
+                    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-bold text-slate-800">🛡️ ข้อมูลความปลอดภัยของร้านค้า</h2>
+                            <p class="text-xs text-slate-500 mt-1">บัญชีนี้ได้รับการป้องกันด้วยระบบ Firebase Authentication & Security Rules</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+                            <p><span class="text-slate-500">รหัสร้าน (Shop ID):</span> <strong id="info-shop-id" class="text-slate-800">-</strong></p>
+                            <p><span class="text-slate-500">อีเมลที่ล็อกอินอยู่:</span> <strong id="info-logged-email" class="text-emerald-700">-</strong></p>
+                            <p class="text-slate-500 pt-2">หากต้องการเปลี่ยนรหัสผ่านเข้าสู่ระบบ กรุณาติดต่อผู้ดูแลระบบ <strong>Sapsong HUB</strong> ครับ</p>
+                        </div>
+                        <button onclick="adminSecureLogout()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition shadow-sm">
+                            🚪 ออกจากระบบ (Logout)
+                        </button>
                     </div>
-                    <button onclick="adminSecureLogout()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition shadow-sm">
-                        🚪 ออกจากระบบ (Logout)
-                    </button>
                 </div>
             </div>
 
@@ -443,7 +509,6 @@
     <!-- Modal พิมพ์ใบเสร็จ & บันทึกรูปใบเสร็จออนไลน์ -->
     <div id="receipt-modal" onclick="closeReceiptModal()" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
         <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <!-- พื้นที่ใบเสร็จสำหรับพิมพ์และแคปภาพ -->
             <div id="print-receipt-area" class="bg-white p-4 rounded-2xl border-2 border-dashed border-slate-300 text-slate-900 text-xs">
                 <div id="receipt-content"></div>
             </div>
@@ -490,6 +555,16 @@
         document.getElementById('admin-email-input').placeholder = EXPECTED_SHOP_EMAIL;
         document.getElementById('info-shop-id').innerText = SHOP_ID;
 
+        const THEME_OPTIONS = [
+            { hex: '#d97706', name: 'ส้มทอง' },
+            { hex: '#dc2626', name: 'แดง' },
+            { hex: '#059669', name: 'เขียว' },
+            { hex: '#2563eb', name: 'น้ำเงิน' },
+            { hex: '#7c3aed', name: 'ม่วง' },
+            { hex: '#db2777', name: 'ชมพู' },
+            { hex: '#0f172a', name: 'ดำมินิมอล' }
+        ];
+
         const placeholderImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23fef3c7'/%3E%3Crect x='45' y='55' width='110' height='95' rx='20' fill='%23d97706'/%3E%3Crect x='55' y='65' width='90' height='75' rx='14' fill='%23fcd34d'/%3E%3C/svg%3E";
 
         const defaultCategories = ['ขนมปังปิ้ง', 'เครื่องดื่ม', 'ของทานเล่น'];
@@ -509,7 +584,19 @@
         let toppingGroups = defaultToppingGroups;
         let menus = [];
         let toppings = defaultToppings;
-        let paymentConfig = { promptpayId: '0855750995', accountName: shopDisplayName, enableDelivery: true, deliveryFee: 0 };
+        let paymentConfig = {
+            promptpayId: '0855750995',
+            accountName: shopDisplayName,
+            enableDelivery: true,
+            deliveryFee: 0,
+            shopLogo: '',
+            themeColor: '#d97706',
+            announcement: '',
+            contactPhone: '',
+            contactFb: '',
+            contactLine: '',
+            receiptFooter: ''
+        };
         let orders = [];
         let isStoreOpen = true;
         let bannedIPs = [];
@@ -519,9 +606,29 @@
         let listenersStarted = false;
 
         let currentUploadedImage = "";
+        let currentUploadedLogo = "";
         let selectedToppingFilter = 'ALL_VIEW';
         let currentQRTableName = '';
         let currentReceiptOrderId = '';
+
+        // โหลดโลโก้ร้านมาโชว์บนหน้าล็อกอินตั้งแต่แรก (อ่านได้สาธารณะตาม Security Rules)
+        db.ref(`shops_data/${SHOP_ID}/paymentConfig/shopLogo`).once('value', snap => {
+            const logo = snap.val();
+            if (logo) applyLogoToAdminUI(logo);
+        });
+
+        function applyLogoToAdminUI(logoBase64) {
+            const loginWrap = document.getElementById('admin-login-logo-wrap');
+            const navLogo = document.getElementById('admin-nav-logo');
+            if (logoBase64) {
+                loginWrap.innerHTML = `<img src="${logoBase64}" class="w-full h-full object-cover">`;
+                navLogo.src = logoBase64;
+                navLogo.classList.remove('hidden');
+            } else {
+                loginWrap.innerHTML = '🛡️';
+                navLogo.classList.add('hidden');
+            }
+        }
 
         function saveShopKey(key, data) {
             db.ref(`shops_data/${SHOP_ID}/${key}`).set(data)
@@ -635,13 +742,22 @@
                 toppingGroups = d.toppingGroups || defaultToppingGroups;
                 menus = d.menus || (SHOP_ID === 'pangnawat' ? defaultMenus : []);
                 toppings = d.toppings || (SHOP_ID === 'pangnawat' ? defaultToppings : []);
+
                 const cfg = d.paymentConfig || {};
                 paymentConfig = {
                     promptpayId: cfg.promptpayId || '0855750995',
                     accountName: cfg.accountName || shopDisplayName,
                     enableDelivery: cfg.enableDelivery !== undefined ? cfg.enableDelivery : true,
-                    deliveryFee: Number(cfg.deliveryFee) || 0
+                    deliveryFee: Number(cfg.deliveryFee) || 0,
+                    shopLogo: cfg.shopLogo || '',
+                    themeColor: cfg.themeColor || '#d97706',
+                    announcement: cfg.announcement || '',
+                    contactPhone: cfg.contactPhone || '',
+                    contactFb: cfg.contactFb || '',
+                    contactLine: cfg.contactLine || '',
+                    receiptFooter: cfg.receiptFooter || ''
                 };
+
                 isStoreOpen = d.isStoreOpen !== undefined ? d.isStoreOpen : true;
                 bannedIPs = d.bannedIPs || [];
                 enableTables = d.enableTables || false;
@@ -661,10 +777,22 @@
                 orders = parsedOrders;
                 isFirstLoad = false;
 
+                // อัปเดตค่าในหน้าตั้งค่า
                 document.getElementById('setting-promptpay-id').value = paymentConfig.promptpayId;
                 document.getElementById('setting-account-name').value = paymentConfig.accountName;
                 document.getElementById('setting-enable-delivery').checked = paymentConfig.enableDelivery;
                 document.getElementById('setting-delivery-fee').value = paymentConfig.deliveryFee;
+                document.getElementById('setting-theme-color').value = paymentConfig.themeColor;
+                document.getElementById('setting-announcement').value = paymentConfig.announcement;
+                document.getElementById('setting-contact-phone').value = paymentConfig.contactPhone;
+                document.getElementById('setting-contact-fb').value = paymentConfig.contactFb;
+                document.getElementById('setting-contact-line').value = paymentConfig.contactLine;
+                document.getElementById('setting-receipt-footer').value = paymentConfig.receiptFooter;
+
+                currentUploadedLogo = paymentConfig.shopLogo;
+                showLogoPreview(currentUploadedLogo);
+                applyLogoToAdminUI(currentUploadedLogo);
+                renderThemeColorPicker();
 
                 renderStoreStatusBtn();
                 renderTableManagementUI();
@@ -687,7 +815,68 @@
         }
 
         // =========================================================================
-        // 4. ระบบจัดการไซส์ / ตัวเลือกหลักของสินค้า (Sizes / Variants)
+        // 4. ระบบอัปโหลดโลโก้ร้าน & เลือกสีธีม
+        // =========================================================================
+        function handleLogoUpload(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_SIZE = 200;
+                    let width = img.width, height = img.height;
+                    if (width > height && width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                    else if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                    canvas.width = width; canvas.height = height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                    currentUploadedLogo = canvas.toDataURL('image/jpeg', 0.85);
+                    showLogoPreview(currentUploadedLogo);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showLogoPreview(b64) {
+            const imgEl = document.getElementById('setting-logo-preview');
+            const ph = document.getElementById('setting-logo-placeholder');
+            const cb = document.getElementById('btn-clear-logo');
+            if (b64) {
+                imgEl.src = b64; imgEl.classList.remove('hidden');
+                ph.classList.add('hidden'); cb.classList.remove('hidden');
+            } else {
+                imgEl.src = ''; imgEl.classList.add('hidden');
+                ph.classList.remove('hidden'); cb.classList.add('hidden');
+            }
+        }
+
+        function clearShopLogo() {
+            currentUploadedLogo = '';
+            document.getElementById('setting-logo-file').value = '';
+            showLogoPreview('');
+        }
+
+        function selectThemeColor(hex) {
+            document.getElementById('setting-theme-color').value = hex;
+            renderThemeColorPicker();
+        }
+
+        function renderThemeColorPicker() {
+            const current = document.getElementById('setting-theme-color').value || '#d97706';
+            document.getElementById('theme-color-picker').innerHTML = THEME_OPTIONS.map(c => {
+                const isSelected = current.toLowerCase() === c.hex.toLowerCase();
+                return `
+                    <button type="button" onclick="selectThemeColor('${c.hex}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 text-xs font-bold transition ${isSelected ? 'border-slate-900 bg-slate-100 scale-105 shadow-xs' : 'border-slate-200 bg-white hover:bg-slate-50'}">
+                        <span class="w-4 h-4 rounded-full inline-block" style="background:${c.hex}"></span>
+                        <span>${c.name}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        // =========================================================================
+        // 5. ระบบจัดการไซส์ / ตัวเลือกหลักของสินค้า (Sizes / Variants)
         // =========================================================================
         function addSizeRow(name = '', price = '') {
             const container = document.getElementById('menu-sizes-container');
@@ -714,12 +903,10 @@
             return sizes;
         }
 
-        function clearSizeRows() {
-            document.getElementById('menu-sizes-container').innerHTML = '';
-        }
+        function clearSizeRows() { document.getElementById('menu-sizes-container').innerHTML = ''; }
 
         // =========================================================================
-        // 5. ระบบใบเสร็จออนไลน์, พิมพ์ใบเสร็จ และบันทึกรูป (PNG)
+        // 6. ระบบใบเสร็จออนไลน์, พิมพ์ใบเสร็จ และบันทึกรูป (PNG)
         // =========================================================================
         function openReceiptModal(firebaseKey) {
             const o = orders.find(x => x.firebaseKey === firebaseKey);
@@ -727,10 +914,13 @@
             currentReceiptOrderId = o.id;
 
             const typeTxt = o.orderType === 'delivery' ? 'จัดส่งถึงที่' : (o.orderType === 'dinein' ? `${o.tableName || 'ทานที่ร้าน'}` : 'รับหน้าร้าน');
+            const logoHTML = paymentConfig.shopLogo ? `<img src="${paymentConfig.shopLogo}" class="w-12 h-12 rounded-xl object-cover mx-auto mb-1.5 border">` : '';
+            const footerTxt = paymentConfig.receiptFooter ? `<div class="mt-1 font-bold text-slate-700">${paymentConfig.receiptFooter}</div>` : '';
             const content = document.getElementById('receipt-content');
 
             content.innerHTML = `
                 <div class="text-center border-b border-dashed border-slate-400 pb-2.5 mb-2.5">
+                    ${logoHTML}
                     <h4 class="font-bold text-base">${shopDisplayName}</h4>
                     <p class="text-[11px] text-slate-600">ใบเสร็จรับเงิน / Receipt</p>
                     <p class="font-mono font-bold text-xs mt-1">${o.id}</p>
@@ -761,6 +951,7 @@
                 <div class="text-center text-[10px] text-slate-500 mt-3 pt-2 border-t border-dashed border-slate-400">
                     ${o.paymentMethod === 'transfer' ? 'ชำระโดยการโอนเงิน' : 'ชำระเงินสด/ที่ร้าน'}<br>
                     ขอบคุณที่อุดหนุนครับ
+                    ${footerTxt}
                 </div>
             `;
 
@@ -781,7 +972,7 @@
         }
 
         // =========================================================================
-        // 6. ระบบจัดการโต๊ะ & QR CODE ประจำโต๊ะ
+        // 7. ระบบจัดการโต๊ะ & QR CODE ประจำโต๊ะ
         // =========================================================================
         function toggleEnableTables() {
             enableTables = !enableTables;
@@ -900,7 +1091,7 @@
         }
 
         // =========================================================================
-        // 7. ฟังก์ชันจัดการเมนู ท็อปปิ้ง ออเดอร์ และบัญชี
+        // 8. ฟังก์ชันจัดการเมนู ท็อปปิ้ง ออเดอร์ และบัญชี
         // =========================================================================
         function getTodayString() {
             const now = new Date();
@@ -909,6 +1100,7 @@
 
         window.onload = () => {
             document.getElementById('order-date-filter').value = getTodayString();
+            renderThemeColorPicker();
         };
 
         function openSlipModal(firebaseKey) {
@@ -926,12 +1118,31 @@
             const enableDelivery = document.getElementById('setting-enable-delivery').checked;
             const deliveryFee = Math.max(0, Number(document.getElementById('setting-delivery-fee').value) || 0);
 
+            const themeColor = document.getElementById('setting-theme-color').value || '#d97706';
+            const announcement = document.getElementById('setting-announcement').value.trim();
+            const contactPhone = document.getElementById('setting-contact-phone').value.trim();
+            const contactFb = document.getElementById('setting-contact-fb').value.trim();
+            const contactLine = document.getElementById('setting-contact-line').value.trim();
+            const receiptFooter = document.getElementById('setting-receipt-footer').value.trim();
+
             if (ppId.length !== 10 && ppId.length !== 13 && ppId.length !== 15) return alert('กรุณากรอกเบอร์พร้อมเพย์ 10 หลัก หรือเลขบัตรประชาชน 13 หลักให้ถูกต้องครับ');
             if (!accName) return alert('กรุณากรอกชื่อบัญชีหรือชื่อร้านครับ');
 
-            paymentConfig = { promptpayId: ppId, accountName: accName, enableDelivery, deliveryFee };
+            paymentConfig = {
+                promptpayId: ppId,
+                accountName: accName,
+                enableDelivery,
+                deliveryFee,
+                shopLogo: currentUploadedLogo || '',
+                themeColor,
+                announcement,
+                contactPhone,
+                contactFb,
+                contactLine,
+                receiptFooter
+            };
             saveShopKey('paymentConfig', paymentConfig);
-            alert('บันทึกข้อมูลพร้อมเพย์และการจัดส่งเรียบร้อยแล้วครับ!');
+            alert('บันทึกการตั้งค่าร้าน โลโก้ และข้อมูลพร้อมเพย์เรียบร้อยแล้วครับ!');
         }
 
         function setFilterToday() { document.getElementById('order-date-filter').value = getTodayString(); renderOrders(); }
