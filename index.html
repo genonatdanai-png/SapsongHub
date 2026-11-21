@@ -30,15 +30,15 @@
 
     <!-- Header สำหรับลูกค้า -->
     <header class="bg-amber-600 text-white shadow-md p-4 sticky top-0 z-40">
-        <div class="max-w-5xl mx-auto flex justify-between items-center gap-2">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
             <div>
-                <div class="flex items-center gap-2 flex-wrap">
-                    <h1 id="store-header-name" class="text-xl sm:text-2xl font-bold tracking-wide">กำลังโหลดชื่อร้าน...</h1>
-                    <span id="table-header-badge" class="hidden bg-white text-amber-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full shadow-xs">🍽️ โต๊ะ -</span>
-                </div>
+                <h1 id="store-header-name" class="text-xl sm:text-2xl font-bold tracking-wide">กำลังโหลดชื่อร้าน...</h1>
                 <p id="store-header-sub" class="text-xs text-amber-100">สั่งอาหาร & เครื่องดื่มออนไลน์</p>
             </div>
-            <span id="store-status-badge" class="text-xs bg-emerald-600 px-3 py-1.5 rounded-full font-semibold shadow-sm shrink-0">🟢 เปิดรับออเดอร์</span>
+            <div class="flex items-center gap-2">
+                <span id="table-header-badge" class="hidden text-xs bg-white text-amber-800 px-3 py-1.5 rounded-full font-bold shadow-sm">🍽️ โต๊ะ -</span>
+                <span id="store-status-badge" class="text-xs bg-emerald-600 px-3 py-1.5 rounded-full font-semibold shadow-sm">🟢 เปิดรับออเดอร์</span>
+            </div>
         </div>
     </header>
 
@@ -70,10 +70,16 @@
             </div>
         </div>
 
-        <!-- แบนเนอร์แจ้งเตือนเมื่อร้านปิด หรือ โต๊ะปิดรับออเดอร์ -->
+        <!-- แบนเนอร์แจ้งเตือนเมื่อร้านปิด -->
         <div id="closed-banner" class="hidden md:col-span-3 bg-red-100 border-2 border-red-400 text-red-800 p-4 rounded-2xl text-center shadow-sm">
-            <h2 id="closed-banner-title" class="text-base sm:text-lg font-bold">⛔ ขณะนี้ร้านปิดรับออเดอร์ชั่วคราวครับ</h2>
-            <p id="closed-banner-sub" class="text-xs sm:text-sm mt-1">ระบบปิดการสั่งซื้อในขณะนี้ ขออภัยในความไม่สะดวกครับ</p>
+            <h2 class="text-base sm:text-lg font-bold">⛔ ขณะนี้ร้านปิดรับออเดอร์ชั่วคราวครับ</h2>
+            <p class="text-xs sm:text-sm mt-1">ระบบปิดการสั่งซื้อในขณะนี้ ขออภัยในความไม่สะดวกครับ</p>
+        </div>
+
+        <!-- แบนเนอร์แจ้งเตือนเมื่อโต๊ะนี้ถูกปิดรับออเดอร์ชั่วคราว -->
+        <div id="table-closed-banner" class="hidden md:col-span-3 bg-orange-100 border-2 border-orange-400 text-orange-900 p-4 rounded-2xl text-center shadow-sm">
+            <h2 class="text-base sm:text-lg font-bold">🍽️ โต๊ะ <span id="closed-table-name"></span> ปิดรับออเดอร์ชั่วคราวครับ</h2>
+            <p class="text-xs sm:text-sm mt-1">กรุณาติดต่อพนักงานที่เคาน์เตอร์เพื่อเปิดโต๊ะก่อนสั่งอาหารครับ</p>
         </div>
 
         <!-- รายการเมนู -->
@@ -90,9 +96,9 @@
 
             <div id="menu-list" class="grid grid-cols-2 sm:grid-cols-2 gap-3"></div>
 
-            <!-- สถานะออเดอร์ล่าสุดของลูกค้า -->
+            <!-- สรุปรายการสั่งซื้อล่าสุดของลูกค้า (เก็บในเครื่องลูกค้าเอง ปลอดภัยจากการแอบดูบิลคนอื่น) -->
             <div id="my-order-box" class="hidden mt-6 bg-white p-4 sm:p-5 rounded-2xl shadow-md border-2 border-amber-400">
-                <h3 class="font-bold text-gray-800 mb-2 text-sm sm:text-base">สถานะออเดอร์ของคุณ</h3>
+                <h3 class="font-bold text-gray-800 mb-2 text-sm sm:text-base">🧾 รายการสั่งซื้อล่าสุดของคุณ</h3>
                 <div id="my-order-detail"></div>
             </div>
         </div>
@@ -106,17 +112,16 @@
             
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">รูปแบบการรับสินค้า</label>
-                <select id="order-type" onchange="toggleDeliveryField()" class="w-full px-3 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-white font-semibold">
+                <select id="order-type" onchange="handleOrderTypeChange()" class="w-full px-3 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-white font-semibold">
                     <option value="takeaway">🛍️ รับหน้าร้าน (จ่ายหน้าร้าน)</option>
                     <option value="delivery">🛵 ขับรถไปส่ง (โอนจ่ายก่อน)</option>
                 </select>
             </div>
 
-            <!-- กล่องเลือกโต๊ะ (แสดงเมื่อร้านเปิดใช้ระบบโต๊ะ และลูกค้าเลือกทานที่ร้าน) -->
-            <div id="dine-in-table-box" class="hidden bg-amber-50 border border-amber-200 p-3 rounded-xl space-y-2">
-                <label class="block text-xs font-bold text-amber-900">🍽️ เลือกโต๊ะที่นั่ง</label>
-                <select id="selected-table-id" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white font-bold text-slate-800 outline-none"></select>
-                <p id="locked-table-note" class="hidden text-[11px] text-amber-700 font-medium">🔒 ล็อกโต๊ะอัตโนมัติจากการสแกน QR Code ประจำโต๊ะ</p>
+            <!-- กล่องเลือกโต๊ะ (แสดงเฉพาะร้านที่เปิดใช้ระบบโต๊ะ และเลือกรูปแบบ "ทานที่ร้าน") -->
+            <div id="table-select-box" class="hidden">
+                <label class="block text-xs font-bold text-amber-800 mb-1">🍽️ เลือกโต๊ะที่นั่ง</label>
+                <select id="customer-table" onchange="updateOrderAvailability()" class="w-full px-3 py-2.5 border-2 border-amber-400 bg-amber-50/70 rounded-xl text-sm font-bold text-slate-800 outline-none"></select>
             </div>
 
             <div>
@@ -182,7 +187,7 @@
 
     </main>
 
-    <!-- แถบปุ่มดูตะกร้าลอยด้านล่าง -->
+    <!-- แถบปุ่มดูตะกร้าลอยด้านล่าง สำหรับหน้าจอมือถือ/ไอแพด -->
     <div id="mobile-cart-bar" onclick="scrollToCart()" class="md:hidden fixed bottom-0 left-0 right-0 bg-amber-600 text-white p-3.5 shadow-lg z-50 flex justify-between items-center cursor-pointer active:bg-amber-700">
         <div class="flex items-center gap-2">
             <span id="mobile-cart-qty" class="bg-white text-amber-700 font-bold text-xs px-2.5 py-1 rounded-full">0</span>
@@ -192,23 +197,28 @@
     </div>
 
     <script>
+        // =========================================================================
+        // 1. ตั้งค่า FIREBASE (เชื่อมต่อโปรเจกต์ sapsonghub)
+        // =========================================================================
         const firebaseConfig = {
-            apiKey: "AIzaSyDhLoPg926qn_6G5DlyY6VhLJPKkcDc548",
-            authDomain: "pang-862d0.firebaseapp.com",
-            databaseURL: "https://pang-862d0-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "pang-862d0",
-            storageBucket: "pang-862d0.firebasestorage.app",
-            messagingSenderId: "416519193519",
-            appId: "1:416519193519:web:6053fd2420b95d735a655a",
-            measurementId: "G-57CPF0GJRH"
+            apiKey: "AIzaSyAhtvwqgAP-5-ITl1TIopqIWEFrZ2deQtg",
+            authDomain: "sapsonghub.firebaseapp.com",
+            databaseURL: "https://sapsonghub-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "sapsonghub",
+            storageBucket: "sapsonghub.firebasestorage.app",
+            messagingSenderId: "448301529212",
+            appId: "1:448301529212:web:7366898a663dcbd556f1f9",
+            measurementId: "G-0SPWW0K3WD"
         };
 
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const db = firebase.database();
 
         const urlParams = new URLSearchParams(window.location.search);
         const SHOP_ID = (urlParams.get('shop') || 'pangnawat').toLowerCase();
-        const URL_TABLE_ID = urlParams.get('table') || ''; // รหัสโต๊ะจากการสแกน QR
+        const SCANNED_TABLE_ID = urlParams.get('table') || '';
 
         const placeholderToast = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23fef3c7'/%3E%3Crect x='45' y='55' width='110' height='95' rx='20' fill='%23d97706'/%3E%3Crect x='55' y='65' width='90' height='75' rx='14' fill='%23fcd34d'/%3E%3C/svg%3E";
         const placeholderDrink = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23ffedd5'/%3E%3Cpolygon points='65,60 135,60 125,155 75,155' fill='%23ea580c'/%3E%3Crect x='60' y='52' width='80' height='10' rx='5' fill='%239a3412'/%3E%3C/svg%3E";
@@ -235,23 +245,19 @@
         let menus = defaultMenus;
         let toppings = defaultToppings;
         let paymentConfig = { promptpayId: '0855750995', accountName: shopDisplayName };
-        let orders = [];
         let isStoreOpen = true;
         let bannedIPs = [];
-
-        // ตัวแปรระบบโต๊ะ
         let enableTables = false;
-        let tables = [];
-        let isCurrentTableClosed = false;
+        let shopTables = [];
 
         let selectedCategory = 'ALL';
         let clientIP = 'กำลังตรวจสอบ...';
         let cart = [];
         let uploadedSlipBase64 = '';
-        let myLastOrderId = localStorage.getItem('my_last_order_' + SHOP_ID) || null;
+        let tableAutoSelected = false;
 
         // =========================================================================
-        // ตรวจสอบสิทธิ์จาก SAPSONG HUB
+        // 2. ตรวจสอบสิทธิ์จาก SAPSONG HUB แบบ REAL-TIME
         // =========================================================================
         function isDateExpired(expireDateStr) {
             if (!expireDateStr || expireDateStr === '9999-12-31') return false;
@@ -284,13 +290,14 @@
                 return;
             }
             if (shopMeta.isSuspended === true) {
-                showLockOverlay('ขออภัย ระบบปิดให้บริการชั่วคราว', `ขณะนี้ร้าน "${shopMeta.name}" งดรับออเดอร์ออนไลน์ชั่วคราว กรุณาสอบถามทางร้านโดยตรง`);
+                showLockOverlay('ขออภัย ระบบปิดให้บริการชั่วคราว', `ขณะนี้ร้าน "${shopMeta.name}" งดรับออเดอร์ออนไลน์ชั่วคราว`);
                 return;
             }
             if (shopMeta.planKey !== 'lifetime' && isDateExpired(shopMeta.expireDate)) {
                 showLockOverlay('ขออภัย ระบบสั่งอาหารปิดให้บริการ', `ขณะนี้ระบบออนไลน์ของร้าน "${shopMeta.name}" ปิดให้บริการชั่วคราว`);
                 return;
             }
+
             hideLockOverlay();
             updateShopBranding(shopMeta.name);
         });
@@ -310,157 +317,177 @@
         }
 
         // =========================================================================
-        // ดึงข้อมูลร้านค้า & ระบบโต๊ะ จาก FIREBASE
+        // 3. ดึงข้อมูลสาธารณะของร้านค้า (แยกดึงเฉพาะ Path ที่ Security Rules อนุญาต)
         // =========================================================================
-        db.ref(`shops_data/${SHOP_ID}`).on('value', (snapshot) => {
-            const d = snapshot.val() || {};
-            categories = d.categories || defaultCategories;
-            menus = d.menus || (SHOP_ID === 'pangnawat' ? defaultMenus : []);
-            toppings = d.toppings || (SHOP_ID === 'pangnawat' ? defaultToppings : []);
-            paymentConfig = d.paymentConfig || { promptpayId: '0855750995', accountName: shopDisplayName };
-            isStoreOpen = d.isStoreOpen !== undefined ? d.isStoreOpen : true;
-            bannedIPs = d.bannedIPs || [];
-            orders = d.orders || [];
+        const shopBaseRef = db.ref(`shops_data/${SHOP_ID}`);
 
-            // ข้อมูลระบบโต๊ะ
-            enableTables = d.enableTables !== undefined ? d.enableTables : false;
-            tables = d.tables || [];
-
-            setupTableOrderingUI();
-            checkIfBanned();
-            updateStoreStatusUI();
+        shopBaseRef.child('categories').on('value', snap => {
+            categories = snap.val() || defaultCategories;
             renderCategoryTabs();
-            renderMenu();
-            renderCart();
-            checkMyOrderStatus();
         });
 
-        // จัดการ UI ระบบโต๊ะฝั่งลูกค้า
-        function setupTableOrderingUI() {
+        shopBaseRef.child('menus').on('value', snap => {
+            menus = snap.val() || (SHOP_ID === 'pangnawat' ? defaultMenus : []);
+            renderMenu();
+        });
+
+        shopBaseRef.child('toppings').on('value', snap => {
+            toppings = snap.val() || (SHOP_ID === 'pangnawat' ? defaultToppings : []);
+            renderCart();
+        });
+
+        shopBaseRef.child('paymentConfig').on('value', snap => {
+            paymentConfig = snap.val() || { promptpayId: '0855750995', accountName: shopDisplayName };
+            updatePaymentQR();
+        });
+
+        shopBaseRef.child('isStoreOpen').on('value', snap => {
+            isStoreOpen = snap.val() !== null ? snap.val() : true;
+            updateOrderAvailability();
+            renderMenu();
+        });
+
+        shopBaseRef.child('bannedIPs').on('value', snap => {
+            bannedIPs = snap.val() || [];
+            checkIfBanned();
+        });
+
+        shopBaseRef.child('enableTables').on('value', snap => {
+            enableTables = snap.val() || false;
+            renderTableOptions();
+            updateOrderAvailability();
+            renderMenu();
+        });
+
+        shopBaseRef.child('tables').on('value', snap => {
+            shopTables = snap.val() || [];
+            renderTableOptions();
+            updateOrderAvailability();
+            renderMenu();
+        });
+
+        function renderTableOptions() {
             const orderTypeSelect = document.getElementById('order-type');
-            const tableHeaderBadge = document.getElementById('table-header-badge');
-            const tableSelect = document.getElementById('selected-table-id');
-            const lockedNote = document.getElementById('locked-table-note');
+            const tableSelect = document.getElementById('customer-table');
+            const currentOrderType = orderTypeSelect.value;
+            const prevSelectedTable = tableSelect.value;
 
-            isCurrentTableClosed = false;
-
-            // หากร้านไม่ได้เปิดระบบโต๊ะ
-            if (!enableTables) {
-                tableHeaderBadge.classList.add('hidden');
-                orderTypeSelect.disabled = false;
-                orderTypeSelect.innerHTML = `
-                    <option value="takeaway">🛍️ รับหน้าร้าน (จ่ายหน้าร้าน)</option>
-                    <option value="delivery">🛵 ขับรถไปส่ง (โอนจ่ายก่อน)</option>
-                `;
-                toggleDeliveryField();
-                return;
+            let optionsHTML = '';
+            if (enableTables && shopTables.length > 0) {
+                optionsHTML += `<option value="dinein">🍽️ ทานที่ร้าน (ระบุโต๊ะ)</option>`;
             }
-
-            // กรณีร้านเปิดใช้ระบบโต๊ะ
-            const openTables = tables.filter(t => t.isOpen);
-
-            // 1) กรณีสแกน QR Code ประจำโต๊ะเข้ามา (?table=...)
-            if (URL_TABLE_ID) {
-                const targetTable = tables.find(t => String(t.id) === String(URL_TABLE_ID));
-                if (!targetTable) {
-                    isCurrentTableClosed = true;
-                    tableHeaderBadge.classList.remove('hidden');
-                    tableHeaderBadge.innerText = `❌ ไม่พบข้อมูลโต๊ะ`;
-                } else if (!targetTable.isOpen) {
-                    isCurrentTableClosed = true;
-                    tableHeaderBadge.classList.remove('hidden');
-                    tableHeaderBadge.innerText = `🔴 ${targetTable.name} (ปิดรับออเดอร์)`;
-                } else {
-                    isCurrentTableClosed = false;
-                    tableHeaderBadge.classList.remove('hidden');
-                    tableHeaderBadge.innerText = `🍽️ ${targetTable.name}`;
-
-                    orderTypeSelect.innerHTML = `<option value="dinein">🍽️ ทานที่ร้าน (${targetTable.name})</option>`;
-                    orderTypeSelect.value = 'dinein';
-                    orderTypeSelect.disabled = true;
-
-                    tableSelect.innerHTML = `<option value="${targetTable.id}">${targetTable.name}</option>`;
-                    tableSelect.value = targetTable.id;
-                    tableSelect.disabled = true;
-                    lockedNote.classList.remove('hidden');
-                }
-                toggleDeliveryField();
-                return;
-            }
-
-            // 2) กรณีลูกค้าเข้าลิงก์หน้าร้านปกติ (ไม่ผ่าน QR โต๊ะ) แต่ร้านเปิดระบบโต๊ะ
-            tableHeaderBadge.classList.add('hidden');
-            orderTypeSelect.disabled = false;
-            lockedNote.classList.add('hidden');
-
-            const prevType = orderTypeSelect.value;
-            let optionsHTML = `
+            optionsHTML += `
                 <option value="takeaway">🛍️ รับหน้าร้าน (จ่ายหน้าร้าน)</option>
                 <option value="delivery">🛵 ขับรถไปส่ง (โอนจ่ายก่อน)</option>
             `;
-            if (openTables.length > 0) {
-                optionsHTML += `<option value="dinein">🍽️ ทานที่ร้าน (เลือกโต๊ะ)</option>`;
-            }
             orderTypeSelect.innerHTML = optionsHTML;
-            if (['takeaway', 'delivery', 'dinein'].includes(prevType) && (prevType !== 'dinein' || openTables.length > 0)) {
-                orderTypeSelect.value = prevType;
+
+            if (enableTables && SCANNED_TABLE_ID && !tableAutoSelected) {
+                orderTypeSelect.value = 'dinein';
+                tableAutoSelected = true;
+            } else if ([...orderTypeSelect.options].some(o => o.value === currentOrderType)) {
+                orderTypeSelect.value = currentOrderType;
             }
 
-            tableSelect.disabled = false;
-            tableSelect.innerHTML = openTables.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-            toggleDeliveryField();
+            if (enableTables && shopTables.length > 0) {
+                tableSelect.innerHTML = shopTables.map(t => {
+                    const statusTxt = t.isOpen ? '' : ' (ปิดรับออเดอร์)';
+                    return `<option value="${t.id}" ${!t.isOpen ? 'disabled' : ''}>${t.name}${statusTxt}</option>`;
+                }).join('');
+
+                if (SCANNED_TABLE_ID && shopTables.some(t => t.id === SCANNED_TABLE_ID)) {
+                    tableSelect.value = SCANNED_TABLE_ID;
+                } else if (prevSelectedTable && shopTables.some(t => t.id === prevSelectedTable)) {
+                    tableSelect.value = prevSelectedTable;
+                }
+            }
+
+            handleOrderTypeChange();
         }
 
-        function toggleDeliveryField() {
+        function handleOrderTypeChange() {
             const type = document.getElementById('order-type').value;
-            const isDelivery = type === 'delivery';
-            const isDineIn = type === 'dinein';
-
-            document.getElementById('delivery-address-box').classList.toggle('hidden', !isDelivery);
-            document.getElementById('dine-in-table-box').classList.toggle('hidden', !isDineIn);
-
+            const tableBox = document.getElementById('table-select-box');
+            const deliveryBox = document.getElementById('delivery-address-box');
             const nameLabel = document.getElementById('customer-name-label');
             const nameInput = document.getElementById('customer-name');
-            if (isDineIn) {
-                nameLabel.innerText = 'ชื่อผู้สั่ง (ไม่บังคับ)';
-                nameInput.placeholder = 'ระบุชื่อเล่น หรือเว้นว่างไว้ได้ครับ';
+
+            if (type === 'dinein' && enableTables) {
+                tableBox.classList.remove('hidden');
+                deliveryBox.classList.add('hidden');
+                nameLabel.innerText = 'ชื่อผู้สั่ง (ไม่บังคับ กรณีสั่งจากโต๊ะ)';
+                nameInput.placeholder = 'เช่น คุณจีโน่ หรือเว้นว่างได้';
+            } else if (type === 'delivery') {
+                tableBox.classList.add('hidden');
+                deliveryBox.classList.remove('hidden');
+                nameLabel.innerText = 'ชื่อผู้สั่ง / เบอร์โทร *';
+                nameInput.placeholder = 'เช่น คุณจีโน่ 081-xxx-xxxx';
             } else {
-                nameLabel.innerText = 'ชื่อผู้สั่ง / เบอร์โทร';
+                tableBox.classList.add('hidden');
+                deliveryBox.classList.add('hidden');
+                nameLabel.innerText = 'ชื่อผู้สั่ง / เบอร์โทร *';
                 nameInput.placeholder = 'เช่น คุณจีโน่ 081-xxx-xxxx';
             }
 
+            updateOrderAvailability();
             updatePaymentQR();
         }
 
-        function updateStoreStatusUI() {
+        function isCurrentTableBlocked() {
+            if (!enableTables) return false;
+            const type = document.getElementById('order-type').value;
+            const selectedId = document.getElementById('customer-table').value || SCANNED_TABLE_ID;
+            if (type === 'dinein' || SCANNED_TABLE_ID) {
+                const targetTable = shopTables.find(t => t.id === selectedId);
+                if (targetTable && !targetTable.isOpen) {
+                    return targetTable;
+                }
+            }
+            return false;
+        }
+
+        function updateOrderAvailability() {
             const badge = document.getElementById('store-status-badge');
-            const banner = document.getElementById('closed-banner');
-            const bannerTitle = document.getElementById('closed-banner-title');
-            const bannerSub = document.getElementById('closed-banner-sub');
+            const storeBanner = document.getElementById('closed-banner');
+            const tableBanner = document.getElementById('table-closed-banner');
+            const tableHeaderBadge = document.getElementById('table-header-badge');
             const btnCheckout = document.getElementById('btn-checkout');
+
+            const type = document.getElementById('order-type').value;
+            const selectedTableId = document.getElementById('customer-table').value;
+            const activeTable = shopTables.find(t => t.id === selectedTableId);
+
+            if (enableTables && type === 'dinein' && activeTable) {
+                tableHeaderBadge.innerText = `🍽️ ${activeTable.name}`;
+                tableHeaderBadge.classList.remove('hidden');
+            } else {
+                tableHeaderBadge.classList.add('hidden');
+            }
+
+            const blockedTable = isCurrentTableBlocked();
 
             if (!isStoreOpen) {
                 badge.innerText = '🔴 ปิดรับออเดอร์';
-                badge.className = 'text-xs bg-red-600 px-3 py-1.5 rounded-full font-semibold shadow-sm shrink-0';
-                bannerTitle.innerText = '⛔ ขณะนี้ร้านปิดรับออเดอร์ชั่วคราวครับ';
-                bannerSub.innerText = 'ระบบปิดการสั่งซื้อในขณะนี้ ขออภัยในความไม่สะดวกครับ';
-                banner.classList.remove('hidden');
+                badge.className = 'text-xs bg-red-600 px-3 py-1.5 rounded-full font-semibold shadow-sm';
+                storeBanner.classList.remove('hidden');
+                tableBanner.classList.add('hidden');
                 btnCheckout.disabled = true;
                 btnCheckout.innerText = 'ร้านปิดรับออเดอร์';
                 btnCheckout.className = 'w-full bg-gray-300 text-gray-500 py-3.5 rounded-xl font-bold text-base cursor-not-allowed';
-            } else if (isCurrentTableClosed) {
-                badge.innerText = '🔴 โต๊ะปิดรับออเดอร์';
-                badge.className = 'text-xs bg-red-600 px-3 py-1.5 rounded-full font-semibold shadow-sm shrink-0';
-                bannerTitle.innerText = '⛔ ขณะนี้โต๊ะนี้ปิดรับการสั่งอาหารชั่วคราวครับ';
-                bannerSub.innerText = 'กรุณาติดต่อพนักงานที่หน้าร้าน หรือย้ายไปสแกน QR Code โต๊ะอื่นที่เปิดให้บริการครับ';
-                banner.classList.remove('hidden');
+            } else if (blockedTable) {
+                badge.innerText = '🟠 โต๊ะปิดรับออเดอร์';
+                badge.className = 'text-xs bg-orange-600 px-3 py-1.5 rounded-full font-semibold shadow-sm';
+                storeBanner.classList.add('hidden');
+                document.getElementById('closed-table-name').innerText = blockedTable.name;
+                tableBanner.classList.remove('hidden');
                 btnCheckout.disabled = true;
-                btnCheckout.innerText = 'โต๊ะนี้ปิดรับออเดอร์';
+                btnCheckout.innerText = `${blockedTable.name} ปิดรับออเดอร์ชั่วคราว`;
                 btnCheckout.className = 'w-full bg-gray-300 text-gray-500 py-3.5 rounded-xl font-bold text-base cursor-not-allowed';
             } else {
                 badge.innerText = '🟢 เปิดรับออเดอร์';
-                badge.className = 'text-xs bg-emerald-600 px-3 py-1.5 rounded-full font-semibold shadow-sm shrink-0';
-                banner.classList.add('hidden');
+                badge.className = 'text-xs bg-emerald-600 px-3 py-1.5 rounded-full font-semibold shadow-sm';
+                storeBanner.classList.add('hidden');
+                tableBanner.classList.add('hidden');
                 btnCheckout.disabled = false;
                 btnCheckout.innerText = 'ยืนยันสั่งซื้อ';
                 btnCheckout.className = 'w-full bg-amber-600 text-white py-3.5 rounded-xl font-bold text-base hover:bg-amber-700 active:scale-[0.99] transition shadow-md';
@@ -468,7 +495,7 @@
         }
 
         // =========================================================================
-        // PROMPTPAY QR CODE & อัปโหลดสลิป
+        // 4. ระบบ PROMPTPAY QR CODE & อัปโหลดสลิป
         // =========================================================================
         function crc16(data) {
             let crc = 0xFFFF;
@@ -481,9 +508,7 @@
             return crc.toString(16).toUpperCase().padStart(4, '0');
         }
 
-        function formatTLV(tag, value) {
-            return `${tag}${value.length.toString().padStart(2, '0')}${value}`;
-        }
+        function formatTLV(tag, value) { return `${tag}${value.length.toString().padStart(2, '0')}${value}`; }
 
         function generatePromptPayPayload(targetId, amount) {
             const cleanId = targetId.replace(/[^0-9]/g, '');
@@ -500,10 +525,7 @@
         }
 
         function calculateCartTotal() {
-            return cart.reduce((sum, item) => {
-                const toppingsSum = (item.selectedToppings || []).reduce((tSum, t) => tSum + t.price, 0);
-                return sum + ((item.price + toppingsSum) * item.qty);
-            }, 0);
+            return cart.reduce((sum, item) => sum + ((item.price + (item.selectedToppings || []).reduce((tSum, t) => tSum + t.price, 0)) * item.qty), 0);
         }
 
         function updatePaymentQR() {
@@ -529,19 +551,18 @@
                 return;
             }
 
-            const payload = generatePromptPayPayload(paymentConfig.promptpayId, total);
-            new QRCode(qrBox, { text: payload, width: 170, height: 170, colorDark: "#0f172a", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M });
-        }
-
-        function copyPromptPay() {
-            navigator.clipboard.writeText(paymentConfig.promptpayId).then(() => {
-                alert(`คัดลอกเบอร์พร้อมเพย์ ${paymentConfig.promptpayId} เรียบร้อยครับ`);
+            new QRCode(qrBox, {
+                text: generatePromptPayPayload(paymentConfig.promptpayId, total),
+                width: 170, height: 170, colorDark: "#0f172a", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M
             });
         }
 
+        function copyPromptPay() {
+            navigator.clipboard.writeText(paymentConfig.promptpayId).then(() => alert(`คัดลอกเบอร์พร้อมเพย์ ${paymentConfig.promptpayId} เรียบร้อยครับ`));
+        }
+
         function handleSlipUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+            const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
@@ -570,7 +591,7 @@
         }
 
         // =========================================================================
-        // ตรวจสอบ IP & การทำงานหน้าร้านลูกค้า
+        // 5. ตรวจสอบ IP & ส่งออเดอร์แบบ SECURE PUSH
         // =========================================================================
         async function fetchClientIP() {
             try {
@@ -595,14 +616,13 @@
             if (isBanned) document.getElementById('banned-ip-display').innerText = clientIP;
         }
 
-        window.onload = async () => { await fetchClientIP(); };
-        function scrollToCart() { document.getElementById('cart-section').scrollIntoView({ behavior: 'smooth' }); }
+        window.onload = async () => {
+            await fetchClientIP();
+            renderLastSavedOrder();
+        };
 
-        function selectCategory(cat) {
-            selectedCategory = cat;
-            renderCategoryTabs();
-            renderMenu();
-        }
+        function scrollToCart() { document.getElementById('cart-section').scrollIntoView({ behavior: 'smooth' }); }
+        function selectCategory(cat) { selectedCategory = cat; renderCategoryTabs(); renderMenu(); }
 
         function renderCategoryTabs() {
             const container = document.getElementById('category-tabs');
@@ -617,17 +637,16 @@
         function renderMenu() {
             const menuList = document.getElementById('menu-list');
             let availableMenus = menus.filter(m => m.available);
-            if (selectedCategory !== 'ALL') {
-                availableMenus = availableMenus.filter(m => (m.category || 'ทั่วไป') === selectedCategory);
-            }
+            if (selectedCategory !== 'ALL') availableMenus = availableMenus.filter(m => (m.category || 'ทั่วไป') === selectedCategory);
+            
             if (availableMenus.length === 0) {
                 menuList.innerHTML = `<p class="text-gray-400 col-span-2 text-center py-8 text-sm">ไม่มีสินค้าพร้อมขายในหมวดหมู่นี้</p>`;
                 return;
             }
 
-            const canOrder = isStoreOpen && !isCurrentTableClosed;
+            const blocked = !isStoreOpen || Boolean(isCurrentTableBlocked());
             menuList.innerHTML = availableMenus.map(m => `
-                <div class="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between border border-amber-100 ${!canOrder ? 'opacity-60' : ''}">
+                <div class="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between border border-amber-100 ${blocked ? 'opacity-60' : ''}">
                     <div>
                         <div class="relative w-full h-32 sm:h-40 bg-amber-100 overflow-hidden">
                             <img src="${m.image || placeholderToast}" alt="${m.name}" class="w-full h-full object-cover">
@@ -639,7 +658,7 @@
                         </div>
                     </div>
                     <div class="px-3 pb-3">
-                        ${canOrder 
+                        ${!blocked 
                             ? `<button onclick="addToCart(${m.id})" class="w-full bg-amber-100 text-amber-800 py-2 rounded-xl text-sm font-bold hover:bg-amber-600 hover:text-white active:scale-95 transition">+ เพิ่มลงตะกร้า</button>`
                             : `<button disabled class="w-full bg-gray-200 text-gray-400 py-2 rounded-xl text-xs font-semibold cursor-not-allowed">ปิดรับออเดอร์</button>`
                         }
@@ -650,7 +669,7 @@
 
         function addToCart(id) {
             if (!isStoreOpen) return alert('ขณะนี้ร้านปิดรับออเดอร์ครับ');
-            if (isCurrentTableClosed) return alert('ขณะนี้โต๊ะนี้ปิดรับออเดอร์ครับ');
+            if (isCurrentTableBlocked()) return alert('โต๊ะนี้ปิดรับออเดอร์ชั่วคราว กรุณาติดต่อพนักงานครับ');
             const menu = menus.find(m => m.id === id);
             if (!menu) return;
             cart.push({ id: menu.id, name: menu.name, price: menu.price, category: menu.category || 'ทั่วไป', image: menu.image || placeholderToast, qty: 1, selectedToppings: [], note: '' });
@@ -668,12 +687,7 @@
         }
 
         function updateItemNote(index, text) { if (cart[index]) cart[index].note = text; }
-
-        function changeQty(index, delta) {
-            cart[index].qty += delta;
-            if (cart[index].qty <= 0) cart.splice(index, 1);
-            renderCart();
-        }
+        function changeQty(index, delta) { cart[index].qty += delta; if (cart[index].qty <= 0) cart.splice(index, 1); renderCart(); }
 
         function renderCart() {
             const cartItems = document.getElementById('cart-items');
@@ -694,10 +708,7 @@
             cartItems.innerHTML = cart.map((item, idx) => {
                 const menuObj = menus.find(m => m.id === item.id);
                 const itemCategory = item.category || (menuObj ? menuObj.category : 'ทั่วไป');
-                const matchingToppings = toppings.filter(t => {
-                    const targetCat = t.targetCategory || t.category || 'ALL';
-                    return t.available && (targetCat === 'ALL' || targetCat === itemCategory);
-                });
+                const matchingToppings = toppings.filter(t => t.available && ((t.targetCategory || t.category || 'ALL') === 'ALL' || (t.targetCategory || t.category) === itemCategory));
 
                 const groupedToppings = {};
                 matchingToppings.forEach(t => {
@@ -761,32 +772,26 @@
         }
 
         function checkout() {
-            if (bannedIPs.some(b => b.ip === clientIP)) {
-                checkIfBanned();
-                return alert('ขออภัย อุปกรณ์ของคุณถูกระงับการสั่งซื้อครับ');
-            }
-            if (!isStoreOpen) return alert('ขออภัยครับ ขณะนี้ร้านปิดรับออเดอร์แล้ว ไม่สามารถสั่งซื้อได้ครับ');
-            if (isCurrentTableClosed) return alert('ขออภัยครับ ขณะนี้โต๊ะนี้ปิดรับออเดอร์แล้วครับ');
+            if (bannedIPs.some(b => b.ip === clientIP)) { checkIfBanned(); return alert('ขออภัย อุปกรณ์ของคุณถูกระงับการสั่งซื้อครับ'); }
+            if (!isStoreOpen) return alert('ขออภัยครับ ขณะนี้ร้านปิดรับออเดอร์แล้ว');
+            if (isCurrentTableBlocked()) return alert('โต๊ะนี้ปิดรับออเดอร์ชั่วคราว กรุณาติดต่อพนักงานครับ');
 
             const orderType = document.getElementById('order-type').value;
             let name = document.getElementById('customer-name').value.trim();
             const address = document.getElementById('customer-address').value.trim();
-            let tableId = '', tableName = '';
+            let tableName = '';
 
             if (orderType === 'dinein') {
-                tableId = document.getElementById('selected-table-id').value;
-                const foundTable = tables.find(t => String(t.id) === String(tableId));
-                if (!foundTable || !foundTable.isOpen) {
-                    return alert('โต๊ะที่เลือกปิดรับออเดอร์แล้ว กรุณาเลือกโต๊ะอื่นครับ');
-                }
-                tableName = foundTable.name;
+                const tableId = document.getElementById('customer-table').value;
+                const tObj = shopTables.find(t => t.id === tableId);
+                if (!tObj || !tObj.isOpen) return alert('กรุณาเลือกโต๊ะที่เปิดให้บริการครับ');
+                tableName = tObj.name;
                 if (!name) name = `ลูกค้า (${tableName})`;
             } else {
                 if (!name) return alert('กรุณากรอกชื่อและเบอร์โทรครับ');
             }
 
             if (cart.length === 0) return alert('กรุณาเลือกสินค้าอย่างน้อย 1 รายการครับ');
-            
             if (orderType === 'delivery') {
                 if (!address) return alert('กรุณาระบุที่อยู่จัดส่งครับ');
                 if (!uploadedSlipBase64) return alert('กรณีขับรถไปส่ง กรุณาสแกนโอนเงินและแนบรูปสลิปก่อนกดสั่งซื้อครับ');
@@ -809,61 +814,48 @@
 
             const newOrder = {
                 id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
-                customerName: name, customerIP: clientIP,
-                orderType: orderType,
-                tableId: tableId,
-                tableName: tableName,
-                address: address,
+                customerName: name, customerIP: clientIP, orderType: orderType,
+                tableName: tableName, address: address,
                 paymentMethod: orderType === 'delivery' ? 'transfer' : 'cash',
                 slipImage: orderType === 'delivery' ? uploadedSlipBase64 : '',
                 items: formattedItems, total: orderGrandTotal, status: 'pending',
                 time: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-                date: localDate
+                date: localDate,
+                createdAt: Date.now()
             };
 
-            const updatedOrders = [newOrder, ...orders];
-            db.ref(`shops_data/${SHOP_ID}/orders`).set(updatedOrders);
-            
-            myLastOrderId = newOrder.id;
-            localStorage.setItem('my_last_order_' + SHOP_ID, myLastOrderId);
-
-            cart = [];
-            clearSlip();
-            renderCart();
-            checkMyOrderStatus();
-            alert(`สั่งซื้อสำเร็จ! ร้าน${shopDisplayName}ได้รับออเดอร์เรียบร้อยแล้วครับ`);
+            // ส่งออเดอร์ขึ้น Firebase ด้วย .push() (เขียนอย่างเดียว ปลอดภัยตาม Security Rules)
+            shopBaseRef.child('orders').push(newOrder)
+                .then(() => {
+                    // บันทึกสำเนาออเดอร์ล่าสุดไว้ในเครื่องลูกค้าเพื่อแสดงผล
+                    localStorage.setItem('my_last_order_data_' + SHOP_ID, JSON.stringify(newOrder));
+                    cart = [];
+                    clearSlip();
+                    renderCart();
+                    renderLastSavedOrder();
+                    alert(`สั่งซื้อสำเร็จ! ร้าน${shopDisplayName}ได้รับออเดอร์เรียบร้อยแล้วครับ`);
+                })
+                .catch(err => {
+                    alert('ไม่สามารถส่งออเดอร์ได้ กรุณาลองใหม่อีกครั้ง: ' + err.message);
+                });
         }
 
-        function checkMyOrderStatus() {
-            if (!myLastOrderId) return;
-            const myOrder = orders.find(o => o.id === myLastOrderId);
+        function renderLastSavedOrder() {
+            const raw = localStorage.getItem('my_last_order_data_' + SHOP_ID);
             const box = document.getElementById('my-order-box');
             const detail = document.getElementById('my-order-detail');
+            if (!raw) { box.classList.add('hidden'); return; }
 
-            if (!myOrder) { box.classList.add('hidden'); return; }
-
+            const myOrder = JSON.parse(raw);
             box.classList.remove('hidden');
-            let statusText = 'รอร้านรับออเดอร์';
-            let statusColor = 'text-yellow-700 bg-yellow-100';
-            if (myOrder.status === 'cooking') {
-                statusText = 'กำลังทำออเดอร์';
-                statusColor = 'text-blue-700 bg-blue-100';
-            } else if (myOrder.status === 'done') {
-                if (myOrder.orderType === 'delivery') statusText = 'กำลังขับรถไปส่ง / เสร็จสิ้น';
-                else if (myOrder.orderType === 'dinein') statusText = `เสิร์ฟที่ ${myOrder.tableName} / เสร็จสิ้น`;
-                else statusText = 'พร้อมรับที่หน้าร้านแล้ว!';
-                statusColor = 'text-emerald-700 bg-emerald-100';
-            }
-
-            const typeTag = myOrder.orderType === 'dinein' ? `<span class="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold ml-1">🍽️ ${myOrder.tableName}</span>` : '';
 
             detail.innerHTML = `
                 <div class="flex justify-between items-center mb-2">
                     <div>
                         <span class="font-bold text-amber-600">${myOrder.id}</span>
-                        ${typeTag}
+                        ${myOrder.tableName ? `<span class="ml-1.5 text-xs bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-bold">🍽️ ${myOrder.tableName}</span>` : ''}
                     </div>
-                    <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColor}">${statusText}</span>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold text-emerald-700 bg-emerald-100">ส่งออเดอร์สำเร็จ (${myOrder.time})</span>
                 </div>
                 <div class="text-xs text-gray-600 mb-2 space-y-1">
                     ${myOrder.items.map(i => {
@@ -873,7 +865,7 @@
                 </div>
                 <div class="flex justify-between items-center text-sm font-bold text-gray-800">
                     <span>ยอดชำระ: ${myOrder.total} บาท</span>
-                    ${myOrder.paymentMethod === 'transfer' ? '<span class="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">แนบสลิปโอนแล้ว</span>' : '<span class="text-xs text-gray-500">ชำระที่ร้าน</span>'}
+                    ${myOrder.paymentMethod === 'transfer' ? '<span class="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">แนบสลิปโอนแล้ว</span>' : '<span class="text-xs text-gray-500">ชำระเงินที่ร้าน</span>'}
                 </div>
             `;
         }
