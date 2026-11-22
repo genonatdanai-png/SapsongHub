@@ -408,4 +408,425 @@
                     receiptFooter: (d.paymentConfig && d.paymentConfig.receiptFooter) || ''
                 };
                 isStoreOpen = d.isStoreOpen !== undefined ? d.isStoreOpen : true;
-                menus = Array.isArray(d.menus) ? d.menus : Object.values(d.menus ||
+                menus = Array.isArray(d.menus) ? d.menus : Object.values(d.menus || {});
+                orders = Object.entries(d.orders || {}).map(([k, v]) => ({ ...v, key: k, items: Array.isArray(v.items) ? v.items : [] })).reverse();
+
+                applyLogoUI(paymentConfig.shopLogo);
+                document.getElementById('set-shop-name').value = paymentConfig.shopName;
+                document.getElementById('set-promptpay').value = paymentConfig.promptpayId;
+                document.getElementById('set-footer').value = paymentConfig.receiptFooter;
+                document.getElementById('set-store-open').checked = isStoreOpen;
+
+                renderOrders();
+                renderMenus();
+            });
+        }
+
+        function applyLogoUI(b64) {
+            const lBox = document.getElementById('login-logo-box'), nLogo = document.getElementById('nav-logo'),
+                  sPrev = document.getElementById('set-logo-preview'), sPh = document.getElementById('set-logo-ph');
+            if (b64) {
+                lBox.innerHTML = `<img src="${b64}" class="w-full h-full object-cover">`;
+                nLogo.src = b64; nLogo.classList.remove('hidden');
+                sPrev.src = b64; sPrev.classList.remove('hidden'); sPh.classList.add('hidden');
+            }
+        }
+
+        function handleLogoUpload(e) {
+            const f = e.target.files[0]; if (!f) return;
+            const r = new FileReader();
+            r.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    const c = document.createElement('canvas'); c.width = 200; c.height = 200;
+                    c.getContext('2d').drawImage(img, 0, 0, 200, 200);
+                    paymentConfig.shopLogo = c.toDataURL('image/jpeg', 0.85);
+                    applyLogoUI(paymentConfig.shopLogo);
+                };
+                img.src = ev.target.result;
+            };
+            r.readAsDataURL(f);
+        }
+
+        function saveStoreSettings() {
+            paymentConfig.shopName = document.getElementById('set-shop-name').value.trim() || SHOP_ID;
+            paymentConfig.promptpayId = document.getElementById('set-promptpay').value.trim();
+            paymentConfig.receiptFooter = document.getElementById('set-footer').value.trim();
+            const openVal = document.getElementById('set-store-open').checked;
+            Promise.all([
+                db.ref(`shops_data/${SHOP_ID}/paymentConfig`).set(paymentConfig),
+                db.ref(`shops_data/${SHOP_ID}/isStoreOpen`).set(openVal)
+            ]).then(() => alert('บันทึกการตั้งค่าร้านเรียบร้อยแล้วครับ'));
+        }
+
+        function saveMenu() {
+            const editId = document.getElementById('edit-menu-id').value;
+            const name = document.getElementById('inp-menu-name').value.trim();
+            const price = Number(document.getElementById('inp-menu-price').value);
+            const category = document.getElementById('inp-menu-cat').value.trim() || 'ทั่วไป';
+            const available = document.getElementById('inp-menu-available').checked;
+            if (!name || isNaN(price) || price < 0) return alert('กรุณากรอกชื่อเมนูและราคาให้ถูกต้องครับ');
+            if (editId) {
+                const idx = menus.findIndex(m => String(m.id) === String(editId));
+                if (idx !== -1) menus[idx] = { ...menus[idx], name, price, category, available };
+            } else {
+                menus.push({ id: 'm-' + Date.now(), name, price, category, available });
+            }
+            db.ref(`shops_data/${SHOP_ID}/menus`).set(menus).then(() => resetMenuForm());
+        }
+
+        function editMenu(id) {
+            const m = menus.find(x => String(x.id) === String(id)); if (!m) return;
+            document.getElementById('edit-menu-id').value = m.id;
+            document.getElementById('inp-menu-name').value = m.name;
+            document.getElementById('inp-menu-price').value = m.price;
+            document.getElementById('inp-menu-cat').value = m.category || '';
+            document.getElementById('inp-menu-available').checked = m.available !== false;
+            document.getElementById('menu-form-title').innerText = '✏️ แก้ไขเมนู';
+            document.getElementById('btn-cancel-menu').classList.remove('hidden');
+        }
+
+        function resetMenuForm() {
+            document.getElementById('edit-menu-id').value = '';
+            document.getElementById('inp-menu-name').value = '';
+            document.getElementById('inp-menu-price').value = '';
+            document.getElementById('inp-menu-cat').value = '';
+            document.getElementById('inp-menu-available').checked = true;
+            document.getElementById('menu-form-title').innerText = '➕ เพิ่มเมนูใหม่';
+            document.getElementById('btn-cancel-menu').classList.add('hidden');
+        }
+
+        function deleteMenu(id) {
+            if (confirm('ยืนยันการลบเมนูนี้?')) {
+                menus = menus.filter(m => String(m.id) !== String(id));
+                db.ref(`shops_data/${SHOP_ID}/menus`).set(menus);
+            }
+        }
+
+        function renderMenus() {
+            document.getElementById('menu-count').innerText = menus.length;
+            const el = document.getElementById('menus-list');
+            if (menus.length === 0) { el.innerHTML = `<p class="text-slate-400 text-sm py-6 text-center">ยังไม่มีเมนูในระบบ</p>`; return; }
+            el.innerHTML = menus.map(m => `
+                <div class="py-3 flex justify-between items-center gap-2">
+                    <div>
+                        <span class="font-bold text-slate-800 text-sm">${m.name}</span>
+                        <span class="text-xs text-amber-700 font-bold ml-2">${Number(m.price).toLocaleString()} บาท</span>
+                        <span class="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full ml-1.5">${m.category || 'ทั่วไป'}</span>
+                        ${m.available === false ? `<span class="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full ml-1 font-bold">หมด</span>` : ''}
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button onclick="editMenu('${m.id}')" class="bg-amber-100 text-amber-800 px-3 py-1 rounded-lg text-xs font-bold">แก้ไข</button>
+                        <button onclick="deleteMenu('${m.id}')" class="bg-red-100 text-red-700 px-2.5 py-1 rounded-lg text-xs font-bold">ลบ</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openNewBillModal() {
+            targetOrderKeyForAdd = null; draftItems = [];
+            document.getElementById('bb-title').innerText = '🧾 เปิดบิลใหม่';
+            document.getElementById('bb-new-meta').classList.remove('hidden');
+            document.getElementById('bb-customer').value = '';
+            document.getElementById('bb-search').value = '';
+            document.getElementById('btn-submit-bill').innerText = '✅ เปิดบิลทันที';
+            renderBillMenuPicker(); renderDraftSummary();
+            document.getElementById('bill-builder-modal').classList.remove('hidden');
+        }
+
+        function openAddToExistingOrderModal(orderKey) {
+            const ord = orders.find(o => o.key === orderKey); if (!ord) return;
+            targetOrderKeyForAdd = orderKey; draftItems = [];
+            document.getElementById('bb-title').innerText = `➕ เพิ่มรายการเข้าบิล #${ord.orderId || ''}`;
+            document.getElementById('bb-new-meta').classList.add('hidden');
+            document.getElementById('bb-search').value = '';
+            document.getElementById('btn-submit-bill').innerText = '✅ เพิ่มเข้าบิลนี้';
+            renderBillMenuPicker(); renderDraftSummary();
+            document.getElementById('bill-builder-modal').classList.remove('hidden');
+        }
+
+        function renderBillMenuPicker() {
+            const kw = document.getElementById('bb-search').value.toLowerCase();
+            const grid = document.getElementById('bb-menu-grid');
+            const list = menus.filter(m => m.available !== false && (!kw || m.name.toLowerCase().includes(kw)));
+            grid.innerHTML = list.map(m => {
+                const inDraft = draftItems.find(d => String(d.menuId) === String(m.id));
+                const qty = inDraft ? inDraft.qty : 0;
+                return `
+                <div class="border rounded-2xl p-3 flex justify-between items-center gap-2 ${qty > 0 ? 'bg-amber-50 border-amber-300' : 'bg-white'}">
+                    <div>
+                        <p class="font-bold text-slate-800 text-xs sm:text-sm">${m.name}</p>
+                        <p class="text-xs font-bold text-amber-700">${Number(m.price).toLocaleString()} บาท</p>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        ${qty > 0 ? `<button type="button" onclick="changeDraftQty('${m.id}', -1)" class="w-7 h-7 rounded-lg bg-slate-200 font-bold text-xs">-</button><span class="w-5 text-center font-bold text-xs">${qty}</span>` : ''}
+                        <button type="button" onclick="addDraftItem('${m.id}')" class="px-2.5 h-7 rounded-lg bg-slate-900 text-white font-bold text-xs">+ เพิ่ม</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function addDraftItem(menuId) {
+            const m = menus.find(x => String(x.id) === String(menuId)); if (!m) return;
+            const ex = draftItems.find(d => String(d.menuId) === String(m.id));
+            if (ex) ex.qty += 1; else draftItems.push({ menuId: m.id, name: m.name, price: Number(m.price) || 0, qty: 1 });
+            renderBillMenuPicker(); renderDraftSummary();
+        }
+
+        function changeDraftQty(menuId, delta) {
+            const idx = draftItems.findIndex(d => String(d.menuId) === String(menuId)); if (idx === -1) return;
+            draftItems[idx].qty += delta;
+            if (draftItems[idx].qty <= 0) draftItems.splice(idx, 1);
+            renderBillMenuPicker(); renderDraftSummary();
+        }
+
+        function renderDraftSummary() {
+            const listEl = document.getElementById('bb-draft-list');
+            const totalEl = document.getElementById('bb-draft-total');
+            if (draftItems.length === 0) { listEl.innerHTML = `<p class="text-slate-400 text-center py-2">ยังไม่ได้เลือกรายการ</p>`; totalEl.innerText = '0 บาท'; return; }
+            const sum = draftItems.reduce((acc, it) => acc + (it.price * it.qty), 0);
+            listEl.innerHTML = draftItems.map(it => `<div class="flex justify-between bg-white px-3 py-1.5 rounded-lg border"><span><strong>${it.name}</strong> x${it.qty}</span><span class="font-bold">${(it.price * it.qty).toLocaleString()} บ.</span></div>`).join('');
+            totalEl.innerText = `${sum.toLocaleString()} บาท`;
+        }
+
+        function submitBillItems() {
+            if (draftItems.length === 0) return alert('กรุณาเลือกรายการครับ');
+            if (targetOrderKeyForAdd) {
+                const ord = orders.find(o => o.key === targetOrderKeyForAdd); if (!ord) return;
+                const merged = [...(ord.items || [])];
+                draftItems.forEach(addIt => {
+                    const idx = merged.findIndex(x => x.name === addIt.name && Number(x.price) === Number(addIt.price));
+                    if (idx !== -1) merged[idx].qty = Number(merged[idx].qty || 1) + addIt.qty;
+                    else merged.push({ name: addIt.name, price: addIt.price, qty: addIt.qty });
+                });
+                const newTotal = merged.reduce((s, x) => s + (Number(x.price || 0) * Number(x.qty || 1)), 0);
+                db.ref(`shops_data/${SHOP_ID}/orders/${targetOrderKeyForAdd}`).update({ items: merged, total: newTotal })
+                    .then(() => document.getElementById('bill-builder-modal').classList.add('hidden'));
+            } else {
+                const cust = document.getElementById('bb-customer').value.trim() || 'ลูกค้าหน้าร้าน';
+                const total = draftItems.reduce((s, x) => s + (x.price * x.qty), 0);
+                db.ref(`shops_data/${SHOP_ID}/orders`).push({
+                    orderId: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
+                    customerName: cust,
+                    orderType: document.getElementById('bb-type').value,
+                    paymentMethod: document.getElementById('bb-payment').value,
+                    items: draftItems.map(x => ({ name: x.name, price: x.price, qty: x.qty })),
+                    total, status: 'กำลังทำ', createdAt: Date.now()
+                }).then(() => document.getElementById('bill-builder-modal').classList.add('hidden'));
+            }
+        }
+
+        function adjustOrderItemQty(orderKey, itemIdx, delta) {
+            const ord = orders.find(o => o.key === orderKey); if (!ord || !ord.items || !ord.items[itemIdx]) return;
+            const nextItems = [...ord.items];
+            const nextQty = Number(nextItems[itemIdx].qty || 1) + delta;
+            if (nextQty <= 0) nextItems.splice(itemIdx, 1); else nextItems[itemIdx] = { ...nextItems[itemIdx], qty: nextQty };
+            const nextTotal = nextItems.reduce((s, x) => s + (Number(x.price || 0) * Number(x.qty || 1)), 0);
+            db.ref(`shops_data/${SHOP_ID}/orders/${orderKey}`).update({ items: nextItems, total: nextTotal });
+        }
+
+        function deleteOrder(orderKey) { if (confirm('ยืนยันการลบบิลนี้?')) db.ref(`shops_data/${SHOP_ID}/orders/${orderKey}`).remove(); }
+
+        function openSlipView(src) {
+            document.getElementById('slip-view-img').src = src;
+            document.getElementById('slip-view-modal').classList.remove('hidden');
+        }
+
+        function setOrderFilter(f) {
+            orderFilter = f;
+            ['ALL', 'OPEN', 'DONE'].forEach(k => {
+                document.getElementById('oflt-' + k).className = (k === f)
+                    ? 'px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white'
+                    : 'px-3 py-1.5 rounded-xl text-xs font-bold bg-white border text-slate-600';
+            });
+            renderOrders();
+        }
+
+        function crc16(data) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < data.length; i++) { crc ^= data.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) crc = ((crc & 0x8000) !== 0) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF; }
+            return crc.toString(16).toUpperCase().padStart(4, '0');
+        }
+        function tlv(t, v) { return `${t}${v.length.toString().padStart(2, '0')}${v}`; }
+        function buildPromptPayQR(id, amt) {
+            const clean = String(id || '').replace(/[^0-9]/g, '');
+            const target = (clean.length === 10 && clean.startsWith('0')) ? tlv('01', '0066' + clean.substring(1)) : tlv('02', clean);
+            const m = tlv('00', 'A000000677010111') + target;
+            let p = tlv('00', '01') + tlv('01', amt > 0 ? '12' : '11') + tlv('29', m) + tlv('53', '764');
+            if (amt > 0) p += tlv('54', Number(amt).toFixed(2));
+            p += tlv('58', 'TH') + '6304';
+            return p + crc16(p);
+        }
+
+        function openCheckoutModal(orderKey) {
+            const ord = orders.find(o => o.key === orderKey); if (!ord) return;
+            checkoutOrderKey = orderKey; checkoutTotal = Number(ord.total || 0);
+            document.getElementById('co-order-meta').innerText = `#${ord.orderId || ''} • ${ord.customerName || 'ลูกค้า'}`;
+            document.getElementById('co-total-amount').innerText = `${checkoutTotal.toLocaleString()} บาท`;
+            document.getElementById('co-pp-id').innerText = paymentConfig.promptpayId || '-';
+            document.getElementById('co-cash-received').value = '';
+            calculateChange();
+            const qrBox = document.getElementById('bill-qr-box'); qrBox.innerHTML = '';
+            if (paymentConfig.promptpayId && checkoutTotal > 0) new QRCode(qrBox, { text: buildPromptPayQR(paymentConfig.promptpayId, checkoutTotal), width: 150, height: 150 });
+            document.getElementById('checkout-modal').classList.remove('hidden');
+        }
+
+        function setQuickCashExact() { document.getElementById('co-cash-received').value = checkoutTotal; calculateChange(); }
+        function addQuickCash(a) { document.getElementById('co-cash-received').value = Number(document.getElementById('co-cash-received').value || 0) + a; calculateChange(); }
+        function calculateChange() {
+            const cash = Number(document.getElementById('co-cash-received').value || 0);
+            const el = document.getElementById('co-change-amount');
+            if (!cash) { el.innerText = '0 บาท'; el.className = 'text-lg font-bold text-emerald-700'; return; }
+            const diff = cash - checkoutTotal;
+            el.innerText = diff < 0 ? `ขาดอีก ${Math.abs(diff).toLocaleString()} บาท` : `${diff.toLocaleString()} บาท`;
+            el.className = diff < 0 ? 'text-sm font-bold text-red-600' : 'text-lg font-bold text-emerald-700';
+        }
+        function finishCheckoutOrder() {
+            if (!checkoutOrderKey) return;
+            db.ref(`shops_data/${SHOP_ID}/orders/${checkoutOrderKey}/status`).set('เสร็จแล้ว')
+                .then(() => document.getElementById('checkout-modal').classList.add('hidden'));
+        }
+
+        function renderOrders() {
+            const filtered = orders.filter(o => {
+                if (orderFilter === 'OPEN') return o.status !== 'เสร็จแล้ว';
+                if (orderFilter === 'DONE') return o.status === 'เสร็จแล้ว';
+                return true;
+            });
+            document.getElementById('orders-summary-badge').innerText = `${filtered.length} บิล`;
+            const el = document.getElementById('orders-container');
+            if (filtered.length === 0) { el.innerHTML = `<div class="bg-white p-8 rounded-2xl border text-center text-slate-400 text-sm col-span-2">ไม่มีบิลในหมวดนี้</div>`; return; }
+
+            el.innerHTML = filtered.map(o => {
+                const itemsHtml = (o.items || []).map((it, idx) => `
+                    <div class="flex justify-between items-center py-1.5 border-b border-dashed text-xs">
+                        <div><span class="font-bold text-slate-800">${it.name}</span> <span class="text-slate-500">(${Number(it.price || 0).toLocaleString()} บ.)</span></div>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="adjustOrderItemQty('${o.key}', ${idx}, -1)" class="w-6 h-6 rounded bg-slate-200 font-bold">-</button>
+                            <span class="font-bold w-5 text-center">${it.qty || 1}</span>
+                            <button onclick="adjustOrderItemQty('${o.key}', ${idx}, 1)" class="w-6 h-6 rounded bg-amber-200 font-bold">+</button>
+                        </div>
+                    </div>`).join('');
+
+                return `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border space-y-3">
+                    <div class="flex justify-between items-start gap-2">
+                        <div>
+                            <span class="text-xs font-mono font-bold text-slate-400">#${o.orderId || o.key.slice(-4)} • ${o.orderType || ''}</span>
+                            <h3 class="font-bold text-slate-800 text-base">${o.customerName || 'ลูกค้า'}</h3>
+                            <p class="text-[11px] text-slate-500">${o.paymentMethod || 'เงินสด'}${o.slipTransRef ? ` • Ref: ${o.slipTransRef.slice(-6)}` : ''}</p>
+                        </div>
+                        <span class="text-xs font-bold px-2.5 py-1 rounded-full ${o.status === 'เสร็จแล้ว' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${o.status || 'กำลังทำ'}</span>
+                    </div>
+                    <div class="bg-slate-50 p-2.5 rounded-xl space-y-1">${itemsHtml}</div>
+                    <div class="flex justify-between items-center">
+                        <button onclick="openAddToExistingOrderModal('${o.key}')" class="bg-indigo-100 text-indigo-900 px-3 py-1.5 rounded-xl text-xs font-bold">➕ เพิ่มเมนู/เข่ง</button>
+                        <span class="text-lg font-bold text-amber-600">${Number(o.total || 0).toLocaleString()} บาท</span>
+                    </div>
+                    <div class="flex gap-1.5 pt-2 border-t flex-wrap">
+                        ${o.slipImage ? `<button onclick="openSlipView('${o.slipImage}')" class="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-xl text-xs font-bold">🔍 สลิป</button>` : ''}
+                        <button onclick="openCheckoutModal('${o.key}')" class="flex-1 bg-emerald-600 text-white py-1.5 rounded-xl text-xs font-bold">💰 เช็กบิล / ทอนเงิน</button>
+                        <a href="receipt.html?shop=${SHOP_ID}&order=${o.key}" target="_blank" class="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold">🧾 ใบเสร็จ</a>
+                        <button onclick="deleteOrder('${o.key}')" class="bg-red-50 text-red-600 px-2.5 py-1.5 rounded-xl text-xs font-bold">ลบ</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function switchTab(tab) {
+            ['orders', 'menus', 'settings'].forEach(t => {
+                document.getElementById('view-' + t).classList.add('hidden');
+                document.getElementById('tab-' + t).className = "tab-btn px-3 py-2 bg-slate-800 text-slate-200 rounded-xl text-xs";
+            });
+            document.getElementById('view-' + tab).classList.remove('hidden');
+            document.getElementById('tab-' + tab).className = "tab-btn active px-3 py-2 rounded-xl text-xs";
+        }
+
+        function openHubRenewModal() {
+            rnSlipBase64 = ''; rnSlipRef = '';
+            document.getElementById('rn-slip-input').value = '';
+            document.getElementById('rn-slip-prev').classList.add('hidden');
+            document.getElementById('rn-slip-status').classList.add('hidden');
+            document.getElementById('rn-shop-info').innerText = `${shopMeta.name || SHOP_ID} (${SHOP_ID})`;
+            document.getElementById('rn-pp-display').innerText = HUB_PROMPTPAY_ID;
+            onShopRenewPresetChange();
+            document.getElementById('hub-renew-modal').classList.remove('hidden');
+        }
+
+        function onShopRenewPresetChange() {
+            const [, amt] = document.getElementById('rn-plan-preset').value.split('|');
+            document.getElementById('rn-amount').value = amt;
+            renderShopRenewQR();
+        }
+
+        function renderShopRenewQR() {
+            const amt = Number(document.getElementById('rn-amount').value) || 0;
+            const box = document.getElementById('renew-qr-box'); box.innerHTML = '';
+            if (amt > 0) {
+                new QRCode(box, { text: buildPromptPayQR(HUB_PROMPTPAY_ID, amt), width: 150, height: 150 });
+            } else {
+                box.innerHTML = `<p class="text-xs font-bold text-emerald-700 py-4 px-2">ทดลอง 3 เดือน ฟรี 0 บาท (ไม่ต้องโอนเงิน)</p>`;
+            }
+        }
+
+        function processShopRenewSlip(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const stBox = document.getElementById('rn-slip-status');
+            stBox.className = 'p-2 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700';
+            stBox.innerText = '🔍 กำลังสแกน QR สลิป...'; stBox.classList.remove('hidden');
+
+            const r = new FileReader();
+            r.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    const sc = document.createElement('canvas'); const max = 1000;
+                    let sw = img.width, sh = img.height;
+                    if (sw > max || sh > max) { if (sw > sh) { sh = Math.round(sh * max / sw); sw = max; } else { sw = Math.round(sw * max / sh); sh = max; } }
+                    sc.width = sw; sc.height = sh;
+                    const ctx = sc.getContext('2d'); ctx.drawImage(img, 0, 0, sw, sh);
+                    const qr = jsQR(ctx.getImageData(0, 0, sw, sh).data, sw, sh);
+
+                    const vc = document.createElement('canvas'); const w = 500, h = Math.round((img.height / img.width) * 500) || 500;
+                    vc.width = w; vc.height = h; vc.getContext('2d').drawImage(img, 0, 0, w, h);
+                    rnSlipBase64 = vc.toDataURL('image/jpeg', 0.75);
+                    const prev = document.getElementById('rn-slip-prev'); prev.src = rnSlipBase64; prev.classList.remove('hidden');
+
+                    if (qr && qr.data) {
+                        const m = qr.data.match(/02\d{2}([A-Za-z0-9]{10,})/);
+                        rnSlipRef = m ? m[1] : qr.data.slice(-16);
+                        stBox.className = 'p-2 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800';
+                        stBox.innerText = `✅ อ่าน QR สลิปได้ (Ref: ${rnSlipRef.slice(-8)})`;
+                    } else {
+                        rnSlipRef = '';
+                        stBox.className = 'p-2 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800';
+                        stBox.innerText = '⚠️ แนบสลิปแล้ว (HUB จะตรวจสลิปให้)';
+                    }
+                };
+                img.src = ev.target.result;
+            };
+            r.readAsDataURL(file);
+        }
+
+        function submitShopRenewRequest() {
+            const [daysStr] = document.getElementById('rn-plan-preset').value.split('|');
+            const days = Number(daysStr) || 30;
+            const amount = Number(document.getElementById('rn-amount').value) || 0;
+            if (amount > 0 && !rnSlipBase64) return alert('กรุณาแนบสลิปโอนเงินก่อนครับ');
+
+            db.ref('sapsong_hub_renewals').push({
+                shopId: SHOP_ID,
+                shopName: paymentConfig.shopName || shopMeta.name || SHOP_ID,
+                bizType: 'food',
+                days, amount,
+                slipImage: rnSlipBase64,
+                slipTransRef: rnSlipRef,
+                status: 'pending',
+                createdAt: Date.now()
+            }).then(() => {
+                document.getElementById('hub-renew-modal').classList.add('hidden');
+                alert('ส่งคำขอต่ออายุให้ Sapsong HUB เรียบร้อยแล้วครับ!');
+            });
+        }
+    </script>
+</body>
+</html>
