@@ -95,7 +95,7 @@
                     </div>
                     <div id="vw-file-actions" class="flex flex-wrap gap-2 shrink-0"></div>
                 </div>
-                <div id="vw-file-embed-box" class="w-full h-[520px] bg-slate-100 rounded-2xl overflow-hidden border"></div>
+                <div id="vw-file-embed-box" class="w-full h-[520px] bg-slate-100 rounded-2xl overflow-hidden border flex items-center justify-center text-slate-500 text-sm"></div>
             </div>
         </div>
 
@@ -123,7 +123,6 @@
                 <button onclick="switchAuthTab('register')" id="tab-auth-register" class="flex-1 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600">สมัครไอดีใหม่</button>
             </div>
 
-            <!-- ฟอร์มล็อกอิน -->
             <form id="form-login" onsubmit="handleStudentLogin(event)" class="space-y-3">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">ไอดีผู้เรียน (Username)</label>
@@ -136,7 +135,6 @@
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-sm shadow-md">เข้าสู่ระบบ</button>
             </form>
 
-            <!-- ฟอร์มสมัครไอดี -->
             <form id="form-register" onsubmit="handleStudentRegister(event)" class="hidden space-y-3">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">ตั้งไอดีผู้เรียน (Username) *</label>
@@ -180,11 +178,9 @@
                 <p class="text-xs text-slate-600">บัญชี: <strong id="pay-acc-name">-</strong> (<span id="pay-pp-id" class="font-mono">-</span>)</p>
                 <div id="qr-box" class="bg-white p-2.5 rounded-xl border border-blue-100 inline-block"></div>
 
-                <!-- อัปโหลดและอ่านสลิปอัตโนมัติ -->
                 <div class="text-left bg-white p-3 rounded-xl border border-blue-200 space-y-2">
                     <label class="block text-xs font-bold text-slate-700">📎 แนบรูปสลิปโอนเงิน (ระบบอ่าน QR สลิปอัตโนมัติ) *</label>
                     <input type="file" id="slip-input" accept="image/*" onchange="processSlipImage(event)" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-100 file:text-emerald-800 file:font-bold cursor-pointer">
-                    
                     <div id="slip-scan-status" class="hidden p-2.5 rounded-xl text-xs font-semibold"></div>
                     <img id="slip-preview" src="" class="hidden w-full max-h-36 object-contain rounded-lg border bg-slate-50">
                 </div>
@@ -218,20 +214,19 @@
         const defaultCover = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='180' viewBox='0 0 300 180'%3E%3Crect width='300' height='180' fill='%23eef2ff'/%3E%3Ccircle cx='150' cy='90' r='34' fill='%234f46e5'/%3E%3Cpolygon points='142,75 166,90 142,105' fill='%23ffffff'/%3E%3C/svg%3E";
 
         let configData = { shopLogo: '', instName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, fileGateUrl: DEFAULT_FILE_GATE_URL, autoUnlockSlip: true };
-        let catalogItems = [];
-        let usedSlipRefs = new Set();
+        let courses = [];
+        let students = {};
+        let ordersObj = {};
+        let currentStudent = null;
         let currentFilter = 'ALL';
-        let activeUsername = localStorage.getItem('sapsong_st_user_' + SHOP_ID) || '';
-        let currentStudentData = null;
-
-        let targetBuyItem = null;
+        let pendingPayItem = null;
         let slipBase64 = '';
-        let parsedSlipInfo = null;
+        let slipTransRef = '';
 
         function isExpired(d) {
             if (!d || d === '9999-12-31') return false;
-            const t = new Date(); t.setHours(0,0,0,0);
-            const e = new Date(d); e.setHours(0,0,0,0);
+            const t = new Date(); t.setHours(0, 0, 0, 0);
+            const e = new Date(d); e.setHours(0, 0, 0, 0);
             return t > e;
         }
 
@@ -243,82 +238,46 @@
 
         db.ref('sapsong_hub_shops/' + SHOP_ID).on('value', snap => {
             const m = snap.val();
-            if (!m) return showLock('ไม่พบข้อมูลสถาบัน', `รหัส "${SHOP_ID}" ยังไม่ได้ลงทะเบียนในระบบ`);
-            if (m.isSuspended) return showLock('ปิดให้บริการชั่วคราว', `สถาบัน "${m.name}" งดให้บริการชั่วคราว`);
-            if (m.planKey !== 'lifetime' && isExpired(m.expireDate)) return showLock('ปิดให้บริการชั่วคราว', `ระบบของ "${m.name}" ปิดให้บริการชั่วคราว`);
+            if (!m) return showLock('ไม่พบสถาบันในระบบ', `รหัส "${SHOP_ID}" ยังไม่ได้ลงทะเบียนใน Sapsong HUB`);
+            if (m.isSuspended) return showLock('ปิดให้บริการชั่วคราว', `สถาบัน "${m.name}" ถูกระงับการใช้งาน`);
+            if (m.planKey !== 'lifetime' && isExpired(m.expireDate)) return showLock('หมดอายุการใช้งาน', `แพ็กเกจของสถาบันหมดอายุเมื่อ ${m.expireDate}`);
             document.getElementById('sapsong-lock-overlay').classList.add('hidden');
-            document.getElementById('hdr-title').innerText = m.name;
-            document.title = m.name;
         });
 
-        db.ref(`courses_data/${SHOP_ID}/config`).on('value', snap => {
-            const c = snap.val() || {};
+        db.ref(`courses_data/${SHOP_ID}`).on('value', snap => {
+            const d = snap.val() || {};
+            const cfg = d.config || {};
             configData = {
-                shopLogo: c.shopLogo || '',
-                instName: c.instName || SHOP_ID,
-                promptpayId: c.promptpayId || '0855750995',
-                accountName: c.accountName || SHOP_ID,
-                fileGateUrl: c.fileGateUrl || DEFAULT_FILE_GATE_URL,
-                autoUnlockSlip: c.autoUnlockSlip !== undefined ? c.autoUnlockSlip : true
+                shopLogo: cfg.shopLogo || '',
+                instName: cfg.instName || SHOP_ID,
+                promptpayId: cfg.promptpayId || '0855750995',
+                accountName: cfg.accountName || SHOP_ID,
+                fileGateUrl: cfg.fileGateUrl || DEFAULT_FILE_GATE_URL,
+                autoUnlockSlip: cfg.autoUnlockSlip !== undefined ? cfg.autoUnlockSlip : true
             };
-            if (configData.shopLogo) {
-                const logo = document.getElementById('hdr-logo');
-                logo.src = configData.shopLogo;
-                logo.classList.remove('hidden');
-            }
-        });
+            courses = Array.isArray(d.courses) ? d.courses : Object.values(d.courses || {});
+            students = d.students || {};
+            ordersObj = d.orders || {};
 
-        db.ref(`courses_data/${SHOP_ID}/courses`).on('value', snap => {
-            catalogItems = snap.val() || [];
+            document.title = `${configData.instName} - คอร์สเรียน & คลังไฟล์`;
+            document.getElementById('hdr-title').innerText = configData.instName;
+            if (configData.shopLogo) {
+                const logoEl = document.getElementById('hdr-logo');
+                logoEl.src = configData.shopLogo;
+                logoEl.classList.remove('hidden');
+            }
+
+            const savedUser = localStorage.getItem(`sapsong_st_${SHOP_ID}`);
+            if (savedUser && students[savedUser]) {
+                currentStudent = { ...students[savedUser], username: savedUser };
+            } else if (savedUser) {
+                currentStudent = null;
+                localStorage.removeItem(`sapsong_st_${SHOP_ID}`);
+            }
+
+            updateStudentBar();
             renderCatalog();
         });
-
-        db.ref(`courses_data/${SHOP_ID}/orders`).on('value', snap => {
-            usedSlipRefs.clear();
-            const allOrders = Object.values(snap.val() || {});
-            allOrders.forEach(o => {
-                if (o.slipTransRef && o.status !== 'rejected') {
-                    usedSlipRefs.add(o.slipTransRef);
-                }
-            });
-        });
-
-        function bindStudentListener(username) {
-            if (!username) {
-                currentStudentData = null;
-                updateStudentUI();
-                renderCatalog();
-                return;
-            }
-            db.ref(`courses_data/${SHOP_ID}/students/${username}`).on('value', snap => {
-                const st = snap.val();
-                if (!st) {
-                    studentLogout();
-                    return;
-                }
-                currentStudentData = st;
-                updateStudentUI();
-                renderCatalog();
-            });
-        }
-
-        if (activeUsername) bindStudentListener(activeUsername);
-
-        function updateStudentUI() {
-            const bar = document.getElementById('student-bar');
-            const authBtns = document.getElementById('auth-header-actions');
-            if (currentStudentData) {
-                bar.classList.remove('hidden');
-                authBtns.classList.add('hidden');
-                document.getElementById('st-fullname').innerText = currentStudentData.fullName;
-                document.getElementById('st-username').innerText = currentStudentData.username;
-                const unlockedObj = currentStudentData.unlockedItems || {};
-                document.getElementById('st-unlocked-count').innerText = Object.keys(unlockedObj).length;
-            } else {
-                bar.classList.add('hidden');
-                authBtns.classList.remove('hidden');
-            }
-        }
 
         function openAuthModal(tab = 'login') {
             switchAuthTab(tab);
@@ -330,278 +289,219 @@
             document.getElementById('form-login').classList.toggle('hidden', !isLogin);
             document.getElementById('form-register').classList.toggle('hidden', isLogin);
             document.getElementById('tab-auth-login').className = isLogin ? 'flex-1 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white' : 'flex-1 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600';
-            document.getElementById('tab-auth-register').className = !isLogin ? 'flex-1 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white' : 'flex-1 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600';
-        }
-
-        function handleStudentRegister(e) {
-            e.preventDefault();
-            const username = document.getElementById('rg-user').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-            const password = document.getElementById('rg-pass').value.trim();
-            const fullName = document.getElementById('rg-name').value.trim();
-            const phone = document.getElementById('rg-phone').value.trim();
-
-            if (username.length < 3) return alert('ไอดีผู้เรียนต้องมีตัวอักษรภาษาอังกฤษหรือตัวเลขอย่างน้อย 3 ตัวครับ');
-            if (password.length < 4) return alert('รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษรครับ');
-
-            const stRef = db.ref(`courses_data/${SHOP_ID}/students/${username}`);
-            stRef.once('value', snap => {
-                if (snap.exists()) return alert('ไอดีผู้เรียนนี้มีคนใช้แล้ว กรุณาตั้งไอดีอื่นครับ');
-
-                const newStudent = {
-                    username, password, fullName, phone,
-                    unlockedItems: {},
-                    createdAt: Date.now()
-                };
-                stRef.set(newStudent).then(() => {
-                    activeUsername = username;
-                    localStorage.setItem('sapsong_st_user_' + SHOP_ID, username);
-                    bindStudentListener(username);
-                    document.getElementById('auth-modal').classList.add('hidden');
-                    alert(`สมัครไอดี "${username}" สำเร็จแล้วครับ!`);
-                });
-            });
+            document.getElementById('tab-auth-register').className = !isLogin ? 'flex-1 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white' : 'flex-1 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600';
         }
 
         function handleStudentLogin(e) {
             e.preventDefault();
-            const username = document.getElementById('lg-user').value.trim().toLowerCase();
-            const password = document.getElementById('lg-pass').value.trim();
+            const u = document.getElementById('lg-user').value.trim().toLowerCase();
+            const p = document.getElementById('lg-pass').value;
+            const st = students[u];
+            if (!st || String(st.password) !== String(p)) {
+                return alert('ไอดีผู้เรียนหรือรหัสผ่านไม่ถูกต้องครับ');
+            }
+            currentStudent = { ...st, username: u };
+            localStorage.setItem(`sapsong_st_${SHOP_ID}`, u);
+            document.getElementById('auth-modal').classList.add('hidden');
+            updateStudentBar();
+            renderCatalog();
+        }
 
-            db.ref(`courses_data/${SHOP_ID}/students/${username}`).once('value', snap => {
-                const st = snap.val();
-                if (!st || st.password !== password) {
-                    return alert('ไอดีผู้เรียนหรือรหัสผ่านไม่ถูกต้องครับ');
-                }
-                activeUsername = username;
-                localStorage.setItem('sapsong_st_user_' + SHOP_ID, username);
-                bindStudentListener(username);
+        function handleStudentRegister(e) {
+            e.preventDefault();
+            const u = document.getElementById('rg-user').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            const p = document.getElementById('rg-pass').value;
+            const name = document.getElementById('rg-name').value.trim();
+            const phone = document.getElementById('rg-phone').value.trim();
+            if (!u || u.length < 3) return alert('กรุณาตั้งไอดีผู้เรียนอย่างน้อย 3 ตัวอักษร (ภาษาอังกฤษ/ตัวเลข)');
+            if (p.length < 4) return alert('กรุณาตั้งรหัสผ่านอย่างน้อย 4 ตัวอักษร');
+            if (students[u]) return alert('ไอดีผู้เรียนนี้มีผู้ใช้งานแล้วครับ');
+
+            const newSt = { username: u, password: p, fullName: name, phone, unlockedItems: {}, createdAt: Date.now() };
+            db.ref(`courses_data/${SHOP_ID}/students/${u}`).set(newSt).then(() => {
+                currentStudent = newSt;
+                localStorage.setItem(`sapsong_st_${SHOP_ID}`, u);
                 document.getElementById('auth-modal').classList.add('hidden');
+                updateStudentBar();
+                renderCatalog();
+                alert('สมัครไอดีผู้เรียนเรียบร้อยแล้วครับ!');
             });
         }
 
         function studentLogout() {
-            if (activeUsername) db.ref(`courses_data/${SHOP_ID}/students/${activeUsername}`).off();
-            activeUsername = '';
-            currentStudentData = null;
-            localStorage.removeItem('sapsong_st_user_' + SHOP_ID);
+            currentStudent = null;
+            localStorage.removeItem(`sapsong_st_${SHOP_ID}`);
             document.getElementById('viewer-panel').classList.add('hidden');
-            updateStudentUI();
+            updateStudentBar();
             renderCatalog();
         }
 
-        function isItemUnlocked(item) {
-            if (Number(item.price) === 0) return true;
-            if (!currentStudentData || !currentStudentData.unlockedItems) return false;
-            return currentStudentData.unlockedItems[item.id] === true;
+        function updateStudentBar() {
+            const bar = document.getElementById('student-bar');
+            const hdrAct = document.getElementById('auth-header-actions');
+            if (!currentStudent) {
+                bar.classList.add('hidden');
+                hdrAct.classList.remove('hidden');
+                return;
+            }
+            bar.classList.remove('hidden');
+            hdrAct.classList.add('hidden');
+            document.getElementById('st-fullname').innerText = currentStudent.fullName || currentStudent.username;
+            document.getElementById('st-username').innerText = currentStudent.username;
+            const cnt = Object.keys(currentStudent.unlockedItems || {}).length;
+            document.getElementById('st-unlocked-count').innerText = cnt;
         }
 
-        function filterItems(type) {
-            currentFilter = type;
+        function isItemUnlocked(item) {
+            if (!item) return false;
+            if (Number(item.price || 0) === 0) return true;
+            if (!currentStudent) return false;
+            return Boolean(currentStudent.unlockedItems && currentStudent.unlockedItems[item.id]);
+        }
+
+        function filterItems(flt) {
+            currentFilter = flt;
             ['ALL', 'video', 'file', 'UNLOCKED'].forEach(k => {
                 const btn = document.getElementById('flt-' + k);
-                if (btn) btn.className = k === type ? 'px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-xs' : 'px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 border';
+                if (!btn) return;
+                btn.className = (k === flt)
+                    ? 'px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-xs'
+                    : 'px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 border';
             });
             renderCatalog();
         }
 
         function renderCatalog() {
+            const kw = (document.getElementById('search-box').value || '').toLowerCase();
             const grid = document.getElementById('catalog-grid');
-            const kw = document.getElementById('search-box').value.toLowerCase();
-
-            let list = catalogItems.filter(item => {
-                const itemType = item.type || 'video';
-                const unlocked = isItemUnlocked(item);
-                if (currentFilter === 'video' && itemType !== 'video') return false;
-                if (currentFilter === 'file' && itemType !== 'file') return false;
-                if (currentFilter === 'UNLOCKED' && !unlocked) return false;
-                if (kw && !item.title.toLowerCase().includes(kw) && !(item.desc || '').toLowerCase().includes(kw)) return false;
+            const filtered = courses.filter(c => {
+                const type = c.type || 'video';
+                if (currentFilter === 'video' && type !== 'video') return false;
+                if (currentFilter === 'file' && type !== 'file') return false;
+                if (currentFilter === 'UNLOCKED' && !isItemUnlocked(c)) return false;
+                if (kw && !String(c.title || '').toLowerCase().includes(kw) && !String(c.desc || '').toLowerCase().includes(kw)) return false;
                 return true;
             });
 
-            if (list.length === 0) {
-                grid.innerHTML = `<p class="text-slate-400 text-sm col-span-3 text-center py-12 bg-white rounded-3xl border">ไม่พบรายการวิชาหรือไฟล์เรียนในหมวดนี้</p>`;
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full bg-white p-10 rounded-3xl border text-center text-slate-400 text-sm">ไม่พบรายวิชาหรือไฟล์เรียนในหมวดนี้</div>`;
                 return;
             }
 
-            grid.innerHTML = list.map(item => {
-                const itemType = item.type || 'video';
-                const unlocked = isItemUnlocked(item);
-                const typeBadge = itemType === 'file'
-                    ? `<span class="bg-amber-100 text-amber-900 text-[10px] font-bold px-2.5 py-0.5 rounded-full">📄 ไฟล์เรียน / ชีท</span>`
-                    : `<span class="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full">🎬 คอร์สวิดีโอ</span>`;
-
-                const lockBadge = unlocked
-                    ? `<span class="bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow">🔓 ปลดล็อกแล้ว</span>`
-                    : `<span class="bg-slate-900/80 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">🔒 ล็อกอยู่</span>`;
-
-                const metaTxt = itemType === 'file'
-                    ? (item.previewUrl ? 'มีตัวอย่างไฟล์ให้ดูพรีวิวก่อนซื้อ' : 'ไฟล์เอกสารฉบับเต็ม (ล็อกสิทธิ์)')
-                    : `จำนวน ${(item.lessons || []).length} บทเรียน`;
+            grid.innerHTML = filtered.map(c => {
+                const isFile = (c.type || 'video') === 'file';
+                const unlocked = isItemUnlocked(c);
+                const priceNum = Number(c.price || 0);
+                const priceText = priceNum === 0 ? 'เรียนฟรี / โหลดฟรี' : `${priceNum.toLocaleString()} บาท`;
 
                 return `
-                <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-200/80 flex flex-col justify-between hover:shadow-md transition">
+                <div class="bg-white rounded-3xl border shadow-sm overflow-hidden flex flex-col justify-between">
                     <div>
-                        <div class="relative h-44 bg-indigo-100">
-                            <img src="${item.cover || defaultCover}" class="w-full h-full object-cover">
-                            <div class="absolute top-2.5 left-2.5 flex gap-1.5">${typeBadge}</div>
-                            <div class="absolute top-2.5 right-2.5">${lockBadge}</div>
-                        </div>
-                        <div class="p-4">
-                            <div class="flex justify-between items-start gap-2">
-                                <h3 class="font-bold text-slate-800 text-base line-clamp-2">${item.title}</h3>
-                                <span class="font-bold text-indigo-700 text-sm shrink-0">${Number(item.price) === 0 ? 'ฟรี' : item.price + ' บ.'}</span>
+                        <img src="${c.cover || defaultCover}" class="w-full h-44 object-cover bg-slate-100">
+                        <div class="p-4 space-y-2">
+                            <div class="flex justify-between items-center gap-2">
+                                <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full ${isFile ? 'bg-amber-100 text-amber-900' : 'bg-indigo-100 text-indigo-800'}">
+                                    ${isFile ? '📄 ไฟล์เรียน / ชีทสรุป' : '🎬 คอร์สวิดีโอ'}
+                                </span>
+                                <span class="text-xs font-bold ${unlocked ? 'text-emerald-600' : 'text-indigo-700'}">
+                                    ${unlocked ? '🔓 ปลดล็อกแล้ว' : priceText}
+                                </span>
                             </div>
-                            <p class="text-xs text-slate-500 mt-1.5 line-clamp-2">${item.desc || ''}</p>
-                            <p class="text-[11px] font-semibold text-slate-500 mt-2">${metaTxt}</p>
+                            <h3 class="font-bold text-slate-800 text-base">${c.title}</h3>
+                            <p class="text-xs text-slate-500 line-clamp-2">${c.desc || ''}</p>
                         </div>
                     </div>
                     <div class="px-4 pb-4 flex gap-2">
+                        ${isFile && c.previewUrl ? `<a href="${c.previewUrl}" target="_blank" class="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">👁️ ตัวอย่าง</a>` : ''}
                         ${unlocked
-                            ? `<button onclick="openItemViewer('${item.id}', false)" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">${itemType === 'file' ? '📥 เปิด/โหลดไฟล์เต็ม' : '▶️ เข้าเรียนทั้งหมด'}</button>`
-                            : `<button onclick="startPurchase('${item.id}')" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">🔓 ซื้อเพื่อปลดล็อก (${item.price} บ.)</button>
-                               <button onclick="openItemViewer('${item.id}', true)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2.5 rounded-xl text-xs font-bold">👁️ พรีวิว</button>`
+                            ? `<button onclick="openViewer('${c.id}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">${isFile ? '📂 เปิดไฟล์ฉบับเต็ม' : '▶️ เข้าเรียนทันที'}</button>`
+                            : `<button onclick="openPayModal('${c.id}')" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">🔒 ปลดล็อก (${priceText})</button>`
                         }
                     </div>
-                </div>
-            `}).join('');
+                </div>`;
+            }).join('');
         }
 
-        function extractEmbedUrl(url) {
+        function toEmbedVideoUrl(url) {
             if (!url) return '';
-            const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/);
+            const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
             if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
-            const driveMatch = url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/);
-            if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
             return url;
         }
 
-        function buildProtectedFileUrl(itemId, mode = 'view') {
-            const gate = configData.fileGateUrl || DEFAULT_FILE_GATE_URL;
-            const user = currentStudentData ? currentStudentData.username : '';
-            const pass = currentStudentData ? currentStudentData.password : '';
-            return `${gate}?shop=${encodeURIComponent(SHOP_ID)}&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}&item=${encodeURIComponent(itemId)}&mode=${encodeURIComponent(mode)}`;
+        function buildProtectedFileUrl(rawUrl) {
+            const gate = (configData.fileGateUrl || DEFAULT_FILE_GATE_URL).trim();
+            const u = currentStudent ? currentStudent.username : '';
+            const p = currentStudent ? currentStudent.password : '';
+            if (!gate) return rawUrl;
+            const sep = gate.includes('?') ? '&' : '?';
+            return `${gate}${sep}shop=${encodeURIComponent(SHOP_ID)}&user=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}&file=${encodeURIComponent(rawUrl)}`;
         }
 
-        function openItemViewer(itemId, isPreviewMode) {
-            const item = catalogItems.find(x => String(x.id) === String(itemId));
+        function openViewer(itemId) {
+            const item = courses.find(c => String(c.id) === String(itemId));
             if (!item) return;
+            if (!isItemUnlocked(item)) return openPayModal(itemId);
 
-            const unlocked = isItemUnlocked(item);
-            const itemType = item.type || 'video';
             const panel = document.getElementById('viewer-panel');
-            const vidLayout = document.getElementById('vw-video-layout');
-            const fileLayout = document.getElementById('vw-file-layout');
+            panel.classList.remove('hidden');
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+            const isFile = (item.type || 'video') === 'file';
+            document.getElementById('vw-badge').innerText = isFile ? '📄 เอกสารฉบับเต็ม' : '🎬 ห้องเรียนวิดีโอ';
             document.getElementById('vw-title').innerText = item.title;
-            document.getElementById('vw-badge').innerText = unlocked ? '🔓 ปลดล็อกแล้ว (เนื้อหาเต็ม)' : '👁️ โหมดดูพรีวิวตัวอย่าง';
-            document.getElementById('vw-badge').className = unlocked
-                ? 'text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full'
-                : 'text-xs bg-amber-100 text-amber-800 font-bold px-2.5 py-0.5 rounded-full';
 
-            if (itemType === 'file') {
-                vidLayout.classList.add('hidden');
-                fileLayout.classList.remove('hidden');
+            if (isFile) {
+                document.getElementById('vw-video-layout').classList.add('hidden');
+                document.getElementById('vw-file-layout').classList.remove('hidden');
+                document.getElementById('vw-file-desc').innerText = item.desc || 'ไฟล์เอกสารฉบับเต็มสำหรับผู้ที่ปลดล็อกแล้ว';
 
-                const actionsBox = document.getElementById('vw-file-actions');
-                const embedBox = document.getElementById('vw-file-embed-box');
-                document.getElementById('vw-file-desc').innerText = item.desc || '';
-
-                if (unlocked && currentStudentData) {
-                    const viewUrl = buildProtectedFileUrl(item.id, 'view');
-                    const dlUrl = buildProtectedFileUrl(item.id, 'download');
-                    document.getElementById('vw-file-status-text').innerText = '✅ ปลดล็อกไฟล์ฉบับเต็มเรียบร้อยแล้ว (ตรวจสิทธิ์อัตโนมัติ)';
-                    actionsBox.innerHTML = `
-                        <a href="${viewUrl}" target="_blank" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm">📖 เปิดในแท็บใหม่</a>
-                        <a href="${dlUrl}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm">📥 ดาวน์โหลดไฟล์ PDF</a>
-                    `;
-                    embedBox.innerHTML = `<iframe src="${viewUrl}" class="w-full h-full border-0"></iframe>`;
-                } else if (unlocked && Number(item.price) === 0 && item.fullFileUrl) {
-                    document.getElementById('vw-file-status-text').innerText = '✅ ไฟล์เรียนฟรี';
-                    actionsBox.innerHTML = `<a href="${item.fullFileUrl}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold">📥 เปิด / ดาวน์โหลดไฟล์</a>`;
-                    embedBox.innerHTML = `<iframe src="${extractEmbedUrl(item.fullFileUrl)}" class="w-full h-full border-0"></iframe>`;
-                } else if (item.previewUrl) {
-                    document.getElementById('vw-file-status-text').innerText = '👁️ กำลังแสดงไฟล์ตัวอย่าง (Preview) — ซื้อเพื่อปลดล็อกไฟล์ฉบับเต็ม';
-                    actionsBox.innerHTML = `
-                        <a href="${item.previewUrl}" target="_blank" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold">📄 เปิดพรีวิว</a>
-                        <button onclick="startPurchase('${item.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold">🔓 ซื้อไฟล์เต็ม (${item.price} บ.)</button>
-                    `;
-                    embedBox.innerHTML = `<iframe src="${extractEmbedUrl(item.previewUrl)}" class="w-full h-full border-0"></iframe>`;
-                } else {
-                    document.getElementById('vw-file-status-text').innerText = '🔒 ไฟล์นี้ถูกล็อกไว้ (ยังไม่มีไฟล์พรีวิว)';
-                    actionsBox.innerHTML = `<button onclick="startPurchase('${item.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold">🔓 ซื้อเพื่อปลดล็อก (${item.price} บ.)</button>`;
-                    embedBox.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-slate-500 gap-3 p-4 text-center">
-                        <div class="text-4xl">🔒</div>
-                        <p class="text-sm font-bold">ไฟล์ฉบับเต็มถูกล็อกอยู่</p>
-                        <p class="text-xs">กรุณาเข้าสู่ระบบและชำระเงินเพื่อปลดล็อกไฟล์ครับ</p>
-                    </div>`;
-                }
+                const protectedUrl = buildProtectedFileUrl(item.fullFileUrl || '');
+                document.getElementById('vw-file-actions').innerHTML = `
+                    <a href="${protectedUrl}" target="_blank" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold">เปิดดู / ดาวน์โหลดไฟล์ฉบับเต็ม</a>
+                `;
+                document.getElementById('vw-file-embed-box').innerHTML = `
+                    <iframe src="${protectedUrl}" class="w-full h-full border-0" allow="autoplay"></iframe>
+                `;
             } else {
-                fileLayout.classList.add('hidden');
-                vidLayout.classList.remove('hidden');
+                document.getElementById('vw-file-layout').classList.add('hidden');
+                document.getElementById('vw-video-layout').classList.remove('hidden');
                 const lessons = item.lessons || [];
                 const listEl = document.getElementById('vw-lesson-list');
-
-                listEl.innerHTML = lessons.map((ls, idx) => {
-                    const canPlay = unlocked || ls.isFree;
-                    return `
-                        <button onclick="${canPlay ? `playVideoLesson(${idx}, '${item.id}')` : `startPurchase('${item.id}')`}"
-                            class="w-full text-left p-3 rounded-xl border text-xs flex justify-between items-center transition ${canPlay ? 'bg-indigo-50/70 hover:bg-indigo-100 border-indigo-200 font-semibold text-slate-800' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}">
-                            <span>${idx + 1}. ${ls.title}</span>
-                            <span>${canPlay ? (ls.isFree && !unlocked ? '🆓 พรีวิว' : '▶️') : '🔒 ปลดล็อก'}</span>
-                        </button>
-                    `;
-                }).join('');
-
-                const firstPlayable = lessons.findIndex(ls => unlocked || ls.isFree);
-                if (firstPlayable !== -1) {
-                    playVideoLesson(firstPlayable, item.id);
-                } else {
-                    document.getElementById('vw-lesson-title').innerText = 'คอร์สนี้ยังไม่มีตอนพรีวิวฟรี';
-                    document.getElementById('video-player-box').innerHTML = `<div class="text-center p-6 space-y-3">
-                        <p class="text-sm">🔒 กรุณาชำระเงินเพื่อปลดล็อกบทเรียนทั้งหมด</p>
-                        <button onclick="startPurchase('${item.id}')" class="bg-amber-400 text-slate-950 px-4 py-2 rounded-xl text-xs font-bold">ซื้อคอร์สนี้ (${item.price} บ.)</button>
-                    </div>`;
+                if (lessons.length === 0) {
+                    listEl.innerHTML = `<p class="text-xs text-slate-400">ยังไม่มีบทเรียนในวิชานี้</p>`;
+                    document.getElementById('video-player-box').innerHTML = `<p class="text-xs text-slate-400">ยังไม่มีวิดีโอ</p>`;
+                    return;
                 }
+                listEl.innerHTML = lessons.map((ls, idx) => `
+                    <button onclick="playLesson('${item.id}', ${idx})" class="w-full text-left px-3.5 py-2.5 rounded-xl border text-xs font-bold hover:bg-indigo-50 transition">
+                        ${idx + 1}. ${ls.title}
+                    </button>
+                `).join('');
+                playLesson(item.id, 0);
             }
-
-            panel.classList.remove('hidden');
-            panel.scrollIntoView({ behavior: 'smooth' });
         }
 
-        function playVideoLesson(idx, itemId) {
-            const item = catalogItems.find(x => String(x.id) === String(itemId));
-            if (!item || !item.lessons || !item.lessons[idx]) return;
-            const ls = item.lessons[idx];
-            const embed = extractEmbedUrl(ls.videoUrl);
-            const wm = currentStudentData ? `${currentStudentData.fullName} (@${currentStudentData.username})` : 'ตัวอย่างการเรียน';
-
+        function playLesson(itemId, idx) {
+            const item = courses.find(c => String(c.id) === String(itemId));
+            const ls = item && item.lessons && item.lessons[idx];
+            if (!ls) return;
             document.getElementById('vw-lesson-title').innerText = ls.title;
-            document.getElementById('video-player-box').innerHTML = `
-                <div class="relative w-full h-full">
-                    <iframe src="${embed}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
-                    <div class="pointer-events-none absolute top-3 right-3 bg-black/45 text-white/85 text-[10px] px-2.5 py-1 rounded-lg">${wm}</div>
-                </div>
-            `;
+            const embedUrl = toEmbedVideoUrl(ls.videoUrl);
+            document.getElementById('video-player-box').innerHTML = `<iframe src="${embedUrl}" class="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             const docBtn = document.getElementById('vw-lesson-doc');
-            if (ls.docUrl && isItemUnlocked(item)) {
-                docBtn.href = ls.docUrl;
-                docBtn.classList.remove('hidden');
-            } else {
-                docBtn.classList.add('hidden');
-            }
+            if (ls.docUrl) { docBtn.href = ls.docUrl; docBtn.classList.remove('hidden'); }
+            else docBtn.classList.add('hidden');
         }
 
         function crc16(data) {
             let crc = 0xFFFF;
-            for (let i = 0; i < data.length; i++) {
-                crc ^= data.charCodeAt(i) << 8;
-                for (let j = 0; j < 8; j++) crc = ((crc & 0x8000) !== 0) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
-            }
+            for (let i = 0; i < data.length; i++) { crc ^= data.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) crc = ((crc & 0x8000) !== 0) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF; }
             return crc.toString(16).toUpperCase().padStart(4, '0');
         }
         function tlv(t, v) { return `${t}${v.length.toString().padStart(2,'0')}${v}`; }
         function buildPromptPayQR(id, amt) {
-            const clean = id.replace(/[^0-9]/g, '');
+            const clean = String(id || '').replace(/[^0-9]/g, '');
             const target = (clean.length === 10 && clean.startsWith('0')) ? tlv('01', '0066' + clean.substring(1)) : tlv('02', clean);
             const m = tlv('00', 'A000000677010111') + target;
             let p = tlv('00','01') + tlv('01', amt>0?'12':'11') + tlv('29', m) + tlv('53','764');
@@ -610,176 +510,127 @@
             return p + crc16(p);
         }
 
-        function parseThaiBankSlipQR(rawText) {
-            if (!rawText || rawText.length < 25) return { valid: false };
-            try {
-                let i = 0, bankCode = '', transRef = '';
-                while (i + 4 <= rawText.length) {
-                    const tag = rawText.substring(i, i + 2);
-                    const len = parseInt(rawText.substring(i + 2, i + 4), 10);
-                    if (isNaN(len) || i + 4 + len > rawText.length) break;
-                    const val = rawText.substring(i + 4, i + 4 + len);
-                    if (tag === '00') {
-                        let j = 0;
-                        while (j + 4 <= val.length) {
-                            const subTag = val.substring(j, j + 2);
-                            const subLen = parseInt(val.substring(j + 2, j + 4), 10);
-                            if (isNaN(subLen) || j + 4 + subLen > val.length) break;
-                            const subVal = val.substring(j + 4, j + 4 + subLen);
-                            if (subTag === '01') bankCode = subVal;
-                            if (subTag === '02') transRef = subVal;
-                            j += 4 + subLen;
-                        }
-                    }
-                    i += 4 + len;
-                }
-                if (bankCode && transRef && transRef.length >= 10) {
-                    return { valid: true, bankCode, transRef, raw: rawText };
-                }
-            } catch (e) {}
-            return { valid: false };
-        }
-
-        function startPurchase(itemId) {
-            if (!currentStudentData) {
-                alert('กรุณาสมัครไอดีหรือเข้าสู่ระบบผู้เรียนก่อนซื้อวิชา/ไฟล์ครับ');
-                openAuthModal('register');
-                return;
+        function openPayModal(itemId) {
+            if (!currentStudent) {
+                alert('กรุณาสมัครไอดีผู้เรียนหรือเข้าสู่ระบบก่อนปลดล็อกครับ');
+                return openAuthModal('register');
             }
-            targetBuyItem = catalogItems.find(x => String(x.id) === String(itemId));
-            if (!targetBuyItem) return;
-
+            const item = courses.find(c => String(c.id) === String(itemId));
+            if (!item) return;
+            pendingPayItem = item;
             slipBase64 = '';
-            parsedSlipInfo = null;
+            slipTransRef = '';
             document.getElementById('slip-input').value = '';
             document.getElementById('slip-preview').classList.add('hidden');
             document.getElementById('slip-scan-status').classList.add('hidden');
 
-            document.getElementById('pay-item-type').innerText = (targetBuyItem.type === 'file') ? '📄 ไฟล์เรียน / ชีทสรุป' : '🎬 คอร์สวิดีโอ';
-            document.getElementById('pay-item-title').innerText = targetBuyItem.title;
-            document.getElementById('pay-item-price').innerText = `${targetBuyItem.price} บาท`;
-            document.getElementById('pay-acc-name').innerText = configData.accountName;
-            document.getElementById('pay-pp-id').innerText = configData.promptpayId;
+            const isFile = (item.type || 'video') === 'file';
+            const amt = Number(item.price || 0);
+            document.getElementById('pay-item-type').innerText = isFile ? 'ไฟล์เรียน / ชีทสรุป' : 'คอร์สวิดีโอ';
+            document.getElementById('pay-item-title').innerText = item.title;
+            document.getElementById('pay-item-price').innerText = `${amt.toLocaleString()} บาท`;
+            document.getElementById('pay-acc-name').innerText = configData.accountName || configData.instName;
+            document.getElementById('pay-pp-id').innerText = configData.promptpayId || '-';
 
             const qrBox = document.getElementById('qr-box');
             qrBox.innerHTML = '';
-            new QRCode(qrBox, {
-                text: buildPromptPayQR(configData.promptpayId, targetBuyItem.price),
-                width: 165, height: 165
-            });
-
+            if (configData.promptpayId && amt > 0) {
+                new QRCode(qrBox, { text: buildPromptPayQR(configData.promptpayId, amt), width: 155, height: 155 });
+            }
             document.getElementById('pay-modal').classList.remove('hidden');
         }
 
-        function processSlipImage(event) {
-            const file = event.target.files[0];
+        function processSlipImage(e) {
+            const file = e.target.files[0];
             if (!file) return;
-            const statusBox = document.getElementById('slip-scan-status');
-            statusBox.className = 'p-2.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700';
-            statusBox.innerText = '🔍 กำลังสแกนอ่านข้อมูล QR บนสลิป...';
-            statusBox.classList.remove('hidden');
+            const stBox = document.getElementById('slip-scan-status');
+            stBox.className = 'p-2.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700';
+            stBox.innerText = '🔍 กำลังสแกน QR บนสลิป...';
+            stBox.classList.remove('hidden');
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
+            const r = new FileReader();
+            r.onload = ev => {
                 const img = new Image();
-                img.onload = function() {
-                    const scanCanvas = document.createElement('canvas');
-                    const maxScan = 1000;
+                img.onload = () => {
+                    const sc = document.createElement('canvas');
+                    const max = 1000;
                     let sw = img.width, sh = img.height;
-                    if (sw > maxScan || sh > maxScan) {
-                        if (sw > sh) { sh = Math.round(sh * maxScan / sw); sw = maxScan; }
-                        else { sw = Math.round(sw * maxScan / sh); sh = maxScan; }
+                    if (sw > max || sh > max) {
+                        if (sw > sh) { sh = Math.round(sh * max / sw); sw = max; }
+                        else { sw = Math.round(sw * max / sh); sh = max; }
                     }
-                    scanCanvas.width = sw; scanCanvas.height = sh;
-                    const sCtx = scanCanvas.getContext('2d');
-                    sCtx.drawImage(img, 0, 0, sw, sh);
-                    const imgData = sCtx.getImageData(0, 0, sw, sh);
-                    const qrCode = jsQR(imgData.data, sw, sh);
+                    sc.width = sw; sc.height = sh;
+                    const ctx = sc.getContext('2d');
+                    ctx.drawImage(img, 0, 0, sw, sh);
+                    const qr = jsQR(ctx.getImageData(0, 0, sw, sh).data, sw, sh);
 
-                    const saveCanvas = document.createElement('canvas');
-                    const w = 520, h = Math.round((img.height / img.width) * 520) || 520;
-                    saveCanvas.width = w; saveCanvas.height = h;
-                    saveCanvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    slipBase64 = saveCanvas.toDataURL('image/jpeg', 0.75);
-
+                    const vc = document.createElement('canvas');
+                    const w = 500, h = Math.round((img.height / img.width) * 500) || 500;
+                    vc.width = w; vc.height = h;
+                    vc.getContext('2d').drawImage(img, 0, 0, w, h);
+                    slipBase64 = vc.toDataURL('image/jpeg', 0.75);
                     const prev = document.getElementById('slip-preview');
                     prev.src = slipBase64;
                     prev.classList.remove('hidden');
 
-                    if (qrCode && qrCode.data) {
-                        const info = parseThaiBankSlipQR(qrCode.data);
-                        if (info.valid) {
-                            if (usedSlipRefs.has(info.transRef)) {
-                                parsedSlipInfo = { valid: false, duplicate: true };
-                                statusBox.className = 'p-2.5 rounded-xl text-xs font-bold bg-red-100 text-red-700';
-                                statusBox.innerText = '❌ สลิปนี้เคยถูกใช้ในระบบแล้ว กรุณาใช้สลิปโอนเงินใหม่ครับ';
-                            } else {
-                                parsedSlipInfo = info;
-                                statusBox.className = 'p-2.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800';
-                                statusBox.innerText = `✅ อ่านสลิปธนาคารสำเร็จ (Ref: ${info.transRef.slice(-8)}) — พร้อมปลดล็อกทันที!`;
-                            }
-                            return;
+                    if (qr && qr.data) {
+                        const m = qr.data.match(/02\d{2}([A-Za-z0-9]{10,})/);
+                        slipTransRef = m ? m[1] : qr.data.slice(-16);
+                        const usedRefs = new Set(
+                            Object.values(ordersObj || {}).filter(o => o.slipTransRef).map(o => o.slipTransRef)
+                        );
+                        if (usedRefs.has(slipTransRef)) {
+                            stBox.className = 'p-2.5 rounded-xl text-xs font-bold bg-red-100 text-red-700';
+                            stBox.innerText = '❌ สลิปรหัสนี้ถูกใช้งานไปแล้ว กรุณาใช้สลิปใหม่';
+                            slipTransRef = '';
+                        } else {
+                            stBox.className = 'p-2.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800';
+                            stBox.innerText = `✅ ตรวจสอบ QR สลิปผ่าน (Ref: ${slipTransRef.slice(-8)})`;
                         }
+                    } else {
+                        slipTransRef = '';
+                        stBox.className = 'p-2.5 rounded-xl text-xs font-semibold bg-amber-100 text-amber-800';
+                        stBox.innerText = '⚠️ ไม่พบ QR บนสลิป ระบบจะส่งให้ผู้สอนตรวจสลิป';
                     }
-
-                    parsedSlipInfo = { valid: false };
-                    statusBox.className = 'p-2.5 rounded-xl text-xs font-semibold bg-amber-100 text-amber-900';
-                    statusBox.innerText = '⚠️ ไม่พบ QR ตรวจสอบสลิปบนรูป (ระบบจะส่งให้ผู้สอนตรวจสอบและอนุมัติให้ครับ)';
                 };
-                img.src = e.target.result;
+                img.src = ev.target.result;
             };
-            reader.readAsDataURL(file);
+            r.readAsDataURL(file);
         }
 
         function confirmPurchase() {
-            if (!currentStudentData || !targetBuyItem) return;
-            if (!slipBase64) return alert('กรุณาแนบรูปสลิปโอนเงินก่อนครับ');
-            if (parsedSlipInfo && parsedSlipInfo.duplicate) {
-                return alert('สลิปนี้เคยถูกใช้งานแล้ว ไม่สามารถใช้ซ้ำได้ครับ');
-            }
+            if (!pendingPayItem || !currentStudent) return;
+            const amt = Number(pendingPayItem.price || 0);
+            if (amt > 0 && !slipBase64) return alert('กรุณาแนบรูปสลิปโอนเงินก่อนครับ');
 
-            const canAutoUnlock = configData.autoUnlockSlip && parsedSlipInfo && parsedSlipInfo.valid;
-            const orderStatus = canAutoUnlock ? 'approved' : 'pending';
+            const autoUnlock = Boolean(configData.autoUnlockSlip && slipTransRef);
+            const statusVal = autoUnlock ? 'approved' : 'pending';
+            const orderId = 'CRS-' + Math.floor(100000 + Math.random() * 900000);
 
-            const orderObj = {
-                orderId: 'CRS-' + Math.floor(1000 + Math.random() * 9000),
-                username: currentStudentData.username,
-                studentName: currentStudentData.fullName,
-                phone: currentStudentData.phone,
-                itemId: targetBuyItem.id,
-                itemType: targetBuyItem.type || 'video',
-                itemTitle: targetBuyItem.title,
-                amount: targetBuyItem.price,
+            db.ref(`courses_data/${SHOP_ID}/orders`).push({
+                orderId,
+                itemId: pendingPayItem.id,
+                itemTitle: pendingPayItem.title,
+                itemType: pendingPayItem.type || 'video',
+                amount: amt,
+                username: currentStudent.username,
+                studentName: currentStudent.fullName || currentStudent.username,
                 slipImage: slipBase64,
-                slipBankCode: (parsedSlipInfo && parsedSlipInfo.bankCode) || '',
-                slipTransRef: (parsedSlipInfo && parsedSlipInfo.transRef) || '',
-                status: orderStatus,
+                slipTransRef,
+                status: statusVal,
                 createdAt: Date.now()
-            };
-
-            const btn = document.getElementById('btn-confirm-pay');
-            btn.disabled = true;
-            btn.innerText = 'กำลังบันทึก...';
-
-            db.ref(`courses_data/${SHOP_ID}/orders`).push(orderObj)
-                .then(() => {
-                    if (canAutoUnlock) {
-                        return db.ref(`courses_data/${SHOP_ID}/students/${currentStudentData.username}/unlockedItems/${targetBuyItem.id}`).set(true);
-                    }
-                })
-                .then(() => {
+            }).then(() => {
+                if (autoUnlock) {
+                    return db.ref(`courses_data/${SHOP_ID}/students/${currentStudent.username}/unlockedItems/${pendingPayItem.id}`).set(true).then(() => {
+                        document.getElementById('pay-modal').classList.add('hidden');
+                        alert('ปลดล็อกเรียบร้อยแล้วครับ! เข้าเรียน/เปิดไฟล์ได้เลย');
+                        openViewer(pendingPayItem.id);
+                    });
+                } else {
                     document.getElementById('pay-modal').classList.add('hidden');
-                    if (canAutoUnlock) {
-                        alert(`🎉 ตรวจสอบสลิปสำเร็จ! ระบบปลดล็อก "${targetBuyItem.title}" ให้คุณเรียบร้อยแล้ว`);
-                        openItemViewer(targetBuyItem.id, false);
-                    } else {
-                        alert('ส่งสลิปเรียบร้อยแล้วครับ ผู้สอนจะตรวจสอบและกดปลดล็อกให้โดยเร็วที่สุด');
-                    }
-                })
-                .finally(() => {
-                    btn.disabled = false;
-                    btn.innerText = 'ยืนยันการชำระเงิน & ปลดล็อก';
-                });
+                    alert('ส่งสลิปเรียบร้อยแล้วครับ รอผู้สอนตรวจสอบและปลดล็อก');
+                }
+            });
         }
     </script>
 </body>
