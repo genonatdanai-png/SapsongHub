@@ -326,20 +326,27 @@
                         <input type="text" id="setting-announcement" placeholder="เช่น สั่งครบ 200 บาท ส่งฟรี! / เปิดบริการ 10:00 - 21:00 น." class="w-full px-3.5 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
 
-                    <!-- ช่องทางติดต่อร้าน -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">📞 เบอร์โทรร้าน</label>
-                            <input type="text" id="setting-contact-phone" placeholder="08x-xxxxxxx" class="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                    <!-- ช่องทางติดต่อร้าน (เพิ่มเองได้อิสระ: Facebook, LINE, IG, เบอร์โทร) -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <label class="text-xs font-bold text-slate-800">📞 ช่องทางการติดต่อร้าน (เพิ่มเองได้หลายช่องทาง)</label>
+                            <span class="text-[11px] text-slate-500">Facebook / LINE / IG / เบอร์</span>
                         </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">📘 ลิงก์ Facebook</label>
-                            <input type="text" id="setting-contact-fb" placeholder="https://fb.com/..." class="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500">
+
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                            <select id="new-contact-channel" class="sm:col-span-3 px-2.5 py-2 border rounded-xl text-xs font-bold bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="phone">📞 เบอร์โทร</option>
+                                <option value="facebook">📘 Facebook</option>
+                                <option value="line">💬 LINE</option>
+                                <option value="ig">📸 IG</option>
+                                <option value="other">🔗 อื่นๆ</option>
+                            </select>
+                            <input type="text" id="new-contact-label" placeholder="ป้ายปุ่ม (เช่น โทรร้าน, เพจหลัก)" class="sm:col-span-4 px-3 py-2 border rounded-xl text-xs bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="text" id="new-contact-value" placeholder="เบอร์โทร / @ไอดี / ลิงก์" onkeyup="if(event.key==='Enter') addContactItem()" class="sm:col-span-3 px-3 py-2 border rounded-xl text-xs bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                            <button type="button" onclick="addContactItem()" class="sm:col-span-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition">+ เพิ่ม</button>
                         </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">💬 LINE ID / ลิงก์</label>
-                            <input type="text" id="setting-contact-line" placeholder="@shopid หรือลิงก์" class="w-full px-3 py-2 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
+
+                        <div id="admin-contacts-list" class="space-y-2"></div>
                     </div>
 
                     <!-- ข้อความท้ายใบเสร็จ -->
@@ -562,6 +569,14 @@
             { hex: '#0f172a', name: 'ดำมินิมอล' }
         ];
 
+        const CHANNEL_META = {
+            phone: { icon: '📞', label: 'เบอร์โทร' },
+            facebook: { icon: '📘', label: 'Facebook' },
+            line: { icon: '💬', label: 'LINE' },
+            ig: { icon: '📸', label: 'IG' },
+            other: { icon: '🔗', label: 'ลิงก์/อื่นๆ' }
+        };
+
         const placeholderImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23fef3c7'/%3E%3Crect x='45' y='55' width='110' height='95' rx='20' fill='%23d97706'/%3E%3Crect x='55' y='65' width='90' height='75' rx='14' fill='%23fcd34d'/%3E%3C/svg%3E";
 
         const defaultCategories = ['ขนมปังปิ้ง', 'เครื่องดื่ม', 'ของทานเล่น'];
@@ -592,8 +607,11 @@
             contactPhone: '',
             contactFb: '',
             contactLine: '',
+            contactIg: '',
+            contacts: [],
             receiptFooter: ''
         };
+        let draftContacts = [];
         let orders = [];
         let isStoreOpen = true;
         let bannedIPs = [];
@@ -629,6 +647,70 @@
         function saveShopKey(key, data) {
             db.ref(`shops_data/${SHOP_ID}/${key}`).set(data)
                 .catch(err => alert('ไม่มีสิทธิ์บันทึกข้อมูล: ' + err.message));
+        }
+
+        function normalizeContactsFromConfig(cfg) {
+            if (Array.isArray(cfg.contacts) && cfg.contacts.length > 0) {
+                return cfg.contacts.map((c, i) => ({
+                    id: c.id || `ct-${i}`,
+                    channel: c.channel || 'other',
+                    label: c.label || (CHANNEL_META[c.channel]?.label || 'ติดต่อ'),
+                    value: c.value || ''
+                })).filter(c => c.value);
+            }
+            const list = [];
+            if (cfg.contactPhone) list.push({ id: 'ct-phone', channel: 'phone', label: `โทร ${cfg.contactPhone}`, value: cfg.contactPhone });
+            if (cfg.contactFb) list.push({ id: 'ct-fb', channel: 'facebook', label: 'Facebook', value: cfg.contactFb });
+            if (cfg.contactLine) list.push({ id: 'ct-line', channel: 'line', label: 'LINE', value: cfg.contactLine });
+            if (cfg.contactIg) list.push({ id: 'ct-ig', channel: 'ig', label: 'IG', value: cfg.contactIg });
+            return list;
+        }
+
+        function addContactItem() {
+            const channel = document.getElementById('new-contact-channel').value;
+            const labelInp = document.getElementById('new-contact-label');
+            const valInp = document.getElementById('new-contact-value');
+            const value = valInp.value.trim();
+            if (!value) return alert('กรุณากรอกเบอร์โทร / @ไอดี / ลิงก์ครับ');
+
+            const meta = CHANNEL_META[channel] || CHANNEL_META.other;
+            const label = labelInp.value.trim() || (channel === 'phone' ? `โทร ${value}` : meta.label);
+
+            draftContacts.push({
+                id: 'ct-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+                channel,
+                label,
+                value
+            });
+
+            labelInp.value = '';
+            valInp.value = '';
+            renderAdminContacts();
+        }
+
+        function removeContactItem(id) {
+            draftContacts = draftContacts.filter(c => c.id !== id);
+            renderAdminContacts();
+        }
+
+        function renderAdminContacts() {
+            const box = document.getElementById('admin-contacts-list');
+            if (!draftContacts || draftContacts.length === 0) {
+                box.innerHTML = `<p class="text-[11px] text-slate-400 text-center py-2">ยังไม่มีช่องทางติดต่อ กด "+ เพิ่ม" เพื่อเพิ่ม Facebook, LINE, IG หรือเบอร์โทรได้เลยครับ</p>`;
+                return;
+            }
+            box.innerHTML = draftContacts.map(c => {
+                const meta = CHANNEL_META[c.channel] || CHANNEL_META.other;
+                return `
+                    <div class="flex justify-between items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                        <div class="truncate">
+                            <span class="font-bold text-slate-800">${meta.icon} ${c.label}</span>
+                            <span class="text-slate-500 ml-1.5 font-mono">${c.value}</span>
+                        </div>
+                        <button type="button" onclick="removeContactItem('${c.id}')" class="text-red-600 hover:bg-red-50 px-2 py-1 rounded-lg font-bold shrink-0">ลบ</button>
+                    </div>
+                `;
+            }).join('');
         }
 
         auth.onAuthStateChanged((user) => {
@@ -750,6 +832,7 @@
 
             shopRef.child('paymentConfig').on('value', snap => {
                 const cfg = snap.val() || {};
+                const normalizedContacts = normalizeContactsFromConfig(cfg);
                 paymentConfig = {
                     promptpayId: cfg.promptpayId || '0855750995',
                     accountName: cfg.accountName || shopDisplayName,
@@ -761,8 +844,13 @@
                     contactPhone: cfg.contactPhone || '',
                     contactFb: cfg.contactFb || '',
                     contactLine: cfg.contactLine || '',
+                    contactIg: cfg.contactIg || '',
+                    contacts: normalizedContacts,
                     receiptFooter: cfg.receiptFooter || ''
                 };
+
+                draftContacts = normalizedContacts.map(c => ({ ...c }));
+                renderAdminContacts();
 
                 document.getElementById('setting-promptpay-id').value = paymentConfig.promptpayId;
                 document.getElementById('setting-account-name').value = paymentConfig.accountName;
@@ -770,9 +858,6 @@
                 document.getElementById('setting-delivery-fee').value = paymentConfig.deliveryFee;
                 document.getElementById('setting-theme-color').value = paymentConfig.themeColor;
                 document.getElementById('setting-announcement').value = paymentConfig.announcement;
-                document.getElementById('setting-contact-phone').value = paymentConfig.contactPhone;
-                document.getElementById('setting-contact-fb').value = paymentConfig.contactFb;
-                document.getElementById('setting-contact-line').value = paymentConfig.contactLine;
                 document.getElementById('setting-receipt-footer').value = paymentConfig.receiptFooter;
 
                 currentUploadedLogo = paymentConfig.shopLogo;
@@ -1112,6 +1197,7 @@
         window.onload = () => {
             document.getElementById('order-date-filter').value = getTodayString();
             renderThemeColorPicker();
+            renderAdminContacts();
         };
 
         function openSlipModal(firebaseKey) {
@@ -1141,10 +1227,12 @@
 
             const themeColor = document.getElementById('setting-theme-color').value || '#d97706';
             const announcement = document.getElementById('setting-announcement').value.trim();
-            const contactPhone = document.getElementById('setting-contact-phone').value.trim();
-            const contactFb = document.getElementById('setting-contact-fb').value.trim();
-            const contactLine = document.getElementById('setting-contact-line').value.trim();
             const receiptFooter = document.getElementById('setting-receipt-footer').value.trim();
+
+            const firstPhone = draftContacts.find(c => c.channel === 'phone')?.value || '';
+            const firstFb = draftContacts.find(c => c.channel === 'facebook')?.value || '';
+            const firstLine = draftContacts.find(c => c.channel === 'line')?.value || '';
+            const firstIg = draftContacts.find(c => c.channel === 'ig')?.value || '';
 
             if (ppId.length !== 10 && ppId.length !== 13 && ppId.length !== 15) return alert('กรุณากรอกเบอร์พร้อมเพย์ 10 หลัก หรือเลขบัตรประชาชน 13 หลักให้ถูกต้องครับ');
             if (!accName) return alert('กรุณากรอกชื่อบัญชีหรือชื่อร้านครับ');
@@ -1157,13 +1245,15 @@
                 shopLogo: currentUploadedLogo || '',
                 themeColor,
                 announcement,
-                contactPhone,
-                contactFb,
-                contactLine,
+                contactPhone: firstPhone,
+                contactFb: firstFb,
+                contactLine: firstLine,
+                contactIg: firstIg,
+                contacts: draftContacts.map(c => ({ ...c })),
                 receiptFooter
             };
             saveShopKey('paymentConfig', paymentConfig);
-            alert('บันทึกการตั้งค่าร้าน โลโก้ และข้อมูลพร้อมเพย์เรียบร้อยแล้วครับ!');
+            alert('บันทึกการตั้งค่าร้าน โลโก้ ช่องทางติดต่อ และข้อมูลพร้อมเพย์เรียบร้อยแล้วครับ!');
         }
 
         function setFilterToday() { document.getElementById('order-date-filter').value = getTodayString(); renderOrders(); }
