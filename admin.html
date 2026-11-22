@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Firebase SDK (App + Auth + Database) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -14,7 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
         body { font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; }
-        #table-qr-container img, #table-qr-container canvas { margin: 0 auto; border-radius: 0.75rem; }
+        #table-qr-container img, #table-qr-container canvas, #srn-qr-box img, #srn-qr-box canvas { margin: 0 auto; border-radius: 0.75rem; }
 
         /* ตั้งค่าหน้ากระดาษสำหรับเครื่องปริ้นท์ใบเสร็จความร้อน (58mm / 80mm) */
         @media print {
@@ -44,8 +45,11 @@
             <div class="text-5xl">🔒</div>
             <h2 id="sapsong-lock-title" class="text-xl font-bold text-white">บัญชีร้านค้าถูกระงับการใช้งาน</h2>
             <p id="sapsong-lock-msg" class="text-sm text-slate-400 leading-relaxed">แพ็กเกจการใช้งานหมดอายุหรือถูกระงับชั่วคราว</p>
+            <button onclick="openShopRenewModal()" class="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs transition shadow-sm">
+                🔄 ต่ออายุแพ็กเกจ & แนบสลิป
+            </button>
             <div class="bg-slate-950 p-3 rounded-xl text-xs text-sky-400 border border-dashed border-sky-500/50">
-                กรุณาติดต่อผู้ดูแลระบบ: <strong>Sapsong HUB</strong> เพื่อต่ออายุการใช้งาน
+                ผู้ดูแลระบบ: <strong>Sapsong HUB</strong>
             </div>
         </div>
     </div>
@@ -96,6 +100,9 @@
                     </div>
 
                     <div class="flex items-center gap-1.5 shrink-0">
+                        <button onclick="openShopRenewModal()" class="text-xs bg-amber-400 hover:bg-amber-500 text-slate-950 px-2.5 py-1.5 rounded-lg font-bold transition shadow">
+                            🔄 ต่ออายุ
+                        </button>
                         <button onclick="toggleStoreStatus()" id="btn-store-status" class="text-xs bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1.5 rounded-lg font-bold transition shadow">
                             🟢 เปิดร้าน
                         </button>
@@ -480,6 +487,50 @@
 
     </div>
 
+    <!-- Modal ร้านค้าต่ออายุแพ็กเกจกับ Sapsong HUB -->
+    <div id="shop-renew-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/75 z-[100000] flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-2.5">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-base">🔄 ต่ออายุแพ็กเกจระบบร้านค้า</h3>
+                    <p id="srn-shop-info" class="text-xs text-slate-500">-</p>
+                </div>
+                <button onclick="document.getElementById('shop-renew-modal').classList.add('hidden')" class="text-2xl font-bold text-gray-400 px-2">&times;</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">แพ็กเกจต่ออายุ</label>
+                    <select id="srn-preset" onchange="onShopRenewPresetChange()" class="w-full px-3 py-2 border rounded-xl font-bold bg-slate-50 outline-none">
+                        <option value="30|299">1 เดือน (299 บ.)</option>
+                        <option value="180|1649">6 เดือน (1,649 บ.)</option>
+                        <option value="365|2990">1 ปี (2,990 บ.)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">ยอดชำระ (บาท)</label>
+                    <input type="number" id="srn-amount" readonly value="299" class="w-full px-3 py-2 border rounded-xl font-bold text-amber-700 bg-slate-100 outline-none">
+                </div>
+            </div>
+
+            <div id="srn-pay-box" class="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-center space-y-2.5">
+                <p class="text-xs font-bold text-amber-950">สแกนจ่ายพร้อมเพย์ Sapsong HUB (<span id="srn-pp-display" class="font-mono">0855750995</span>)</p>
+                <div id="srn-qr-box" class="bg-white p-2 rounded-xl border inline-block"></div>
+
+                <div id="srn-slip-wrap" class="text-left bg-white p-3 rounded-xl border space-y-2">
+                    <label class="block text-xs font-bold text-slate-700">📎 แนบสลิปโอนเงิน (อ่าน QR สลิปอัตโนมัติ) *</label>
+                    <input type="file" id="srn-slip-input" accept="image/*" onchange="processShopRenewSlip(event)" class="block w-full text-xs text-slate-500">
+                    <div id="srn-slip-status" class="hidden p-2 rounded-lg text-xs font-semibold"></div>
+                    <img id="srn-slip-prev" src="" class="hidden w-full max-h-32 object-contain rounded-lg border">
+                </div>
+            </div>
+
+            <button onclick="submitShopRenewRequest()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 py-3 rounded-xl font-bold text-sm shadow-md">
+                📤 ส่งคำขอต่ออายุให้ HUB ตรวจสอบ
+            </button>
+        </div>
+    </div>
+
     <!-- Modal ดูรูปสลิปขนาดใหญ่ -->
     <div id="slip-modal" onclick="closeSlipModal()" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
         <div onclick="event.stopPropagation()" class="bg-white rounded-2xl max-w-md w-full p-4 space-y-3 shadow-2xl">
@@ -554,6 +605,7 @@
         const SHOP_ID = (urlParams.get('shop') || 'pangnawat').toLowerCase();
         const SUPER_ADMIN_EMAIL = 'admingeno@ss.com';
         const EXPECTED_SHOP_EMAIL = `${SHOP_ID}@ss.com`;
+        const HUB_PROMPTPAY_ID = '0855750995';
 
         document.getElementById('back-to-store-link').href = `index.html?shop=${SHOP_ID}`;
         document.getElementById('admin-email-input').placeholder = EXPECTED_SHOP_EMAIL;
@@ -591,6 +643,7 @@
             { id: 104, name: 'เพิ่มไข่มุก', price: 5, toppingGroup: 'ท็อปปิ้งน้ำ', targetCategory: 'เครื่องดื่ม', available: true }
         ];
 
+        let shopMetaData = { id: SHOP_ID, name: SHOP_ID === 'pangnawat' ? 'ปังหน้าวัด' : SHOP_ID, allowFree90d: false };
         let shopDisplayName = SHOP_ID === 'pangnawat' ? 'ปังหน้าวัด' : SHOP_ID;
         let categories = defaultCategories;
         let toppingGroups = defaultToppingGroups;
@@ -625,6 +678,152 @@
         let selectedToppingFilter = 'ALL_VIEW';
         let currentQRTableName = '';
         let currentReceiptOrderId = '';
+        let srnSlipBase64 = '';
+        let srnSlipRef = '';
+
+        function crc16(data) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < data.length; i++) {
+                crc ^= data.charCodeAt(i) << 8;
+                for (let j = 0; j < 8; j++) {
+                    crc = ((crc & 0x8000) !== 0) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+                }
+            }
+            return crc.toString(16).toUpperCase().padStart(4, '0');
+        }
+        function tlv(t, v) { return `${t}${v.length.toString().padStart(2, '0')}${v}`; }
+        function buildPromptPayQR(id, amt) {
+            const clean = String(id || '').replace(/[^0-9]/g, '');
+            const target = (clean.length === 10 && clean.startsWith('0')) ? tlv('01', '0066' + clean.substring(1)) : tlv('02', clean);
+            const m = tlv('00', 'A000000677010111') + target;
+            let p = tlv('00', '01') + tlv('01', amt > 0 ? '12' : '11') + tlv('29', m) + tlv('53', '764');
+            if (amt > 0) p += tlv('54', Number(amt).toFixed(2));
+            p += tlv('58', 'TH') + '6304';
+            return p + crc16(p);
+        }
+
+        function buildRenewPresetOptions() {
+            const sel = document.getElementById('srn-preset');
+            let opts = '';
+            if (shopMetaData && shopMetaData.allowFree90d === true) {
+                opts += `<option value="90|0">🎁 ฟรี 3 เดือน (90 วัน — 0 บ.)</option>`;
+            }
+            opts += `
+                <option value="30|299">1 เดือน (299 บ.)</option>
+                <option value="180|1649">6 เดือน (1,649 บ.)</option>
+                <option value="365|2990">1 ปี (2,990 บ.)</option>
+            `;
+            sel.innerHTML = opts;
+        }
+
+        function openShopRenewModal() {
+            srnSlipBase64 = '';
+            srnSlipRef = '';
+            document.getElementById('srn-slip-input').value = '';
+            document.getElementById('srn-slip-prev').classList.add('hidden');
+            document.getElementById('srn-slip-status').classList.add('hidden');
+            document.getElementById('srn-shop-info').innerText = `${shopDisplayName} (${SHOP_ID})`;
+            document.getElementById('srn-pp-display').innerText = HUB_PROMPTPAY_ID;
+            buildRenewPresetOptions();
+            onShopRenewPresetChange();
+            document.getElementById('shop-renew-modal').classList.remove('hidden');
+        }
+
+        function onShopRenewPresetChange() {
+            const [, amt] = document.getElementById('srn-preset').value.split('|');
+            document.getElementById('srn-amount').value = amt;
+            renderShopRenewQR();
+        }
+
+        function renderShopRenewQR() {
+            const amt = Number(document.getElementById('srn-amount').value) || 0;
+            const box = document.getElementById('srn-qr-box');
+            const slipWrap = document.getElementById('srn-slip-wrap');
+            box.innerHTML = '';
+            if (amt > 0) {
+                slipWrap.classList.remove('hidden');
+                new QRCode(box, { text: buildPromptPayQR(HUB_PROMPTPAY_ID, amt), width: 155, height: 155 });
+            } else {
+                slipWrap.classList.add('hidden');
+                box.innerHTML = `<p class="text-xs font-bold text-emerald-700 py-4 px-2">🎁 สิทธิ์พิเศษจาก Super Admin: ฟรี 3 เดือน (0 บาท — ไม่ต้องโอนเงิน)</p>`;
+            }
+        }
+
+        function processShopRenewSlip(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const stBox = document.getElementById('srn-slip-status');
+            stBox.className = 'p-2 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700';
+            stBox.innerText = '🔍 กำลังสแกน QR สลิป...';
+            stBox.classList.remove('hidden');
+
+            const r = new FileReader();
+            r.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    const sc = document.createElement('canvas');
+                    const max = 1000;
+                    let sw = img.width, sh = img.height;
+                    if (sw > max || sh > max) {
+                        if (sw > sh) { sh = Math.round(sh * max / sw); sw = max; }
+                        else { sw = Math.round(sw * max / sh); sh = max; }
+                    }
+                    sc.width = sw; sc.height = sh;
+                    const ctx = sc.getContext('2d');
+                    ctx.drawImage(img, 0, 0, sw, sh);
+                    const qr = (typeof jsQR === 'function') ? jsQR(ctx.getImageData(0, 0, sw, sh).data, sw, sh) : null;
+
+                    const vc = document.createElement('canvas');
+                    const w = 500, h = Math.round((img.height / img.width) * 500) || 500;
+                    vc.width = w; vc.height = h;
+                    vc.getContext('2d').drawImage(img, 0, 0, w, h);
+                    srnSlipBase64 = vc.toDataURL('image/jpeg', 0.75);
+                    const prev = document.getElementById('srn-slip-prev');
+                    prev.src = srnSlipBase64;
+                    prev.classList.remove('hidden');
+
+                    if (qr && qr.data) {
+                        const m = qr.data.match(/02\d{2}([A-Za-z0-9]{10,})/);
+                        srnSlipRef = m ? m[1] : qr.data.slice(-16);
+                        stBox.className = 'p-2 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800';
+                        stBox.innerText = `✅ อ่าน QR สลิปได้ (Ref: ${srnSlipRef.slice(-8)})`;
+                    } else {
+                        srnSlipRef = '';
+                        stBox.className = 'p-2 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800';
+                        stBox.innerText = '⚠️ ไม่พบ QR บนสลิป ระบบจะส่งให้ HUB ตรวจสลิป';
+                    }
+                };
+                img.src = ev.target.result;
+            };
+            r.readAsDataURL(file);
+        }
+
+        function submitShopRenewRequest() {
+            const [daysStr] = document.getElementById('srn-preset').value.split('|');
+            const days = Number(daysStr) || 30;
+            const amount = Number(document.getElementById('srn-amount').value) || 0;
+            if (amount === 0 && (!shopMetaData || shopMetaData.allowFree90d !== true)) {
+                return alert('บัญชีนี้ยังไม่ได้รับสิทธิ์ต่ออายุฟรี 3 เดือนจาก Super Admin ครับ');
+            }
+            if (amount > 0 && !srnSlipBase64) return alert('กรุณาแนบสลิปโอนเงินก่อนส่งคำขอครับ');
+
+            db.ref('sapsong_hub_renewals').push({
+                shopId: SHOP_ID,
+                shopName: shopDisplayName,
+                bizType: shopMetaData.bizType || 'food',
+                days,
+                amount,
+                slipImage: srnSlipBase64,
+                slipTransRef: srnSlipRef,
+                status: 'pending',
+                createdAt: Date.now()
+            }).then(() => {
+                document.getElementById('shop-renew-modal').classList.add('hidden');
+                alert('ส่งคำขอต่ออายุให้ Sapsong HUB เรียบร้อยแล้วครับ!');
+            }).catch(err => {
+                alert('ส่งคำขอไม่สำเร็จ: ' + err.message);
+            });
+        }
 
         db.ref(`shops_data/${SHOP_ID}/paymentConfig/shopLogo`).once('value', snap => {
             const logo = snap.val();
@@ -794,6 +993,7 @@
                     showLockOverlay('ไม่พบข้อมูลร้านค้าในระบบ', `รหัสร้าน "${SHOP_ID}" ยังไม่ได้ลงทะเบียนใน Sapsong HUB`);
                     return;
                 }
+                shopMetaData = shopMeta;
                 if (shopMeta.isSuspended === true) {
                     showLockOverlay('บัญชีร้านค้าถูกระงับชั่วคราว', `ร้าน "${shopMeta.name}" ถูกระงับสิทธิ์การใช้งานชั่วคราว`);
                     return;
