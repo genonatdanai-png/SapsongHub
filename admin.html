@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>หลังบ้านร้านอาหาร - Sapsong HUB</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Firebase SDK (App + Auth + Database) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -13,6 +14,7 @@
     <style>
         body { font-family: 'Prompt', sans-serif; }
         .tab-btn.active { background-color: #f59e0b; color: #0f172a; font-weight: 700; }
+        #bill-qr-box img, #bill-qr-box canvas { margin: 0 auto; border-radius: 0.75rem; }
         @media print {
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; }
@@ -89,7 +91,7 @@
 
         <main class="max-w-6xl mx-auto p-3 sm:p-5 space-y-5">
 
-            <!-- แท็บ 1: ออเดอร์ & บิล (รองรับเพิ่ม/แก้รายการในบิลแบบติ่มซำ/หยิบเอง) -->
+            <!-- แท็บ 1: ออเดอร์ & บิล -->
             <div id="view-orders" class="space-y-4">
                 <div class="flex flex-wrap justify-between items-center gap-2">
                     <h2 class="text-lg font-bold text-slate-800">📋 รายการออเดอร์ & บิลที่เปิดอยู่</h2>
@@ -193,7 +195,6 @@
                 <button onclick="document.getElementById('bill-builder-modal').classList.add('hidden')" class="text-2xl font-bold text-gray-400 px-2">&times;</button>
             </div>
 
-            <!-- ช่องระบุโต๊ะ/ลูกค้า (แสดงเฉพาะตอนเปิดบิลใหม่) -->
             <div id="bb-new-meta" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-amber-50/80 border border-amber-200 p-3 rounded-2xl text-xs">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">โต๊ะ / ชื่อลูกค้า *</label>
@@ -216,13 +217,11 @@
                 </div>
             </div>
 
-            <!-- ค้นหาและเลือกเมนู -->
             <div class="space-y-2 overflow-y-auto flex-1 pr-1">
                 <input type="text" id="bb-search" oninput="renderBillMenuPicker()" placeholder="🔍 พิมพ์ค้นหาชื่อเมนู / เข่ง..." class="w-full px-3.5 py-2 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-500">
                 <div id="bb-menu-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
             </div>
 
-            <!-- สรุปรายการที่จะเพิ่มในรอบนี้ -->
             <div class="border-t pt-3 space-y-3 bg-slate-50 -mx-5 -mb-5 p-4 rounded-b-3xl">
                 <div id="bb-draft-list" class="max-h-28 overflow-y-auto space-y-1 text-xs">
                     <p class="text-gray-400 text-center py-2">ยังไม่ได้เลือกรายการ</p>
@@ -237,6 +236,50 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal เช็กบิล: สร้าง QR พร้อมเพย์ตามยอดบิลจริง & คำนวณเงินทอน -->
+    <div id="checkout-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-2.5">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base">💰 เช็กบิล & รับชำระเงิน</h3>
+                    <p id="co-order-meta" class="text-xs text-gray-500">-</p>
+                </div>
+                <button onclick="document.getElementById('checkout-modal').classList.add('hidden')" class="text-2xl font-bold text-gray-400 px-2">&times;</button>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-center">
+                <p class="text-xs text-amber-900 font-semibold">ยอดรวมที่ต้องชำระ</p>
+                <p id="co-total-amount" class="text-3xl font-bold text-amber-600 mt-0.5">0 บาท</p>
+            </div>
+
+            <!-- โหมดคิดเงินสด & เงินทอน -->
+            <div class="bg-slate-50 border rounded-2xl p-3.5 space-y-2.5">
+                <label class="block text-xs font-bold text-slate-700">💵 รับเงินสดมา (บาท)</label>
+                <input type="number" id="co-cash-received" oninput="calculateChange()" placeholder="กรอกยอดเงินที่รับมา เช่น 500" class="w-full px-3.5 py-2 border rounded-xl bg-white text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500">
+                <div class="flex flex-wrap gap-1.5">
+                    <button type="button" onclick="setQuickCashExact()" class="px-2.5 py-1 bg-white border rounded-lg text-xs font-bold text-slate-700 hover:bg-gray-100">พอดีบิล</button>
+                    <button type="button" onclick="addQuickCash(100)" class="px-2.5 py-1 bg-white border rounded-lg text-xs font-bold text-slate-700 hover:bg-gray-100">+100</button>
+                    <button type="button" onclick="addQuickCash(500)" class="px-2.5 py-1 bg-white border rounded-lg text-xs font-bold text-slate-700 hover:bg-gray-100">+500</button>
+                    <button type="button" onclick="addQuickCash(1000)" class="px-2.5 py-1 bg-white border rounded-lg text-xs font-bold text-slate-700 hover:bg-gray-100">+1,000</button>
+                </div>
+                <div id="co-change-box" class="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex justify-between items-center">
+                    <span class="text-xs font-bold text-emerald-900">เงินทอน:</span>
+                    <span id="co-change-amount" class="text-lg font-bold text-emerald-700">0 บาท</span>
+                </div>
+            </div>
+
+            <!-- โหมด QR พร้อมเพย์ตามยอดบิลจริง -->
+            <div class="bg-blue-50/80 border border-blue-200 rounded-2xl p-3.5 text-center space-y-2">
+                <p class="text-xs font-bold text-blue-950">📱 สแกนจ่ายพร้อมเพย์ตามยอดบิล (<span id="co-pp-id" class="font-mono">-</span>)</p>
+                <div id="bill-qr-box" class="bg-white p-2 rounded-xl border inline-block"></div>
+            </div>
+
+            <button onclick="finishCheckoutOrder()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-sm shadow-md">
+                ✅ ยืนยันรับเงิน & ปิดบิล (เสร็จแล้ว)
+            </button>
         </div>
     </div>
 
@@ -270,9 +313,10 @@
         let orders = [];
         let listenersStarted = false;
 
-        // สถานะสำหรับเปิดบิลใหม่ หรือ เพิ่มรายการเข้าบิลที่มีอยู่
-        let targetOrderKeyForAdd = null; // null = เปิดบิลใหม่, มีค่า = เพิ่มรายการเข้าบิล key นี้
-        let draftItems = []; // [{ menuId, name, price, qty }]
+        let targetOrderKeyForAdd = null;
+        let draftItems = [];
+        let checkoutOrderKey = null;
+        let checkoutTotal = 0;
 
         auth.onAuthStateChanged(user => {
             if (user && (user.email.toLowerCase() === SUPER_ADMIN_EMAIL || user.email.toLowerCase() === EXPECTED_EMAIL)) {
@@ -397,9 +441,6 @@
             ]).then(() => alert('บันทึกการตั้งค่าร้านเรียบร้อยแล้วครับ'));
         }
 
-        // =========================================================================
-        // จัดการเมนู
-        // =========================================================================
         function saveMenu() {
             const editId = document.getElementById('edit-menu-id').value;
             const name = document.getElementById('inp-menu-name').value.trim();
@@ -471,9 +512,6 @@
             `).join('');
         }
 
-        // =========================================================================
-        // ระบบเปิดบิลใหม่ & เพิ่ม/แก้รายการเข้าบิล (แบบร้านติ่มซำ / หยิบเอง)
-        // =========================================================================
         function openNewBillModal() {
             targetOrderKeyForAdd = null;
             draftItems = [];
@@ -535,11 +573,8 @@
             const m = menus.find(x => String(x.id) === String(menuId));
             if (!m) return;
             const existing = draftItems.find(d => String(d.menuId) === String(m.id));
-            if (existing) {
-                existing.qty += 1;
-            } else {
-                draftItems.push({ menuId: m.id, name: m.name, price: Number(m.price) || 0, qty: 1 });
-            }
+            if (existing) existing.qty += 1;
+            else draftItems.push({ menuId: m.id, name: m.name, price: Number(m.price) || 0, qty: 1 });
             renderBillMenuPicker();
             renderDraftSummary();
         }
@@ -575,27 +610,18 @@
             if (draftItems.length === 0) return alert('กรุณาเลือกรายการอย่างน้อย 1 รายการครับ');
 
             if (targetOrderKeyForAdd) {
-                // เพิ่มรายการเข้าบิลที่มีอยู่แล้ว
                 const ord = orders.find(o => o.key === targetOrderKeyForAdd);
                 if (!ord) return;
                 const merged = [...(ord.items || [])];
                 draftItems.forEach(addIt => {
                     const foundIdx = merged.findIndex(x => x.name === addIt.name && Number(x.price) === Number(addIt.price));
-                    if (foundIdx !== -1) {
-                        merged[foundIdx].qty = Number(merged[foundIdx].qty || 1) + addIt.qty;
-                    } else {
-                        merged.push({ name: addIt.name, price: addIt.price, qty: addIt.qty });
-                    }
+                    if (foundIdx !== -1) merged[foundIdx].qty = Number(merged[foundIdx].qty || 1) + addIt.qty;
+                    else merged.push({ name: addIt.name, price: addIt.price, qty: addIt.qty });
                 });
                 const newTotal = merged.reduce((s, x) => s + (Number(x.price || 0) * Number(x.qty || 1)), 0);
-                db.ref(`shops_data/${SHOP_ID}/orders/${targetOrderKeyForAdd}`).update({
-                    items: merged,
-                    total: newTotal
-                }).then(() => {
-                    document.getElementById('bill-builder-modal').classList.add('hidden');
-                });
+                db.ref(`shops_data/${SHOP_ID}/orders/${targetOrderKeyForAdd}`).update({ items: merged, total: newTotal })
+                    .then(() => document.getElementById('bill-builder-modal').classList.add('hidden'));
             } else {
-                // เปิดบิลใหม่จากหลังบ้าน
                 const cust = document.getElementById('bb-customer').value.trim() || 'ลูกค้าหน้าร้าน';
                 const orderType = document.getElementById('bb-type').value;
                 const paymentMethod = document.getElementById('bb-payment').value;
@@ -613,28 +639,20 @@
                     createdByStaff: true
                 };
 
-                db.ref(`shops_data/${SHOP_ID}/orders`).push(newOrder).then(() => {
-                    document.getElementById('bill-builder-modal').classList.add('hidden');
-                });
+                db.ref(`shops_data/${SHOP_ID}/orders`).push(newOrder)
+                    .then(() => document.getElementById('bill-builder-modal').classList.add('hidden'));
             }
         }
 
-        // ปรับจำนวนสินค้าโดยตรงบนการ์ดออเดอร์ที่เปิดอยู่
         function adjustOrderItemQty(orderKey, itemIdx, delta) {
             const ord = orders.find(o => o.key === orderKey);
             if (!ord || !ord.items || !ord.items[itemIdx]) return;
             const nextItems = [...ord.items];
             const nextQty = Number(nextItems[itemIdx].qty || 1) + delta;
-            if (nextQty <= 0) {
-                nextItems.splice(itemIdx, 1);
-            } else {
-                nextItems[itemIdx] = { ...nextItems[itemIdx], qty: nextQty };
-            }
+            if (nextQty <= 0) nextItems.splice(itemIdx, 1);
+            else nextItems[itemIdx] = { ...nextItems[itemIdx], qty: nextQty };
             const nextTotal = nextItems.reduce((s, x) => s + (Number(x.price || 0) * Number(x.qty || 1)), 0);
-            db.ref(`shops_data/${SHOP_ID}/orders/${orderKey}`).update({
-                items: nextItems,
-                total: nextTotal
-            });
+            db.ref(`shops_data/${SHOP_ID}/orders/${orderKey}`).update({ items: nextItems, total: nextTotal });
         }
 
         function setOrderStatus(orderKey, status) {
@@ -645,6 +663,86 @@
             if (confirm('ยืนยันการลบบิลนี้?')) {
                 db.ref(`shops_data/${SHOP_ID}/orders/${orderKey}`).remove();
             }
+        }
+
+        // =========================================================================
+        // สร้าง QR พร้อมเพย์ตามยอดบิลจริง & คำนวณเงินทอน
+        // =========================================================================
+        function crc16(data) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < data.length; i++) {
+                crc ^= data.charCodeAt(i) << 8;
+                for (let j = 0; j < 8; j++) crc = ((crc & 0x8000) !== 0) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+            }
+            return crc.toString(16).toUpperCase().padStart(4, '0');
+        }
+        function tlv(t, v) { return `${t}${v.length.toString().padStart(2,'0')}${v}`; }
+        function buildPromptPayQR(id, amt) {
+            const clean = String(id || '').replace(/[^0-9]/g, '');
+            const target = (clean.length === 10 && clean.startsWith('0')) ? tlv('01', '0066' + clean.substring(1)) : tlv('02', clean);
+            const m = tlv('00', 'A000000677010111') + target;
+            let p = tlv('00','01') + tlv('01', amt>0?'12':'11') + tlv('29', m) + tlv('53','764');
+            if (amt > 0) p += tlv('54', Number(amt).toFixed(2));
+            p += tlv('58','TH') + '6304';
+            return p + crc16(p);
+        }
+
+        function openCheckoutModal(orderKey) {
+            const ord = orders.find(o => o.key === orderKey);
+            if (!ord) return;
+            checkoutOrderKey = orderKey;
+            checkoutTotal = Number(ord.total || 0);
+
+            document.getElementById('co-order-meta').innerText = `#${ord.orderId || ''} • ${ord.customerName || 'ลูกค้า'}`;
+            document.getElementById('co-total-amount').innerText = `${checkoutTotal.toLocaleString()} บาท`;
+            document.getElementById('co-pp-id').innerText = paymentConfig.promptpayId || '-';
+            document.getElementById('co-cash-received').value = '';
+            calculateChange();
+
+            const qrBox = document.getElementById('bill-qr-box');
+            qrBox.innerHTML = '';
+            if (paymentConfig.promptpayId && checkoutTotal > 0) {
+                new QRCode(qrBox, { text: buildPromptPayQR(paymentConfig.promptpayId, checkoutTotal), width: 155, height: 155 });
+            } else {
+                qrBox.innerHTML = `<p class="text-xs text-gray-400 py-4">ไม่ได้ตั้งค่าพร้อมเพย์หรือยอดเป็น 0 บาท</p>`;
+            }
+
+            document.getElementById('checkout-modal').classList.remove('hidden');
+        }
+
+        function setQuickCashExact() {
+            document.getElementById('co-cash-received').value = checkoutTotal;
+            calculateChange();
+        }
+
+        function addQuickCash(amount) {
+            const cur = Number(document.getElementById('co-cash-received').value || 0);
+            document.getElementById('co-cash-received').value = cur + amount;
+            calculateChange();
+        }
+
+        function calculateChange() {
+            const cash = Number(document.getElementById('co-cash-received').value || 0);
+            const el = document.getElementById('co-change-amount');
+            if (!cash) {
+                el.innerText = '0 บาท';
+                el.className = 'text-lg font-bold text-emerald-700';
+                return;
+            }
+            const diff = cash - checkoutTotal;
+            if (diff < 0) {
+                el.innerText = `ขาดอีก ${Math.abs(diff).toLocaleString()} บาท`;
+                el.className = 'text-sm font-bold text-red-600';
+            } else {
+                el.innerText = `${diff.toLocaleString()} บาท`;
+                el.className = 'text-lg font-bold text-emerald-700';
+            }
+        }
+
+        function finishCheckoutOrder() {
+            if (!checkoutOrderKey) return;
+            db.ref(`shops_data/${SHOP_ID}/orders/${checkoutOrderKey}/status`).set('เสร็จแล้ว')
+                .then(() => document.getElementById('checkout-modal').classList.add('hidden'));
         }
 
         function renderOrders() {
@@ -698,8 +796,8 @@
                     </div>
 
                     <div class="flex gap-1.5 pt-2 border-t flex-wrap">
-                        <button onclick="setOrderStatus('${o.key}', 'กำลังทำ')" class="flex-1 bg-amber-400 hover:bg-amber-500 text-slate-950 py-1.5 rounded-xl text-xs font-bold">กำลังทำ</button>
-                        <button onclick="setOrderStatus('${o.key}', 'เสร็จแล้ว')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded-xl text-xs font-bold">เช็กบิล / เสร็จแล้ว</button>
+                        <button onclick="setOrderStatus('${o.key}', 'กำลังทำ')" class="bg-amber-400 hover:bg-amber-500 text-slate-950 px-3 py-1.5 rounded-xl text-xs font-bold">กำลังทำ</button>
+                        <button onclick="openCheckoutModal('${o.key}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded-xl text-xs font-bold">💰 เช็กบิล / QR / ทอนเงิน</button>
                         <a href="receipt.html?shop=${SHOP_ID}" target="_blank" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold">🧾 ใบเสร็จ</a>
                         <button onclick="deleteOrder('${o.key}')" class="bg-red-50 hover:bg-red-100 text-red-600 px-2.5 py-1.5 rounded-xl text-xs font-bold">ลบ</button>
                     </div>
