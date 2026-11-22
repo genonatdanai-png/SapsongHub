@@ -126,7 +126,7 @@
                     <h2 id="room-form-title" class="text-base font-bold text-slate-800">➕ เพิ่มห้องพัก / ข้อมูลผู้เช่า</h2>
                     <input type="hidden" id="edit-room-id" value="">
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-7 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">เลขห้อง / ชื่อห้อง *</label>
                             <input type="text" id="inp-room-no" placeholder="เช่น 101, A1" class="w-full px-3 py-2 border rounded-xl text-sm font-bold outline-none">
@@ -144,11 +144,15 @@
                             <input type="tel" id="inp-tenant-phone" placeholder="08x-xxx-xxxx" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">เลขมิเตอร์น้ำเริ่มต้น</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">รหัส PIN ดูบิล (เช่น บัตร 4–6 ตัวท้าย)</label>
+                            <input type="text" id="inp-room-pin" placeholder="เช่น 4589" class="w-full px-3 py-2 border rounded-xl text-sm font-mono font-bold text-teal-800 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">มิเตอร์น้ำเริ่มต้น</label>
                             <input type="number" id="inp-init-water" value="0" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">เลขมิเตอร์ไฟเริ่มต้น</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">มิเตอร์ไฟเริ่มต้น</label>
                             <input type="number" id="inp-init-elec" value="0" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
                     </div>
@@ -165,8 +169,8 @@
                     </div>
 
                     <div class="flex gap-2">
-                        <button onclick="saveRoomForm()" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold">💾 บันทึกข้อมูลห้องพัก</button>
-                        <button onclick="resetRoomForm()" id="btn-cancel-room" class="hidden bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold">ยกเลิกแก้ไข</button>
+                        <button type="button" onclick="saveRoomForm()" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold">💾 บันทึกข้อมูลห้องพัก</button>
+                        <button type="button" onclick="resetRoomForm()" id="btn-cancel-room" class="hidden bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold">ยกเลิกแก้ไข</button>
                     </div>
                 </div>
 
@@ -221,7 +225,7 @@
             <!-- 5. แท็บตั้งค่าหอพัก, ค่าน้ำ-ไฟ, ช่องทางติดต่อ & พร้อมเพย์ -->
             <div id="view-settings" class="hidden">
                 <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border max-w-2xl space-y-4">
-                    <h2 class="text-base font-bold text-slate-800">⚙️ ตั้งค่าหอพัก, อัตราค่าน้ำ-ไฟ, ช่องทางติดต่อ & พร้อมเพย์</h2>
+                    <h2 class="text-base font-bold text-slate-800">⚙️ ตั้งค่าหอพัก, อัตราค่าน้ำ-ไฟ, PDPA & พร้อมเพย์</h2>
                     <div class="flex items-center gap-4 bg-slate-50 p-3.5 rounded-2xl border">
                         <div class="w-16 h-16 rounded-2xl bg-white border flex items-center justify-center overflow-hidden shrink-0">
                             <img id="set-logo-preview" src="" class="hidden w-full h-full object-cover">
@@ -264,6 +268,19 @@
                         <input type="text" id="set-announcement" placeholder="เช่น กรุณาชำระค่าเช่าภายในวันที่ 5 ของทุกเดือน" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
                     </div>
 
+                    <!-- ตั้งค่าความปลอดภัยข้อมูลผู้เช่า (PDPA) -->
+                    <div class="bg-blue-50/80 border border-blue-200 p-3.5 rounded-2xl space-y-2.5">
+                        <p class="text-xs font-bold text-blue-950">🛡️ การคุ้มครองข้อมูลส่วนบุคคลผู้เช่า (PDPA)</p>
+                        <label class="flex items-start gap-2.5 cursor-pointer">
+                            <input type="checkbox" id="set-require-room-pin" class="w-4 h-4 mt-0.5 accent-teal-600">
+                            <span class="text-xs font-semibold text-slate-800">บังคับกรอก "รหัส PIN ของห้อง" ก่อนเปิดดูบิลและชำระเงินของห้องนั้น</span>
+                        </label>
+                        <label class="flex items-start gap-2.5 cursor-pointer">
+                            <input type="checkbox" id="set-mask-tenant-name" class="w-4 h-4 mt-0.5 accent-teal-600">
+                            <span class="text-xs font-semibold text-slate-800">ย่อชื่อผู้เช่าในใบแจ้งหนี้ฝั่งผู้เช่า (เช่น สมชาย ส.) เพื่อลดการเปิดเผยชื่อเต็ม</span>
+                        </label>
+                    </div>
+
                     <!-- ช่องทางการติดต่อหอพัก -->
                     <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-3">
                         <div class="flex justify-between items-center">
@@ -294,7 +311,7 @@
                         </label>
                     </div>
 
-                    <button onclick="saveDormSettings()" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold">💾 บันทึกการตั้งค่าหอพัก</button>
+                    <button type="button" onclick="saveDormSettings()" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold">💾 บันทึกการตั้งค่าหอพัก</button>
                 </div>
             </div>
 
@@ -425,7 +442,8 @@
         let dormMeta = { id: SHOP_ID, name: SHOP_ID, allowFree90d: false };
         let configData = {
             shopLogo: '', dormName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID,
-            waterRate: 18, elecRate: 8, announcement: '', contacts: [], autoApproveSlip: true
+            waterRate: 18, elecRate: 8, announcement: '', contacts: [], autoApproveSlip: true,
+            requireRoomPin: true, maskTenantName: true
         };
         let draftContacts = [];
         let rooms = [];
@@ -504,7 +522,9 @@
                     elecRate: Number(cfg.elecRate) || 8,
                     announcement: cfg.announcement || '',
                     contacts: loadedContacts,
-                    autoApproveSlip: cfg.autoApproveSlip !== undefined ? cfg.autoApproveSlip : true
+                    autoApproveSlip: cfg.autoApproveSlip !== undefined ? cfg.autoApproveSlip : true,
+                    requireRoomPin: cfg.requireRoomPin !== undefined ? cfg.requireRoomPin : true,
+                    maskTenantName: cfg.maskTenantName !== undefined ? cfg.maskTenantName : true
                 };
                 draftContacts = loadedContacts.map(c => ({ ...c }));
                 renderAdminContacts();
@@ -516,6 +536,8 @@
                 document.getElementById('set-elec-rate').value = configData.elecRate;
                 document.getElementById('set-announcement').value = configData.announcement;
                 document.getElementById('set-auto-approve-slip').checked = configData.autoApproveSlip;
+                document.getElementById('set-require-room-pin').checked = configData.requireRoomPin;
+                document.getElementById('set-mask-tenant-name').checked = configData.maskTenantName;
                 document.getElementById('disp-water-rate').innerText = configData.waterRate;
                 document.getElementById('disp-elec-rate').innerText = configData.elecRate;
                 renderMeterTable();
@@ -586,7 +608,11 @@
             configData.announcement = document.getElementById('set-announcement').value.trim();
             configData.contacts = draftContacts.map(c => ({ ...c }));
             configData.autoApproveSlip = document.getElementById('set-auto-approve-slip').checked;
-            db.ref(`dorms_data/${SHOP_ID}/config`).set(configData).then(() => alert('บันทึกการตั้งค่าหอพักเรียบร้อยแล้วครับ'));
+            configData.requireRoomPin = document.getElementById('set-require-room-pin').checked;
+            configData.maskTenantName = document.getElementById('set-mask-tenant-name').checked;
+            db.ref(`dorms_data/${SHOP_ID}/config`).set(configData)
+                .then(() => alert('บันทึกการตั้งค่าหอพักเรียบร้อยแล้วครับ'))
+                .catch(err => alert('บันทึกไม่สำเร็จ: ' + err.message));
         }
 
         // ================= จัดการห้องพัก =================
@@ -596,6 +622,7 @@
             const rent = Number(document.getElementById('inp-room-rent').value) || 0;
             const tenantName = document.getElementById('inp-tenant-name').value.trim();
             const tenantPhone = document.getElementById('inp-tenant-phone').value.trim();
+            const roomPin = document.getElementById('inp-room-pin').value.trim();
             const lastWater = Number(document.getElementById('inp-init-water').value) || 0;
             const lastElec = Number(document.getElementById('inp-init-elec').value) || 0;
             const extraFee = Number(document.getElementById('inp-room-extra').value) || 0;
@@ -606,20 +633,20 @@
             if (editId) {
                 const idx = rooms.findIndex(r => String(r.id) === String(editId));
                 if (idx !== -1) {
-                    rooms[idx] = { ...rooms[idx], roomNo, rent, tenantName, tenantPhone, lastWater, lastElec, extraFee, note };
+                    rooms[idx] = { ...rooms[idx], roomNo, rent, tenantName, tenantPhone, roomPin, lastWater, lastElec, extraFee, note };
                 }
             } else {
-                if (rooms.some(r => r.roomNo === roomNo)) return alert('มีเลขห้องนี้อยู่ในระบบแล้วครับ');
+                if (rooms.some(r => String(r.roomNo).toLowerCase() === roomNo.toLowerCase())) return alert('มีเลขห้องนี้อยู่ในระบบแล้วครับ');
                 rooms.push({
                     id: 'rm-' + Date.now(),
-                    roomNo, rent, tenantName, tenantPhone, lastWater, lastElec, extraFee, note
+                    roomNo, rent, tenantName, tenantPhone, roomPin, lastWater, lastElec, extraFee, note
                 });
             }
 
             db.ref(`dorms_data/${SHOP_ID}/rooms`).set(rooms).then(() => {
                 resetRoomForm();
                 alert('บันทึกข้อมูลห้องพักเรียบร้อยแล้วครับ');
-            });
+            }).catch(err => alert('บันทึกห้องพักไม่สำเร็จ: ' + err.message));
         }
 
         function editRoom(id) {
@@ -630,6 +657,7 @@
             document.getElementById('inp-room-rent').value = r.rent;
             document.getElementById('inp-tenant-name').value = r.tenantName || '';
             document.getElementById('inp-tenant-phone').value = r.tenantPhone || '';
+            document.getElementById('inp-room-pin').value = r.roomPin || '';
             document.getElementById('inp-init-water').value = r.lastWater || 0;
             document.getElementById('inp-init-elec').value = r.lastElec || 0;
             document.getElementById('inp-room-extra').value = r.extraFee || 0;
@@ -644,6 +672,7 @@
             document.getElementById('inp-room-rent').value = '';
             document.getElementById('inp-tenant-name').value = '';
             document.getElementById('inp-tenant-phone').value = '';
+            document.getElementById('inp-room-pin').value = '';
             document.getElementById('inp-init-water').value = '0';
             document.getElementById('inp-init-elec').value = '0';
             document.getElementById('inp-room-extra').value = '0';
@@ -695,6 +724,7 @@
                                 </span>
                             </div>
                             <p class="text-xs text-slate-700 font-semibold mt-1.5">ผู้เช่า: ${isOccupied ? `${r.tenantName} (${r.tenantPhone || '-'})` : '-'}</p>
+                            <p class="text-xs text-slate-600 mt-0.5">รหัส PIN ดูบิล: <span class="font-mono font-bold text-teal-800">${r.roomPin || '(ไม่ได้ตั้ง)'}</span></p>
                             <p class="text-xs text-teal-700 font-bold mt-1">ค่าเช่า: ${Number(r.rent || 0).toLocaleString()} บ./เดือน ${r.extraFee > 0 ? `(+อื่นๆ ${r.extraFee}บ.)` : ''}</p>
                             <p class="text-[11px] text-slate-500 mt-1">มิเตอร์ล่าสุด: 💧 ${r.lastWater || 0} | ⚡ ${r.lastElec || 0}</p>
                             ${r.note ? `<p class="text-[11px] text-slate-400 mt-1">${r.note}</p>` : ''}
@@ -820,7 +850,7 @@
                 elecRate: configData.elecRate,
                 elecCost: costE,
                 total,
-                status: 'unpaid', // unpaid, pending_review, paid
+                status: 'unpaid',
                 slipImage: '',
                 slipTransRef: '',
                 createdAt: Date.now()
@@ -834,7 +864,6 @@
             });
         }
 
-        // ================= ตรวจสลิป & บิล =================
         function setBillStatus(billKey, status) {
             db.ref(`dorms_data/${SHOP_ID}/bills/${billKey}/status`).set(status);
         }
@@ -959,7 +988,6 @@
             document.getElementById('tab-' + tab).className = "px-3 py-2 bg-amber-400 text-slate-950 font-bold rounded-xl text-xs";
         }
 
-        // ================= ต่ออายุกับ Sapsong HUB =================
         function crc16(data) {
             let crc = 0xFFFF;
             for (let i = 0; i < data.length; i++) { crc ^= data.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) crc = ((crc & 0x8000) !== 0) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF; }
