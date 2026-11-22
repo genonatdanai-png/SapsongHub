@@ -58,12 +58,12 @@
             <div id="contact-buttons-wrap" class="flex flex-wrap gap-2 w-full sm:w-auto"></div>
         </div>
 
-        <!-- กล่องเลือกห้องพัก -->
+        <!-- กล่องเลือกห้องพัก (ซ่อนชื่อผู้เช่าตามหลัก PDPA) -->
         <div class="bg-white p-4 sm:p-5 rounded-3xl shadow-sm border border-slate-200 space-y-3">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
                     <h2 class="text-base font-bold text-slate-800">🚪 เลือกหมายเลขห้องพักของคุณ</h2>
-                    <p class="text-xs text-slate-500">เลือกห้องเพื่อดูใบแจ้งหนี้ค่าเช่า ค่าน้ำ-ค่าไฟ และสแกนจ่ายเงิน</p>
+                    <p class="text-xs text-slate-500">เลือกห้องเพื่อยืนยันตัวตนและตรวจสอบใบแจ้งหนี้ค่าเช่า</p>
                 </div>
                 <select id="room-selector" onchange="onSelectRoom(this.value)" class="w-full sm:w-64 px-3.5 py-2.5 border-2 border-teal-500 rounded-xl text-sm font-bold text-teal-950 bg-teal-50/60 outline-none">
                     <option value="">-- กรุณาเลือกห้องพัก --</option>
@@ -71,11 +71,32 @@
             </div>
         </div>
 
-        <!-- รายการบิลของห้องที่เลือก -->
+        <!-- กล่องยืนยันรหัส PIN ของห้องพัก (PDPA Gate) -->
+        <div id="pin-verify-section" class="hidden bg-white p-6 rounded-3xl shadow-sm border-2 border-teal-200 max-w-md mx-auto text-center space-y-4">
+            <div class="w-14 h-14 bg-teal-100 text-teal-700 rounded-2xl flex items-center justify-center text-2xl mx-auto">🔐</div>
+            <div>
+                <h3 id="pin-room-title" class="text-base font-bold text-slate-800">ยืนยันตัวตนผู้เช่า ห้อง -</h3>
+                <p class="text-xs text-slate-500 mt-1">กรุณากรอก <strong>รหัส PIN ของห้อง</strong> (เช่น เลขบัตร 4–6 ตัวท้าย) เพื่อความเป็นส่วนตัวของข้อมูลใบแจ้งหนี้</p>
+            </div>
+            <form onsubmit="verifyRoomPin(event)" class="space-y-3">
+                <input type="password" inputmode="numeric" id="inp-verify-pin" required placeholder="กรอกรหัส PIN ของห้อง" class="w-full px-4 py-3 border-2 border-slate-200 focus:border-teal-600 rounded-2xl text-center font-mono text-lg font-bold tracking-widest outline-none">
+                <p id="pin-error-msg" class="hidden text-xs text-red-600 font-semibold"></p>
+                <button type="submit" id="btn-verify-pin" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-2xl text-sm font-bold shadow-md transition">
+                    🔓 ยืนยันเปิดดูใบแจ้งหนี้
+                </button>
+            </form>
+        </div>
+
+        <!-- รายการบิลของห้องที่ผ่านการยืนยันแล้ว -->
         <div id="room-bills-section" class="hidden space-y-4">
-            <div class="flex justify-between items-center">
-                <h3 id="room-bills-heading" class="text-base font-bold text-slate-800">🧾 รายการใบแจ้งหนี้</h3>
-                <span id="room-bills-count" class="text-xs font-bold bg-teal-100 text-teal-800 px-3 py-1 rounded-full">0 บิล</span>
+            <div class="flex flex-wrap justify-between items-center gap-2">
+                <div class="flex items-center gap-2">
+                    <h3 id="room-bills-heading" class="text-base font-bold text-slate-800">🧾 รายการใบแจ้งหนี้</h3>
+                    <span id="room-bills-count" class="text-xs font-bold bg-teal-100 text-teal-800 px-3 py-1 rounded-full">0 บิล</span>
+                </div>
+                <button id="btn-lock-room" onclick="lockCurrentRoom()" class="hidden text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-xl">
+                    🔒 ล็อกหน้าจอห้องนี้
+                </button>
             </div>
             <div id="tenant-bills-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
@@ -146,14 +167,31 @@
 
         let configData = {
             shopLogo: '', dormName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID,
-            announcement: '', contacts: [], autoApproveSlip: true
+            announcement: '', contacts: [], autoApproveSlip: true,
+            requireRoomPin: true, maskTenantName: true
         };
         let rooms = [];
         let bills = [];
         let selectedRoomNo = INITIAL_ROOM;
+        let unlockedRooms = {};
+        let failedAttempts = {};
         let pendingPayBill = null;
         let slipBase64 = '';
         let slipTransRef = '';
+
+        function formatDisplayTenantName(fullName) {
+            const raw = String(fullName || '').trim();
+            if (!raw) return '-';
+            if (!configData.maskTenantName) return raw;
+            const parts = raw.split(/\s+/);
+            if (parts.length >= 2) {
+                return `${parts[0]} ${parts[1].charAt(0)}.`;
+            }
+            if (raw.length > 4) {
+                return raw.slice(0, -2) + 'xx';
+            }
+            return raw;
+        }
 
         function isExpired(d) {
             if (!d || d === '9999-12-31') return false;
@@ -218,7 +256,9 @@
                 accountName: cfg.accountName || SHOP_ID,
                 announcement: cfg.announcement || '',
                 contacts: Array.isArray(cfg.contacts) ? cfg.contacts : [],
-                autoApproveSlip: cfg.autoApproveSlip !== undefined ? cfg.autoApproveSlip : true
+                autoApproveSlip: cfg.autoApproveSlip !== undefined ? cfg.autoApproveSlip : true,
+                requireRoomPin: cfg.requireRoomPin !== undefined ? cfg.requireRoomPin : true,
+                maskTenantName: cfg.maskTenantName !== undefined ? cfg.maskTenantName : true
             };
             document.title = `${configData.dormName} - แจ้งบิลค่าเช่า`;
             document.getElementById('hdr-title').innerText = configData.dormName;
@@ -235,27 +275,28 @@
                 annBar.classList.add('hidden');
             }
             renderContacts();
+            updateRoomAccessView();
         });
 
         dormBaseRef.child('rooms').on('value', snap => {
             const raw = snap.val() || [];
             rooms = Array.isArray(raw) ? raw : Object.values(raw);
             renderRoomSelector();
-            renderTenantBills();
+            updateRoomAccessView();
         });
 
         dormBaseRef.child('bills').on('value', snap => {
             const raw = snap.val() || {};
             bills = Object.entries(raw).map(([k, v]) => ({ ...v, key: k })).reverse();
-            renderTenantBills();
+            updateRoomAccessView();
         });
 
         function renderRoomSelector() {
             const sel = document.getElementById('room-selector');
             let opts = `<option value="">-- กรุณาเลือกห้องพัก --</option>`;
             rooms.forEach(r => {
-                const label = r.tenantName ? `ห้อง ${r.roomNo} (${r.tenantName})` : `ห้อง ${r.roomNo}`;
-                opts += `<option value="${r.roomNo}" ${String(r.roomNo) === String(selectedRoomNo) ? 'selected' : ''}>${label}</option>`;
+                // แสดงเฉพาะเลขห้อง ไม่แสดงชื่อผู้เช่า (PDPA)
+                opts += `<option value="${r.roomNo}" ${String(r.roomNo) === String(selectedRoomNo) ? 'selected' : ''}>🚪 ห้อง ${r.roomNo}</option>`;
             });
             sel.innerHTML = opts;
 
@@ -270,6 +311,8 @@
 
         function onSelectRoom(roomNo) {
             selectedRoomNo = roomNo;
+            document.getElementById('inp-verify-pin').value = '';
+            document.getElementById('pin-error-msg').classList.add('hidden');
             const badge = document.getElementById('hdr-room-badge');
             if (selectedRoomNo) {
                 badge.innerText = `🚪 ห้อง ${selectedRoomNo}`;
@@ -277,17 +320,89 @@
             } else {
                 badge.classList.add('hidden');
             }
-            renderTenantBills();
+            updateRoomAccessView();
+        }
+
+        function isRoomUnlocked(roomObj) {
+            if (!roomObj) return false;
+            if (!configData.requireRoomPin) return true;
+            const pin = String(roomObj.roomPin || '').trim();
+            if (!pin) return true; // หากเจ้าของหอยังไม่ได้ตั้ง PIN ห้องนี้ ให้เปิดดูได้
+            return Boolean(unlockedRooms[roomObj.roomNo]);
+        }
+
+        function verifyRoomPin(e) {
+            e.preventDefault();
+            if (!selectedRoomNo) return;
+            const roomObj = rooms.find(r => String(r.roomNo) === String(selectedRoomNo));
+            if (!roomObj) return;
+
+            const errEl = document.getElementById('pin-error-msg');
+            const attempts = failedAttempts[selectedRoomNo] || 0;
+            if (attempts >= 5) {
+                errEl.innerText = '❌ กรอกรหัสผิดเกิน 5 ครั้ง กรุณาติดต่อสำนักงานหอพักครับ';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            const inputPin = document.getElementById('inp-verify-pin').value.trim();
+            const expectedPin = String(roomObj.roomPin || '').trim();
+
+            if (inputPin === expectedPin) {
+                unlockedRooms[selectedRoomNo] = true;
+                failedAttempts[selectedRoomNo] = 0;
+                errEl.classList.add('hidden');
+                document.getElementById('inp-verify-pin').value = '';
+                updateRoomAccessView();
+            } else {
+                failedAttempts[selectedRoomNo] = attempts + 1;
+                const left = 5 - failedAttempts[selectedRoomNo];
+                errEl.innerText = left > 0
+                    ? `❌ รหัส PIN ไม่ถูกต้อง (กรอกผิดได้อีก ${left} ครั้ง)`
+                    : '❌ กรอกรหัสผิดเกิน 5 ครั้ง กรุณาติดต่อสำนักงานหอพักครับ';
+                errEl.classList.remove('hidden');
+            }
+        }
+
+        function lockCurrentRoom() {
+            if (!selectedRoomNo) return;
+            delete unlockedRooms[selectedRoomNo];
+            updateRoomAccessView();
+        }
+
+        function updateRoomAccessView() {
+            const pinSec = document.getElementById('pin-verify-section');
+            const billSec = document.getElementById('room-bills-section');
+            const lockBtn = document.getElementById('btn-lock-room');
+
+            if (!selectedRoomNo) {
+                pinSec.classList.add('hidden');
+                billSec.classList.add('hidden');
+                return;
+            }
+
+            const roomObj = rooms.find(r => String(r.roomNo) === String(selectedRoomNo));
+            if (!roomObj) {
+                pinSec.classList.add('hidden');
+                billSec.classList.add('hidden');
+                return;
+            }
+
+            const hasPin = configData.requireRoomPin && Boolean(String(roomObj.roomPin || '').trim());
+            if (isRoomUnlocked(roomObj)) {
+                pinSec.classList.add('hidden');
+                billSec.classList.remove('hidden');
+                lockBtn.classList.toggle('hidden', !hasPin);
+                renderTenantBills();
+            } else {
+                document.getElementById('pin-room-title').innerText = `ยืนยันตัวตนผู้เช่า ห้อง ${selectedRoomNo}`;
+                pinSec.classList.remove('hidden');
+                billSec.classList.add('hidden');
+            }
         }
 
         function renderTenantBills() {
-            const sec = document.getElementById('room-bills-section');
             const list = document.getElementById('tenant-bills-list');
-            if (!selectedRoomNo) {
-                sec.classList.add('hidden');
-                return;
-            }
-            sec.classList.remove('hidden');
             const roomBills = bills.filter(b => String(b.roomNo) === String(selectedRoomNo));
             document.getElementById('room-bills-heading').innerText = `🧾 ใบแจ้งหนี้ ห้อง ${selectedRoomNo}`;
             document.getElementById('room-bills-count').innerText = `${roomBills.length} บิล`;
@@ -302,13 +417,15 @@
                 if (b.status === 'pending_review') badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">🔍 ส่งสลิปแล้ว (รอตรวจสอบ)</span>`;
                 else if (b.status === 'paid') badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">✅ ชำระเรียบร้อยแล้ว</span>`;
 
+                const displayTenant = formatDisplayTenantName(b.tenantName);
+
                 return `
                     <div class="bg-white p-4 sm:p-5 rounded-3xl shadow-sm border space-y-3">
                         <div class="flex justify-between items-start gap-2">
                             <div>
                                 <span class="font-mono text-xs text-slate-400">${b.billId}</span>
                                 <h4 class="font-bold text-slate-800 text-base">รอบบิลเดือน ${b.billingMonth}</h4>
-                                <p class="text-xs text-slate-500">ผู้เช่า: ${b.tenantName || '-'}</p>
+                                <p class="text-xs text-slate-500">ผู้เช่า: ${displayTenant}</p>
                             </div>
                             ${badge}
                         </div>
@@ -354,6 +471,9 @@
         function openPayModal(billKey) {
             const bill = bills.find(b => b.key === billKey);
             if (!bill) return;
+            const roomObj = rooms.find(r => String(r.roomNo) === String(bill.roomNo));
+            if (!isRoomUnlocked(roomObj)) return;
+
             pendingPayBill = bill;
             slipBase64 = '';
             slipTransRef = '';
@@ -363,7 +483,7 @@
 
             const amt = Number(bill.total || 0);
             document.getElementById('pay-bill-month').innerText = `รอบบิลเดือน ${bill.billingMonth}`;
-            document.getElementById('pay-room-title').innerText = `🚪 ห้อง ${bill.roomNo} (${bill.tenantName || '-'})`;
+            document.getElementById('pay-room-title').innerText = `🚪 ห้อง ${bill.roomNo} (${formatDisplayTenantName(bill.tenantName)})`;
             document.getElementById('pay-total-amount').innerText = `${amt.toLocaleString()} บาท`;
             document.getElementById('pay-acc-name').innerText = configData.accountName || configData.dormName;
             document.getElementById('pay-pp-id').innerText = configData.promptpayId || '-';
