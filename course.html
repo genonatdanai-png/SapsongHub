@@ -61,7 +61,7 @@
             </div>
         </div>
 
-        <!-- ห้องเรียนวิดีโอ / หน้าต่างเปิดไฟล์เต็ม (แสดงเมื่อคลิกเข้าเรียนหรือเปิดไฟล์ที่ปลดล็อกแล้ว) -->
+        <!-- ห้องเรียนวิดีโอ / หน้าต่างเปิดไฟล์เต็ม -->
         <div id="viewer-panel" class="hidden bg-white p-4 sm:p-6 rounded-3xl shadow-xl border-2 border-indigo-300 space-y-4">
             <div class="flex justify-between items-center border-b pb-3 gap-2">
                 <div>
@@ -90,14 +90,12 @@
             <div id="vw-file-layout" class="hidden space-y-4">
                 <div class="bg-indigo-50/80 border border-indigo-200 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div>
-                        <p id="vw-file-status-text" class="text-sm font-bold text-indigo-950">📄 เอกสารฉบับเต็ม (ปลดล็อกแล้ว)</p>
+                        <p id="vw-file-status-text" class="text-sm font-bold text-indigo-950">📄 เอกสารฉบับเต็ม</p>
                         <p id="vw-file-desc" class="text-xs text-slate-600 mt-0.5">-</p>
                     </div>
-                    <a id="vw-file-open-btn" href="#" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm shrink-0">
-                        📥 เปิด / ดาวน์โหลดไฟล์ฉบับเต็ม
-                    </a>
+                    <div id="vw-file-actions" class="flex flex-wrap gap-2 shrink-0"></div>
                 </div>
-                <div id="vw-file-embed-box" class="w-full h-[500px] bg-slate-100 rounded-2xl overflow-hidden border"></div>
+                <div id="vw-file-embed-box" class="w-full h-[520px] bg-slate-100 rounded-2xl overflow-hidden border"></div>
             </div>
         </div>
 
@@ -187,7 +185,6 @@
                     <label class="block text-xs font-bold text-slate-700">📎 แนบรูปสลิปโอนเงิน (ระบบอ่าน QR สลิปอัตโนมัติ) *</label>
                     <input type="file" id="slip-input" accept="image/*" onchange="processSlipImage(event)" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-100 file:text-emerald-800 file:font-bold cursor-pointer">
                     
-                    <!-- สถานะการอ่านสลิป -->
                     <div id="slip-scan-status" class="hidden p-2.5 rounded-xl text-xs font-semibold"></div>
                     <img id="slip-preview" src="" class="hidden w-full max-h-36 object-contain rounded-lg border bg-slate-50">
                 </div>
@@ -216,10 +213,11 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const SHOP_ID = (urlParams.get('shop') || 'demo-course').toLowerCase();
+        const DEFAULT_FILE_GATE_URL = "https://script.google.com/macros/s/AKfycbzthLK8rDuJCT7ds7EyeybqGMnqLcp6pzFCUe7MPq2VloK6LzLjNzsRg1i1Jxm666uzgA/exec";
 
         const defaultCover = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='180' viewBox='0 0 300 180'%3E%3Crect width='300' height='180' fill='%23eef2ff'/%3E%3Ccircle cx='150' cy='90' r='34' fill='%234f46e5'/%3E%3Cpolygon points='142,75 166,90 142,105' fill='%23ffffff'/%3E%3C/svg%3E";
 
-        let configData = { shopLogo: '', instName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, autoUnlockSlip: true };
+        let configData = { shopLogo: '', instName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, fileGateUrl: DEFAULT_FILE_GATE_URL, autoUnlockSlip: true };
         let catalogItems = [];
         let usedSlipRefs = new Set();
         let currentFilter = 'ALL';
@@ -228,7 +226,7 @@
 
         let targetBuyItem = null;
         let slipBase64 = '';
-        let parsedSlipInfo = null; // { valid: boolean, transRef: string, bankCode: string, raw: string }
+        let parsedSlipInfo = null;
 
         function isExpired(d) {
             if (!d || d === '9999-12-31') return false;
@@ -260,6 +258,7 @@
                 instName: c.instName || SHOP_ID,
                 promptpayId: c.promptpayId || '0855750995',
                 accountName: c.accountName || SHOP_ID,
+                fileGateUrl: c.fileGateUrl || DEFAULT_FILE_GATE_URL,
                 autoUnlockSlip: c.autoUnlockSlip !== undefined ? c.autoUnlockSlip : true
             };
             if (configData.shopLogo) {
@@ -274,7 +273,6 @@
             renderCatalog();
         });
 
-        // ดึงรายการ Transaction Ref ที่เคยใช้แล้วเพื่อป้องกันสลิปซ้ำ
         db.ref(`courses_data/${SHOP_ID}/orders`).on('value', snap => {
             usedSlipRefs.clear();
             const allOrders = Object.values(snap.val() || {});
@@ -285,7 +283,6 @@
             });
         });
 
-        // ซิงก์ข้อมูลบัญชีผู้เรียนแบบ Real-time
         function bindStudentListener(username) {
             if (!username) {
                 currentStudentData = null;
@@ -438,7 +435,7 @@
                     : `<span class="bg-slate-900/80 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">🔒 ล็อกอยู่</span>`;
 
                 const metaTxt = itemType === 'file'
-                    ? (item.previewUrl ? 'มีตัวอย่างไฟล์ให้ดูพรีวิวก่อนซื้อ' : 'ไฟล์เอกสารฉบับเต็ม')
+                    ? (item.previewUrl ? 'มีตัวอย่างไฟล์ให้ดูพรีวิวก่อนซื้อ' : 'ไฟล์เอกสารฉบับเต็ม (ล็อกสิทธิ์)')
                     : `จำนวน ${(item.lessons || []).length} บทเรียน`;
 
                 return `
@@ -469,9 +466,6 @@
             `}).join('');
         }
 
-        // =========================================================================
-        // ระบบเปิดดูพรีวิว & เปิดเนื้อหาเต็มหลังปลดล็อก
-        // =========================================================================
         function extractEmbedUrl(url) {
             if (!url) return '';
             const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/);
@@ -479,6 +473,13 @@
             const driveMatch = url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/);
             if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
             return url;
+        }
+
+        function buildProtectedFileUrl(itemId, mode = 'view') {
+            const gate = configData.fileGateUrl || DEFAULT_FILE_GATE_URL;
+            const user = currentStudentData ? currentStudentData.username : '';
+            const pass = currentStudentData ? currentStudentData.password : '';
+            return `${gate}?shop=${encodeURIComponent(SHOP_ID)}&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}&item=${encodeURIComponent(itemId)}&mode=${encodeURIComponent(mode)}`;
         }
 
         function openItemViewer(itemId, isPreviewMode) {
@@ -501,25 +502,38 @@
                 vidLayout.classList.add('hidden');
                 fileLayout.classList.remove('hidden');
 
-                const targetUrl = unlocked ? item.fullFileUrl : item.previewUrl;
-                const openBtn = document.getElementById('vw-file-open-btn');
+                const actionsBox = document.getElementById('vw-file-actions');
                 const embedBox = document.getElementById('vw-file-embed-box');
-
                 document.getElementById('vw-file-desc').innerText = item.desc || '';
-                if (!targetUrl) {
-                    document.getElementById('vw-file-status-text').innerText = '🔒 ไฟล์นี้ถูกล็อกไว้ (ยังไม่มีลิงก์พรีวิว กรุณาปลดล็อกเพื่อดาวน์โหลดไฟล์เต็ม)';
-                    openBtn.classList.add('hidden');
+
+                if (unlocked && currentStudentData) {
+                    const viewUrl = buildProtectedFileUrl(item.id, 'view');
+                    const dlUrl = buildProtectedFileUrl(item.id, 'download');
+                    document.getElementById('vw-file-status-text').innerText = '✅ ปลดล็อกไฟล์ฉบับเต็มเรียบร้อยแล้ว (ตรวจสิทธิ์อัตโนมัติ)';
+                    actionsBox.innerHTML = `
+                        <a href="${viewUrl}" target="_blank" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm">📖 เปิดในแท็บใหม่</a>
+                        <a href="${dlUrl}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm">📥 ดาวน์โหลดไฟล์ PDF</a>
+                    `;
+                    embedBox.innerHTML = `<iframe src="${viewUrl}" class="w-full h-full border-0"></iframe>`;
+                } else if (unlocked && Number(item.price) === 0 && item.fullFileUrl) {
+                    document.getElementById('vw-file-status-text').innerText = '✅ ไฟล์เรียนฟรี';
+                    actionsBox.innerHTML = `<a href="${item.fullFileUrl}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold">📥 เปิด / ดาวน์โหลดไฟล์</a>`;
+                    embedBox.innerHTML = `<iframe src="${extractEmbedUrl(item.fullFileUrl)}" class="w-full h-full border-0"></iframe>`;
+                } else if (item.previewUrl) {
+                    document.getElementById('vw-file-status-text').innerText = '👁️ กำลังแสดงไฟล์ตัวอย่าง (Preview) — ซื้อเพื่อปลดล็อกไฟล์ฉบับเต็ม';
+                    actionsBox.innerHTML = `
+                        <a href="${item.previewUrl}" target="_blank" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold">📄 เปิดพรีวิว</a>
+                        <button onclick="startPurchase('${item.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold">🔓 ซื้อไฟล์เต็ม (${item.price} บ.)</button>
+                    `;
+                    embedBox.innerHTML = `<iframe src="${extractEmbedUrl(item.previewUrl)}" class="w-full h-full border-0"></iframe>`;
+                } else {
+                    document.getElementById('vw-file-status-text').innerText = '🔒 ไฟล์นี้ถูกล็อกไว้ (ยังไม่มีไฟล์พรีวิว)';
+                    actionsBox.innerHTML = `<button onclick="startPurchase('${item.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold">🔓 ซื้อเพื่อปลดล็อก (${item.price} บ.)</button>`;
                     embedBox.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-slate-500 gap-3 p-4 text-center">
                         <div class="text-4xl">🔒</div>
                         <p class="text-sm font-bold">ไฟล์ฉบับเต็มถูกล็อกอยู่</p>
-                        <button onclick="startPurchase('${item.id}')" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold">ซื้อเพื่อปลดล็อก (${item.price} บ.)</button>
+                        <p class="text-xs">กรุณาเข้าสู่ระบบและชำระเงินเพื่อปลดล็อกไฟล์ครับ</p>
                     </div>`;
-                } else {
-                    document.getElementById('vw-file-status-text').innerText = unlocked ? '✅ ปลดล็อกไฟล์ฉบับเต็มเรียบร้อยแล้ว' : '👁️ กำลังแสดงไฟล์ตัวอย่าง (Preview) — ซื้อเพื่อเปิดไฟล์ฉบับเต็ม';
-                    openBtn.href = targetUrl;
-                    openBtn.innerText = unlocked ? '📥 เปิด / ดาวน์โหลดไฟล์ฉบับเต็ม' : '📄 เปิดไฟล์ตัวอย่าง (Preview)';
-                    openBtn.classList.remove('hidden');
-                    embedBox.innerHTML = `<iframe src="${extractEmbedUrl(targetUrl)}" class="w-full h-full border-0"></iframe>`;
                 }
             } else {
                 fileLayout.classList.add('hidden');
@@ -577,9 +591,6 @@
             }
         }
 
-        // =========================================================================
-        // ระบบชำระเงินพร้อมเพย์ & ระบบอ่านสลิป QR (Thai Bank Slip Verification)
-        // =========================================================================
         function crc16(data) {
             let crc = 0xFFFF;
             for (let i = 0; i < data.length; i++) {
@@ -599,12 +610,10 @@
             return p + crc16(p);
         }
 
-        // ถอดรหัส Mini-QR บนสลิปธนาคารไทย (BOT Standard: Tag 00 -> 01 = Bank Code, 02 = Trans Ref)
         function parseThaiBankSlipQR(rawText) {
             if (!rawText || rawText.length < 25) return { valid: false };
             try {
-                let i = 0;
-                let bankCode = '', transRef = '';
+                let i = 0, bankCode = '', transRef = '';
                 while (i + 4 <= rawText.length) {
                     const tag = rawText.substring(i, i + 2);
                     const len = parseInt(rawText.substring(i + 2, i + 4), 10);
@@ -674,7 +683,6 @@
             reader.onload = function(e) {
                 const img = new Image();
                 img.onload = function() {
-                    // 1. สแกนอ่าน QR บนภาพความละเอียดสูงก่อนย่อ
                     const scanCanvas = document.createElement('canvas');
                     const maxScan = 1000;
                     let sw = img.width, sh = img.height;
@@ -688,7 +696,6 @@
                     const imgData = sCtx.getImageData(0, 0, sw, sh);
                     const qrCode = jsQR(imgData.data, sw, sh);
 
-                    // 2. ย่อรูปสลิปเพื่อเก็บลง Firebase
                     const saveCanvas = document.createElement('canvas');
                     const w = 520, h = Math.round((img.height / img.width) * 520) || 520;
                     saveCanvas.width = w; saveCanvas.height = h;
