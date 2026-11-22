@@ -59,6 +59,8 @@
     .btn-info:hover { background: #bae6fd; }
     .btn-warning { background: #fef3c7; color: #92400e; }
     .btn-danger { background: #fee2e2; color: #991b1b; }
+    .btn-purple { background: #ede9fe; color: #5b21b6; }
+    .btn-purple:hover { background: #ddd6fe; }
     .btn-outline { background: white; border: 1px solid var(--border); color: var(--text); }
     .btn-outline:hover { background: #f8fafc; }
 
@@ -207,17 +209,17 @@
     <div class="form-group">
       <label>ประเภทระบบธุรกิจ</label>
       <select id="inp-biztype">
-        <option value="food">🍜 ระบบสั่งอาหารออนไลน์ (index.html / admin.html)</option>
-        <option value="course">🎓 ระบบเรียนออนไลน์อัปคลิปขาย (course.html / course-admin.html)</option>
+        <option value="food">🍜 ระบบสั่งอาหาร / ร้านค้า (index.html / admin.html)</option>
+        <option value="course">🎓 ระบบเรียนออนไลน์ & ขายไฟล์ชีท (course.html / course-admin.html)</option>
       </select>
     </div>
     <div class="form-group">
       <label>รหัสใช้งาน (ID - ภาษาอังกฤษห้ามเว้นวรรค)</label>
-      <input type="text" id="inp-id" placeholder="เช่น pangnawat หรือ math-kru-geno">
+      <input type="text" id="inp-id" placeholder="เช่น pangnawat หรือ math-geno">
     </div>
     <div class="form-group">
       <label>ชื่อร้าน / ชื่อสถาบันหรือผู้สอน</label>
-      <input type="text" id="inp-name" placeholder="เช่น ปังหน้าวัด หรือ คอร์สคณิตพี่จีโน่">
+      <input type="text" id="inp-name" placeholder="เช่น ปังหน้าวัด หรือ คอร์สพี่จีโน่">
     </div>
     <div class="form-group">
       <label>เบอร์โทร / LINE ติดต่อ</label>
@@ -251,8 +253,8 @@
     <div class="form-group">
       <label>ประเภทธุรกิจ</label>
       <select id="edit-biztype">
-        <option value="food">🍜 ระบบสั่งอาหารออนไลน์</option>
-        <option value="course">🎓 ระบบเรียนออนไลน์อัปคลิปขาย</option>
+        <option value="food">🍜 ระบบสั่งอาหาร / ร้านค้า</option>
+        <option value="course">🎓 ระบบเรียนออนไลน์ & ขายไฟล์ชีท</option>
       </select>
     </div>
     <div class="form-group">
@@ -445,6 +447,33 @@
     setTimeout(() => t.style.display = 'none', 3000);
   }
 
+  function copyHandoverText(index) {
+    const shop = shops[index];
+    if (!shop) return;
+    const bizType = shop.bizType || 'food';
+    const plan = PLANS[shop.planKey] || PLANS['1m'];
+    const baseDir = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
+    const frontUrl = bizType === 'course'
+      ? `${baseDir}/course.html?shop=${shop.id}`
+      : `${baseDir}/index.html?shop=${shop.id}`;
+    const backUrl = bizType === 'course'
+      ? `${baseDir}/course-admin.html?shop=${shop.id}`
+      : `${baseDir}/admin.html?shop=${shop.id}`;
+    const expText = shop.planKey === 'lifetime' ? 'ฟรีตลอดชีพ' : shop.expireDate;
+
+    const text = [
+      `📌 ข้อมูลระบบ: ${shop.name} (${shop.id})`,
+      `• ประเภท: ${bizType === 'course' ? 'ระบบเรียนออนไลน์ & ขายไฟล์ชีท' : 'ระบบสั่งอาหาร & บิลร้านค้า'}`,
+      `• ลิงก์หน้าใช้งาน: ${frontUrl}`,
+      `• ลิงก์หลังบ้าน: ${backUrl}`,
+      `• อีเมลล็อกอินหลังบ้าน: ${shop.id}@ss.com`,
+      `• แพ็กเกจ: ${plan.label} | วันหมดอายุ: ${expText}`
+    ].join('\n');
+
+    navigator.clipboard.writeText(text);
+    showToast(`คัดลอกข้อความส่งงาน "${shop.name}" แล้วครับ`);
+  }
+
   function renderTable() {
     const tbody = document.getElementById('shopTableBody');
     const keyword = document.getElementById('searchInput').value.toLowerCase();
@@ -518,6 +547,7 @@
           <div style="display:flex; gap:4px; flex-wrap:wrap;">
             <button class="btn btn-sm btn-outline" onclick="copyLink('${frontUrl}', '${frontLabel}')">${frontLabel}</button>
             <button class="btn btn-sm btn-outline" onclick="copyLink('${backUrl}', '${backLabel}')">${backLabel}</button>
+            <button class="btn btn-sm btn-purple" onclick="copyHandoverText(${index})">📋 ส่งงาน</button>
           </div>
         </td>
         <td>
