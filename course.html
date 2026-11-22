@@ -69,7 +69,7 @@
             </div>
         </div>
 
-        <!-- ห้องเรียนวิดีโอ / หน้าต่างเปิดไฟล์เต็ม -->
+        <!-- ห้องเรียนวิดีโอ / หน้าต่างเปิดไฟล์ -->
         <div id="viewer-panel" class="hidden bg-white p-4 sm:p-6 rounded-3xl shadow-xl border-2 border-indigo-300 space-y-4">
             <div class="flex justify-between items-center border-b pb-3 gap-2">
                 <div>
@@ -101,12 +101,12 @@
             <div id="vw-file-layout" class="hidden space-y-4">
                 <div class="bg-indigo-50/80 border border-indigo-200 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div>
-                        <p id="vw-file-status-text" class="text-sm font-bold text-indigo-950">📄 เอกสารฉบับเต็ม</p>
+                        <p id="vw-file-status-text" class="text-sm font-bold text-indigo-950">📄 เอกสารเรียน</p>
                         <p id="vw-file-desc" class="text-xs text-slate-600 mt-0.5">-</p>
                     </div>
                     <div id="vw-file-actions" class="flex flex-wrap gap-2 shrink-0"></div>
                 </div>
-                <div id="vw-file-embed-box" class="w-full h-[520px] bg-slate-100 rounded-2xl overflow-hidden border flex items-center justify-center text-slate-500 text-sm"></div>
+                <div id="vw-file-embed-box" class="w-full h-[540px] bg-slate-100 rounded-2xl overflow-hidden border flex items-center justify-center text-slate-500 text-sm"></div>
             </div>
         </div>
 
@@ -220,7 +220,6 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const SHOP_ID = (urlParams.get('shop') || 'demo-course').toLowerCase();
-        const DEFAULT_FILE_GATE_URL = "https://script.google.com/macros/s/AKfycbzthLK8rDuJCT7ds7EyeybqGMnqLcp6pzFCUe7MPq2VloK6LzLjNzsRg1i1Jxm666uzgA/exec";
 
         const CHANNEL_STYLE = {
             phone: { icon: '📞', cls: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
@@ -232,7 +231,7 @@
 
         const defaultCover = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='180' viewBox='0 0 300 180'%3E%3Crect width='300' height='180' fill='%23eef2ff'/%3E%3Ccircle cx='150' cy='90' r='34' fill='%234f46e5'/%3E%3Cpolygon points='142,75 166,90 142,105' fill='%23ffffff'/%3E%3C/svg%3E";
 
-        let configData = { shopLogo: '', instName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, contacts: [], fileGateUrl: DEFAULT_FILE_GATE_URL, autoUnlockSlip: true };
+        let configData = { shopLogo: '', instName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, contacts: [], autoUnlockSlip: true };
         let courses = [];
         let students = {};
         let ordersObj = {};
@@ -241,6 +240,14 @@
         let pendingPayItem = null;
         let slipBase64 = '';
         let slipTransRef = '';
+        let activeBlobUrl = '';
+
+        function revokeActiveBlobUrl() {
+            if (activeBlobUrl) {
+                URL.revokeObjectURL(activeBlobUrl);
+                activeBlobUrl = '';
+            }
+        }
 
         function isExpired(d) {
             if (!d || d === '9999-12-31') return false;
@@ -317,7 +324,6 @@
                 promptpayId: cfg.promptpayId || '0855750995',
                 accountName: cfg.accountName || SHOP_ID,
                 contacts: Array.isArray(cfg.contacts) ? cfg.contacts : [],
-                fileGateUrl: cfg.fileGateUrl || DEFAULT_FILE_GATE_URL,
                 autoUnlockSlip: cfg.autoUnlockSlip !== undefined ? cfg.autoUnlockSlip : true
             };
             document.title = `${configData.instName} - คอร์สเรียน & คลังไฟล์`;
@@ -492,7 +498,7 @@
                         </div>
                     </div>
                     <div class="px-4 pb-4 flex gap-2">
-                        ${isFile && c.previewUrl ? `<a href="${c.previewUrl}" target="_blank" class="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">👁️ ตัวอย่าง</a>` : ''}
+                        ${isFile && c.previewFileData ? `<button onclick="openViewer('${c.id}', true)" class="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">👁️ ตัวอย่าง</button>` : ''}
                         ${!isFile && !unlocked && hasFreePreview ? `<button onclick="openViewer('${c.id}', true)" class="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">👁️ ทดลองเรียน</button>` : ''}
                         ${unlocked
                             ? `<button onclick="openViewer('${c.id}', false)" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">${isFile ? '📂 เปิดไฟล์ฉบับเต็ม' : '▶️ เข้าเรียนทันที'}</button>`
@@ -512,16 +518,46 @@
             return url;
         }
 
-        function buildProtectedFileUrl(rawUrl) {
-            const gate = (configData.fileGateUrl || DEFAULT_FILE_GATE_URL).trim();
-            const u = currentStudent ? currentStudent.username : '';
-            const p = currentStudent ? currentStudent.password : '';
-            if (!gate) return rawUrl;
-            const sep = gate.includes('?') ? '&' : '?';
-            return `${gate}${sep}shop=${encodeURIComponent(SHOP_ID)}&user=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}&file=${encodeURIComponent(rawUrl)}`;
+        function dataUrlToBlob(dataUrl) {
+            const parts = String(dataUrl || '').split(',');
+            const mimeMatch = parts[0] && parts[0].match(/data:([^;]+);base64/);
+            const mime = mimeMatch ? mimeMatch[1] : 'application/pdf';
+            const byteStr = atob(parts[1] || '');
+            const arr = new Uint8Array(byteStr.length);
+            for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+            return { blob: new Blob([arr], { type: mime }), mime };
+        }
+
+        function renderDocViewer(dataUrl, fileName, isPreviewMode) {
+            revokeActiveBlobUrl();
+            const embedBox = document.getElementById('vw-file-embed-box');
+            const actionsBox = document.getElementById('vw-file-actions');
+
+            if (!dataUrl) {
+                actionsBox.innerHTML = '';
+                embedBox.innerHTML = `<p class="text-xs text-slate-400">ยังไม่มีไฟล์ในรายการนี้</p>`;
+                return;
+            }
+
+            const { blob, mime } = dataUrlToBlob(dataUrl);
+            const blobUrl = URL.createObjectURL(blob);
+            activeBlobUrl = blobUrl;
+            const safeDownloadName = fileName || 'document.pdf';
+
+            actionsBox.innerHTML = `
+                <a href="${blobUrl}" target="_blank" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold">เปิดแท็บใหม่</a>
+                <a href="${blobUrl}" download="${safeDownloadName}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold">⬇️ ดาวน์โหลดไฟล์</a>
+            `;
+
+            if (mime.startsWith('image/')) {
+                embedBox.innerHTML = `<div class="w-full h-full overflow-auto p-3 flex justify-center items-start"><img src="${blobUrl}" alt="${safeDownloadName}" class="max-w-full h-auto rounded-xl"></div>`;
+            } else {
+                embedBox.innerHTML = `<iframe src="${blobUrl}" class="w-full h-full border-0"></iframe>`;
+            }
         }
 
         function closeViewer() {
+            revokeActiveBlobUrl();
             document.getElementById('viewer-panel').classList.add('hidden');
             document.getElementById('video-player-box').innerHTML = '';
             document.getElementById('vw-file-embed-box').innerHTML = '';
@@ -538,21 +574,21 @@
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
             const isFile = (item.type || 'video') === 'file';
-            document.getElementById('vw-badge').innerText = isFile ? '📄 เอกสารฉบับเต็ม' : (unlocked ? '🎬 ห้องเรียนวิดีโอ' : '👁️ โหมดทดลองเรียนฟรี');
+            document.getElementById('vw-badge').innerText = isFile
+                ? (previewOnly && !unlocked ? '👁️ ตัวอย่างเอกสาร' : '📄 เอกสารฉบับเต็ม')
+                : (unlocked ? '🎬 ห้องเรียนวิดีโอ' : '👁️ โหมดทดลองเรียนฟรี');
             document.getElementById('vw-title').innerText = item.title;
 
             if (isFile) {
                 document.getElementById('vw-video-layout').classList.add('hidden');
                 document.getElementById('vw-file-layout').classList.remove('hidden');
-                document.getElementById('vw-file-desc').innerText = item.desc || 'ไฟล์เอกสารฉบับเต็มสำหรับผู้ที่ปลดล็อกแล้ว';
+                document.getElementById('vw-file-desc').innerText = item.desc || 'เอกสารเรียนจากผู้สอน';
 
-                const protectedUrl = buildProtectedFileUrl(item.fullFileUrl || '');
-                document.getElementById('vw-file-actions').innerHTML = `
-                    <a href="${protectedUrl}" target="_blank" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold">เปิดดู / ดาวน์โหลดไฟล์ฉบับเต็ม</a>
-                `;
-                document.getElementById('vw-file-embed-box').innerHTML = `
-                    <iframe src="${protectedUrl}" class="w-full h-full border-0" allow="autoplay"></iframe>
-                `;
+                const usePreview = previewOnly && !unlocked && item.previewFileData;
+                const chosenData = usePreview ? item.previewFileData : item.fullFileData;
+                const chosenName = usePreview ? (item.previewFileName || `${item.title}-preview.pdf`) : (item.fullFileName || `${item.title}.pdf`);
+                document.getElementById('vw-file-status-text').innerText = usePreview ? `👁️ ตัวอย่าง: ${chosenName}` : `📄 ฉบับเต็ม: ${chosenName}`;
+                renderDocViewer(chosenData, chosenName, usePreview);
             } else {
                 document.getElementById('vw-file-layout').classList.add('hidden');
                 document.getElementById('vw-video-layout').classList.remove('hidden');
