@@ -70,6 +70,7 @@
                     <button onclick="switchTab('orders')" id="tab-orders" class="px-3 py-2 bg-amber-400 text-slate-950 font-bold rounded-xl text-xs">รายการซื้อ & สลิป</button>
                     <button onclick="switchTab('courses')" id="tab-courses" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">วิชาเรียน & ไฟล์ขาย</button>
                     <button onclick="switchTab('students')" id="tab-students" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">ไอดีผู้เรียน</button>
+                    <button onclick="switchTab('revenue')" id="tab-revenue" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">รายรับ</button>
                     <button onclick="switchTab('settings')" id="tab-settings" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">ตั้งค่าสถาบัน</button>
                     <button onclick="openCourseRenewModal()" class="px-3 py-2 bg-emerald-400 hover:bg-emerald-500 text-slate-950 font-bold rounded-xl text-xs">🔄 ต่ออายุ</button>
                     <button onclick="logout()" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold">ออก</button>
@@ -152,6 +153,50 @@
                     <span id="student-count" class="text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">0 บัญชี</span>
                 </div>
                 <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+
+            <!-- 4. หน้าสรุปรายรับ -->
+            <div id="view-revenue" class="hidden space-y-5">
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                    <h2 class="text-lg font-bold text-slate-800">💰 สรุปรายรับคอร์สเรียน & ไฟล์ (นับเฉพาะรายการที่ปลดล็อกแล้ว)</h2>
+                    <span class="text-xs font-semibold text-slate-500">อัปเดตแบบเรียลไทม์</span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-emerald-500">
+                        <p class="text-gray-500 text-xs">รายรับวันนี้</p>
+                        <h3 id="crev-today" class="text-xl sm:text-2xl font-bold text-emerald-600 mt-1">0 บ.</h3>
+                    </div>
+                    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-blue-500">
+                        <p class="text-gray-500 text-xs">รายรับเดือนนี้</p>
+                        <h3 id="crev-month" class="text-xl sm:text-2xl font-bold text-blue-600 mt-1">0 บ.</h3>
+                    </div>
+                    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-purple-500">
+                        <p class="text-gray-500 text-xs">รายรับปีนี้</p>
+                        <h3 id="crev-year" class="text-xl sm:text-2xl font-bold text-purple-600 mt-1">0 บ.</h3>
+                    </div>
+                    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-amber-500">
+                        <p class="text-gray-500 text-xs">รายการที่ปลดล็อกแล้ว</p>
+                        <h3 id="crev-count" class="text-xl sm:text-2xl font-bold text-amber-600 mt-1">0 รายการ</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border overflow-x-auto">
+                    <h3 class="text-base font-bold text-slate-800 mb-3">🧾 ประวัติการชำระเงินทั้งหมด</h3>
+                    <table class="w-full text-left text-xs sm:text-sm min-w-[640px]">
+                        <thead>
+                            <tr class="border-b bg-slate-50 text-slate-600">
+                                <th class="p-3">เลขที่บิล</th>
+                                <th class="p-3">วัน-เวลา</th>
+                                <th class="p-3">ผู้เรียน</th>
+                                <th class="p-3">วิชา / ไฟล์</th>
+                                <th class="p-3">สถานะ</th>
+                                <th class="p-3 text-right">ยอดเงิน</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crev-table" class="divide-y"></tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="view-settings" class="hidden">
@@ -379,7 +424,66 @@
                 const rawOrders = snap.val() || {};
                 orders = Object.entries(rawOrders).map(([k, v]) => ({ ...v, key: k })).reverse();
                 renderOrders();
+                renderCourseRevenue();
             });
+        }
+
+        function formatDateKey(ts) {
+            if (!ts) return '';
+            const d = new Date(Number(ts));
+            if (isNaN(d.getTime())) return '';
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        function renderCourseRevenue() {
+            const now = new Date();
+            const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            const monthStr = todayStr.substring(0, 7);
+            const yearStr = todayStr.substring(0, 4);
+
+            let sumToday = 0, sumMonth = 0, sumYear = 0, countApproved = 0;
+
+            orders.forEach(o => {
+                const amt = Number(o.amount || 0);
+                if (o.status === 'approved') {
+                    countApproved++;
+                    const dStr = o.date || formatDateKey(o.createdAt);
+                    if (dStr === todayStr) sumToday += amt;
+                    if (dStr && dStr.startsWith(monthStr)) sumMonth += amt;
+                    if (dStr && dStr.startsWith(yearStr)) sumYear += amt;
+                }
+            });
+
+            document.getElementById('crev-today').innerText = `${sumToday.toLocaleString()} บ.`;
+            document.getElementById('crev-month').innerText = `${sumMonth.toLocaleString()} บ.`;
+            document.getElementById('crev-year').innerText = `${sumYear.toLocaleString()} บ.`;
+            document.getElementById('crev-count').innerText = `${countApproved.toLocaleString()} รายการ`;
+
+            const tbody = document.getElementById('crev-table');
+            if (orders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">ยังไม่มีประวัติการชำระเงิน</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = orders.map(o => {
+                const isApproved = o.status === 'approved';
+                const timeTxt = o.createdAt ? new Date(Number(o.createdAt)).toLocaleString('th-TH') : (o.date || '-');
+                const amt = Number(o.amount || 0);
+                return `
+                    <tr>
+                        <td class="p-3 font-mono font-bold text-slate-700">${o.orderId || o.key.slice(-6)}</td>
+                        <td class="p-3 text-xs text-slate-500">${timeTxt}</td>
+                        <td class="p-3 font-medium">${o.studentName || o.username || '-'} <span class="text-xs text-slate-400">(@${o.username || ''})</span></td>
+                        <td class="p-3">${o.itemType === 'file' ? '📄' : '🎬'} ${o.itemTitle || '-'}</td>
+                        <td class="p-3">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${isApproved ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">
+                                ${isApproved ? '🔓 ปลดล็อกแล้ว (นับรายรับ)' : '⏳ รอตรวจสอบ'}
+                            </span>
+                        </td>
+                        <td class="p-3 text-right font-bold ${isApproved ? 'text-emerald-600' : 'text-slate-500'}">${amt.toLocaleString()} บ.</td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function applyLogoUI(b64) {
@@ -512,7 +616,7 @@
         }
 
         function switchTab(tab) {
-            ['orders', 'courses', 'students', 'settings'].forEach(t => {
+            ['orders', 'courses', 'students', 'revenue', 'settings'].forEach(t => {
                 document.getElementById('view-' + t).classList.add('hidden');
                 document.getElementById('tab-' + t).className = "px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs";
             });
