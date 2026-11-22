@@ -21,6 +21,7 @@
       --warning: #f59e0b;
       --danger: #ef4444;
       --purple: #7c3aed;
+      --teal: #0d9488;
       --border: #e2e8f0;
     }
     * { box-sizing: border-box; font-family: 'Prompt', sans-serif; margin: 0; padding: 0; }
@@ -99,6 +100,7 @@
     .badge-free90 { background: #dbeafe; color: #1e40af; font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; display: inline-block; margin-top: 3px; }
     .biz-food { background: #ffedd5; color: #9a3412; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-top: 3px; }
     .biz-course { background: #e0e7ff; color: #3730a3; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-top: 3px; }
+    .biz-dorm { background: #ccfbf1; color: #115e59; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-top: 3px; }
 
     /* Renewals Grid */
     .renewals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; padding: 20px; }
@@ -196,6 +198,7 @@
         <button class="filter-pill active" id="pill-ALL" onclick="setBizFilter('ALL')">ทั้งหมด</button>
         <button class="filter-pill" id="pill-food" onclick="setBizFilter('food')">🍜 ร้านอาหาร</button>
         <button class="filter-pill" id="pill-course" onclick="setBizFilter('course')">🎓 คอร์สเรียนออนไลน์</button>
+        <button class="filter-pill" id="pill-dorm" onclick="setBizFilter('dorm')">🏠 หอพัก / ห้องเช่า</button>
       </div>
       <input type="text" class="search-box" id="searchInput" placeholder="ค้นหาชื่อ หรือ ID..." onkeyup="renderTable()">
     </div>
@@ -276,7 +279,7 @@
     </div>
     <div class="settings-body">
       <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 18px;">
-        ข้อมูลนี้จะถูกนำไปสร้าง QR Code พร้อมเพย์และแสดงชื่อบัญชีในหน้าต่ออายุของทุกร้านค้าและผู้สอนโดยอัตโนมัติ
+        ข้อมูลนี้จะถูกนำไปสร้าง QR Code พร้อมเพย์และแสดงชื่อบัญชีในหน้าต่ออายุของทุกร้านค้า ผู้สอน และหอพักโดยอัตโนมัติ
       </p>
       <div class="form-group">
         <label>เบอร์พร้อมเพย์ (10 หลัก) หรือ เลขบัตรประชาชน (13 หลัก)</label>
@@ -300,15 +303,16 @@
       <select id="inp-biztype">
         <option value="food">🍜 ระบบสั่งอาหาร / ร้านค้า (index.html / admin.html)</option>
         <option value="course">🎓 ระบบเรียนออนไลน์ & ขายไฟล์ชีท (course.html / course-admin.html)</option>
+        <option value="dorm">🏠 ระบบบิลหอพัก / ห้องเช่า (dorm.html / dorm-admin.html)</option>
       </select>
     </div>
     <div class="form-group">
       <label>รหัสใช้งาน (ID - ภาษาอังกฤษห้ามเว้นวรรค)</label>
-      <input type="text" id="inp-id" placeholder="เช่น pangnawat หรือ math-geno">
+      <input type="text" id="inp-id" placeholder="เช่น pangnawat, math-geno หรือ dorm-huayyod">
     </div>
     <div class="form-group">
-      <label>ชื่อร้าน / ชื่อสถาบันหรือผู้สอน</label>
-      <input type="text" id="inp-name" placeholder="เช่น ปังหน้าวัด หรือ คอร์สพี่จีโน่">
+      <label>ชื่อร้าน / ชื่อสถาบัน / ชื่อหอพัก</label>
+      <input type="text" id="inp-name" placeholder="เช่น ปังหน้าวัด, คอร์สพี่จีโน่ หรือ หอพักสุขใจ">
     </div>
     <div class="form-group">
       <label>เบอร์โทร / LINE ติดต่อ</label>
@@ -361,10 +365,11 @@
       <select id="edit-biztype">
         <option value="food">🍜 ระบบสั่งอาหาร / ร้านค้า</option>
         <option value="course">🎓 ระบบเรียนออนไลน์ & ขายไฟล์ชีท</option>
+        <option value="dorm">🏠 ระบบบิลหอพัก / ห้องเช่า</option>
       </select>
     </div>
     <div class="form-group">
-      <label>ชื่อร้าน / ชื่อสถาบัน</label>
+      <label>ชื่อร้าน / ชื่อสถาบัน / ชื่อหอพัก</label>
       <input type="text" id="edit-name">
     </div>
     <div class="form-group">
@@ -602,7 +607,7 @@
 
   function setBizFilter(type) {
     currentBizFilter = type;
-    ['ALL', 'food', 'course'].forEach(k => {
+    ['ALL', 'food', 'course', 'dorm'].forEach(k => {
       document.getElementById('pill-' + k).classList.toggle('active', k === type);
     });
     renderTable();
@@ -616,21 +621,51 @@
     showToast(shop.allowFree90d ? `เปิดสิทธิ์ฟรี 3 เดือนให้ "${shop.name}" แล้ว` : `ปิดสิทธิ์ฟรี 3 เดือนของ "${shop.name}" แล้ว`);
   }
 
+  function getBizUrls(bizType, id, baseDir) {
+    if (bizType === 'course') {
+      return {
+        frontUrl: `${baseDir}/course.html?shop=${id}`,
+        backUrl: `${baseDir}/course-admin.html?shop=${id}`,
+        frontLabel: '🎓 หน้าเรียน',
+        backLabel: '🎬 ผู้สอน',
+        bizBadge: `<span class="biz-course">🎓 คอร์สเรียนออนไลน์</span>`,
+        bizText: 'ระบบเรียนออนไลน์ & ขายไฟล์ชีท'
+      };
+    }
+    if (bizType === 'dorm') {
+      return {
+        frontUrl: `${baseDir}/dorm.html?shop=${id}`,
+        backUrl: `${baseDir}/dorm-admin.html?shop=${id}`,
+        frontLabel: '🏠 หน้าเช็กบิล',
+        backLabel: '🏢 หลังบ้านหอ',
+        bizBadge: `<span class="biz-dorm">🏠 หอพัก / ห้องเช่า</span>`,
+        bizText: 'ระบบบิลหอพัก / ห้องเช่า'
+      };
+    }
+    return {
+      frontUrl: `${baseDir}/index.html?shop=${id}`,
+      backUrl: `${baseDir}/admin.html?shop=${id}`,
+      frontLabel: '🛒 หน้าร้าน',
+      backLabel: '⚙️ หลังบ้าน',
+      bizBadge: `<span class="biz-food">🍜 ร้านอาหาร</span>`,
+      bizText: 'ระบบสั่งอาหาร & บิลร้านค้า'
+    };
+  }
+
   function copyHandoverText(index) {
     const shop = shops[index];
     if (!shop) return;
     const bizType = shop.bizType || 'food';
     const baseDir = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
-    const frontUrl = bizType === 'course' ? `${baseDir}/course.html?shop=${shop.id}` : `${baseDir}/index.html?shop=${shop.id}`;
-    const backUrl = bizType === 'course' ? `${baseDir}/course-admin.html?shop=${shop.id}` : `${baseDir}/admin.html?shop=${shop.id}`;
+    const info = getBizUrls(bizType, shop.id, baseDir);
     const expText = shop.planKey === 'lifetime' ? 'ฟรีตลอดชีพ' : shop.expireDate;
     const pkgText = shop.planKey === 'lifetime' ? 'ฟรีตลอดชีพ' : `${shop.days || 30} วัน (${Number(shop.price || 0).toLocaleString()} ฿)`;
 
     const text = [
       `📌 ข้อมูลระบบ: ${shop.name} (${shop.id})`,
-      `• ประเภท: ${bizType === 'course' ? 'ระบบเรียนออนไลน์ & ขายไฟล์ชีท' : 'ระบบสั่งอาหาร & บิลร้านค้า'}`,
-      `• ลิงก์หน้าใช้งาน: ${frontUrl}`,
-      `• ลิงก์หลังบ้าน: ${backUrl}`,
+      `• ประเภท: ${info.bizText}`,
+      `• ลิงก์หน้าใช้งาน: ${info.frontUrl}`,
+      `• ลิงก์หลังบ้าน: ${info.backUrl}`,
       `• อีเมลล็อกอินหลังบ้าน: ${shop.id}@ss.com`,
       `• แพ็กเกจ: ${pkgText} | วันหมดอายุ: ${expText}`
     ].join('\n');
@@ -674,11 +709,7 @@
       if (currentBizFilter !== 'ALL' && bizType !== currentBizFilter) return;
       if (!shop.name.toLowerCase().includes(keyword) && !shop.id.toLowerCase().includes(keyword)) return;
 
-      const frontUrl = bizType === 'course' ? `${baseDir}/course.html?shop=${shop.id}` : `${baseDir}/index.html?shop=${shop.id}`;
-      const backUrl = bizType === 'course' ? `${baseDir}/course-admin.html?shop=${shop.id}` : `${baseDir}/admin.html?shop=${shop.id}`;
-      const frontLabel = bizType === 'course' ? '🎓 หน้าเรียน' : '🛒 หน้าร้าน';
-      const backLabel = bizType === 'course' ? '🎬 ผู้สอน' : '⚙️ หลังบ้าน';
-      const bizBadge = bizType === 'course' ? `<span class="biz-course">🎓 คอร์สเรียนออนไลน์</span>` : `<span class="biz-food">🍜 ร้านอาหาร</span>`;
+      const info = getBizUrls(bizType, shop.id, baseDir);
       const free90Badge = allowFree90 ? `<span class="badge-free90">🎁 สิทธิ์ฟรี 3 เดือน</span>` : '';
       const pkgText = isLifetime ? 'ฟรีตลอดชีพ (VIP)' : `${shop.days || 30} วัน — ${Number(shop.price || 0).toLocaleString()} ฿`;
 
@@ -691,7 +722,7 @@
             <div>
               <div style="font-weight:600;">${shop.name}</div>
               <div style="font-size:0.8rem; color:var(--muted);">${shop.contact}</div>
-              ${bizBadge} ${free90Badge}
+              ${info.bizBadge} ${free90Badge}
             </div>
           </div>
         </td>
@@ -700,8 +731,8 @@
         <td>${statusBadge}</td>
         <td>
           <div style="display:flex; gap:4px; flex-wrap:wrap;">
-            <button class="btn btn-sm btn-outline" onclick="copyLink('${frontUrl}', '${frontLabel}')">${frontLabel}</button>
-            <button class="btn btn-sm btn-outline" onclick="copyLink('${backUrl}', '${backLabel}')">${backLabel}</button>
+            <button class="btn btn-sm btn-outline" onclick="copyLink('${info.frontUrl}', '${info.frontLabel}')">${info.frontLabel}</button>
+            <button class="btn btn-sm btn-outline" onclick="copyLink('${info.backUrl}', '${info.backLabel}')">${info.backLabel}</button>
             <button class="btn btn-sm btn-purple" onclick="copyHandoverText(${index})">📋 ส่งงาน</button>
           </div>
         </td>
