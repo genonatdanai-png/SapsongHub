@@ -18,7 +18,7 @@
         #pay-qr-box img, #pay-qr-box canvas { margin: 0 auto; border-radius: 0.75rem; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-28">
+<body class="bg-gray-50 min-h-screen pb-28">
 
     <!-- Lock Gate จาก Sapsong HUB -->
     <div id="sapsong-lock-overlay" class="hidden fixed inset-0 bg-slate-950 text-white z-[99999] flex flex-col justify-center items-center text-center p-6">
@@ -51,7 +51,7 @@
     <!-- แถบค้นหา & หมวดหมู่ -->
     <div class="bg-white border-b sticky top-[68px] z-30 shadow-xs">
         <div class="max-w-3xl mx-auto px-4 py-3 space-y-2.5">
-            <input type="text" id="search-input" oninput="renderMenus()" placeholder="🔍 ค้นหาเมนูอาหาร..." class="w-full px-4 py-2 bg-slate-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-400">
+            <input type="text" id="search-input" oninput="renderMenus()" placeholder="🔍 ค้นหาเมนูอาหาร..." class="w-full px-4 py-2 bg-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-400">
             <div id="category-tabs" class="flex gap-2 overflow-x-auto no-scrollbar pb-0.5"></div>
         </div>
     </div>
@@ -82,10 +82,9 @@
         <div onclick="event.stopPropagation()" class="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[92vh] overflow-y-auto shadow-2xl">
             <div class="flex justify-between items-center border-b pb-3">
                 <h2 class="text-lg font-bold text-slate-800">🛒 สรุปรายการสั่งอาหาร</h2>
-                <button onclick="document.getElementById('cart-modal').classList.add('hidden')" class="text-2xl font-bold text-slate-400 px-2">&times;</button>
+                <button onclick="document.getElementById('cart-modal').classList.add('hidden')" class="text-2xl font-bold text-gray-400 px-2">&times;</button>
             </div>
 
-            <!-- รายการในตะกร้า -->
             <div id="cart-items-list" class="divide-y max-h-52 overflow-y-auto"></div>
 
             <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex justify-between items-center">
@@ -93,38 +92,36 @@
                 <span id="cart-modal-total" class="text-xl font-extrabold text-amber-600">0 บาท</span>
             </div>
 
-            <!-- ข้อมูลลูกค้า -->
             <div class="space-y-3 text-sm">
                 <div class="grid grid-cols-2 gap-2.5">
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">ประเภทการสั่ง</label>
-                        <select id="ord-type" class="w-full px-3 py-2.5 border rounded-xl font-semibold bg-slate-50 outline-none">
+                        <label class="block text-xs font-bold text-gray-600 mb-1">ประเภทการสั่ง</label>
+                        <select id="ord-type" class="w-full px-3 py-2.5 border rounded-xl font-semibold bg-gray-50 outline-none">
                             <option value="ทานที่ร้าน">🍽️ ทานที่ร้าน</option>
                             <option value="รับกลับบ้าน">🛍️ รับกลับบ้าน</option>
                             <option value="เดลิเวอรี่">🛵 เดลิเวอรี่</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">ชื่อ / เลขโต๊ะ *</label>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">ชื่อ / เลขโต๊ะ *</label>
                         <input type="text" id="ord-customer" placeholder="เช่น โต๊ะ 3 หรือ ชื่อเล่น" class="w-full px-3 py-2.5 border rounded-xl outline-none focus:border-amber-500">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">วิธีชำระเงิน</label>
-                    <select id="ord-payment" onchange="togglePaymentBox()" class="w-full px-3 py-2.5 border rounded-xl font-semibold bg-slate-50 outline-none">
+                    <label class="block text-xs font-bold text-gray-600 mb-1">วิธีชำระเงิน</label>
+                    <select id="ord-payment" onchange="togglePaymentBox()" class="w-full px-3 py-2.5 border rounded-xl font-semibold bg-gray-50 outline-none">
                         <option value="โอนพร้อมเพย์">📱 โอนพร้อมเพย์ (สแกน QR)</option>
                         <option value="เงินสด">💵 เงินสด (จ่ายหน้าร้าน/ปลายทาง)</option>
                     </select>
                 </div>
 
-                <!-- กล่อง QR พร้อมเพย์ + อัปโหลดสลิป -->
                 <div id="promptpay-box" class="bg-blue-50/80 border border-blue-200 rounded-2xl p-3.5 text-center space-y-2.5">
                     <p class="text-xs font-bold text-blue-950">สแกนจ่ายพร้อมเพย์ (<span id="pp-id-text" class="font-mono">-</span>)</p>
                     <div id="pay-qr-box" class="bg-white p-2 rounded-xl border inline-block"></div>
                     <div class="text-left bg-white p-3 rounded-xl border space-y-2">
                         <label class="block text-xs font-bold text-slate-700">📎 แนบสลิปโอนเงิน *</label>
-                        <input type="file" id="slip-input" accept="image/*" onchange="processSlip(event)" class="block w-full text-xs text-slate-500">
+                        <input type="file" id="slip-input" accept="image/*" onchange="processSlip(event)" class="block w-full text-xs text-gray-500">
                         <div id="slip-status" class="hidden p-2 rounded-lg text-xs font-semibold"></div>
                         <img id="slip-prev" src="" class="hidden w-full max-h-36 object-contain rounded-lg border">
                     </div>
@@ -159,7 +156,7 @@
         let paymentConfig = { shopName: SHOP_ID, promptpayId: '', shopLogo: '' };
         let isStoreOpen = true;
         let menus = [];
-        let cart = {}; // { menuId: qty }
+        let cart = {};
         let selectedCategory = 'ALL';
         let slipBase64 = '';
         let slipTransRef = '';
@@ -191,7 +188,6 @@
             document.getElementById('sapsong-lock-overlay').classList.remove('hidden');
         }
 
-        // ตรวจสอบสิทธิ์จาก Sapsong HUB
         db.ref('sapsong_hub_shops/' + SHOP_ID).on('value', snap => {
             const m = snap.val();
             if (!m) return showLock('ไม่พบร้านค้าในระบบ', `รหัส "${SHOP_ID}" ยังไม่ได้ลงทะเบียนใน Sapsong HUB`);
@@ -200,7 +196,6 @@
             document.getElementById('sapsong-lock-overlay').classList.add('hidden');
         });
 
-        // โหลดข้อมูลร้านค้า
         db.ref(`shops_data/${SHOP_ID}`).on('value', snap => {
             const d = snap.val() || {};
             paymentConfig = {
@@ -242,7 +237,7 @@
             const el = document.getElementById('category-tabs');
             el.innerHTML = cats.map(c => {
                 const active = c === selectedCategory;
-                return `<button onclick="selectCategory('${c}')" class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition ${active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${c === 'ALL' ? 'ทั้งหมด' : c}</button>`;
+                return `<button onclick="selectCategory('${c}')" class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition ${active ? 'bg-slate-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">${c === 'ALL' ? 'ทั้งหมด' : c}</button>`;
             }).join('');
         }
 
@@ -262,7 +257,7 @@
             });
 
             if (list.length === 0) {
-                grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 text-sm bg-white rounded-2xl border">ยังไม่มีเมนูในหมวดนี้</div>`;
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400 text-sm bg-white rounded-2xl border">ยังไม่มีเมนูในหมวดนี้</div>`;
                 return;
             }
 
@@ -272,7 +267,7 @@
                 return `
                 <div class="bg-white p-3.5 rounded-2xl border shadow-xs flex justify-between items-center gap-3 ${!avail ? 'opacity-50' : ''}">
                     <div class="min-w-0">
-                        <span class="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">${m.category || 'ทั่วไป'}</span>
+                        <span class="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">${m.category || 'ทั่วไป'}</span>
                         <h3 class="font-bold text-slate-800 text-sm sm:text-base mt-1 truncate">${m.name}</h3>
                         <p class="text-amber-600 font-bold text-sm mt-0.5">${Number(m.price || 0).toLocaleString()} บาท</p>
                     </div>
@@ -280,7 +275,7 @@
                         ${!avail || !isStoreOpen
                             ? `<span class="text-xs font-bold text-red-500 bg-red-50 px-2.5 py-1 rounded-lg">${!isStoreOpen ? 'ร้านปิด' : 'หมด'}</span>`
                             : (qty > 0
-                                ? `<button onclick="changeQty('${m.id}', -1)" class="w-8 h-8 rounded-xl bg-slate-200 hover:bg-slate-300 font-bold text-slate-800">-</button>
+                                ? `<button onclick="changeQty('${m.id}', -1)" class="w-8 h-8 rounded-xl bg-gray-200 hover:bg-gray-300 font-bold text-slate-800">-</button>
                                    <span class="w-6 text-center font-bold text-sm">${qty}</span>
                                    <button onclick="changeQty('${m.id}', 1)" class="w-8 h-8 rounded-xl bg-amber-500 hover:bg-amber-600 font-bold text-slate-950">+</button>`
                                 : `<button onclick="changeQty('${m.id}', 1)" class="px-3.5 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold">+ เพิ่ม</button>`)
@@ -332,11 +327,11 @@
                 <div class="py-2.5 flex justify-between items-center gap-2 text-sm">
                     <div>
                         <p class="font-bold text-slate-800">${it.name}</p>
-                        <p class="text-xs text-slate-500">${it.price.toLocaleString()} บ. x ${it.qty}</p>
+                        <p class="text-xs text-gray-500">${it.price.toLocaleString()} บ. x ${it.qty}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-slate-800">${(it.price * it.qty).toLocaleString()} บ.</span>
-                        <button onclick="changeQty('${it.id}', -1); openCartModal();" class="w-6 h-6 rounded bg-slate-200 font-bold text-xs">-</button>
+                        <button onclick="changeQty('${it.id}', -1); openCartModal();" class="w-6 h-6 rounded bg-gray-200 font-bold text-xs">-</button>
                         <button onclick="changeQty('${it.id}', 1); openCartModal();" class="w-6 h-6 rounded bg-amber-200 font-bold text-xs">+</button>
                     </div>
                 </div>
@@ -386,7 +381,7 @@
             const file = e.target.files[0];
             if (!file) return;
             const st = document.getElementById('slip-status');
-            st.className = 'p-2 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700';
+            st.className = 'p-2 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700';
             st.innerText = '🔍 กำลังสแกน QR สลิป...';
             st.classList.remove('hidden');
 
