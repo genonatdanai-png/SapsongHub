@@ -96,7 +96,7 @@
                             <label class="block text-xs font-semibold text-slate-600 mb-1">ประเภทสินค้า</label>
                             <select id="inp-item-type" onchange="toggleItemTypeFields()" class="w-full px-3 py-2 border rounded-xl text-sm font-bold bg-indigo-50 text-indigo-950 outline-none">
                                 <option value="video">🎬 คอร์สวิดีโอออนไลน์</option>
-                                <option value="file">📄 ไฟล์เรียน / ชีทสรุป</option>
+                                <option value="file">📄 ไฟล์เรียน / ชีทสรุป (อัปโหลด PDF ในเว็บ)</option>
                             </select>
                         </div>
                         <div>
@@ -116,31 +116,47 @@
                         <label class="block text-xs font-semibold text-slate-600 mb-1">รายละเอียด</label>
                         <textarea id="inp-course-desc" rows="2" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none"></textarea>
                     </div>
+
+                    <!-- โหมดคอร์สวิดีโอ -->
                     <div id="video-fields-box" class="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-4 space-y-3">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-sm font-bold text-indigo-950">🎬 รายการตอนเรียน</h3>
+                        <div class="flex justify-between items-center flex-wrap gap-2">
+                            <div>
+                                <h3 class="text-sm font-bold text-indigo-950">🎬 รายการตอนเรียน</h3>
+                                <p class="text-[11px] text-indigo-700">วางลิงก์ YouTube (Unlisted) / Google Drive / วิดีโอของแต่ละตอน</p>
+                            </div>
                             <button type="button" onclick="addLessonRow()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold">+ เพิ่มตอนเรียน</button>
                         </div>
                         <div id="lessons-container" class="space-y-2.5"></div>
                     </div>
-                    <div id="file-fields-box" class="hidden bg-amber-50/80 border border-amber-200 rounded-2xl p-4 space-y-3">
-                        <h3 class="text-sm font-bold text-amber-950">📄 ตั้งค่าลิงก์พรีวิว และ ไฟล์ฉบับเต็ม</h3>
+
+                    <!-- โหมดไฟล์เรียน / ชีทสรุป (อัปโหลดไฟล์ใน HTML เลย) -->
+                    <div id="file-fields-box" class="hidden bg-amber-50/80 border border-amber-200 rounded-2xl p-4 space-y-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-amber-950">📄 อัปโหลดไฟล์เอกสาร / ชีทสรุปในหน้าเว็บ</h3>
+                            <p class="text-[11px] text-amber-800 mt-0.5">แนะนำไฟล์ PDF ขนาดไม่เกิน ~1.5 MB ต่อไฟล์ เพื่อให้บันทึกลงฐานข้อมูลและเปิดอ่านได้ลื่นไหล</p>
+                        </div>
+
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">👁️ ลิงก์ไฟล์ตัวอย่าง (Preview)</label>
-                                <input type="text" id="inp-file-preview" class="w-full px-3.5 py-2 border rounded-xl text-xs bg-white outline-none">
+                            <div class="bg-white p-3 rounded-xl border border-amber-200 space-y-2">
+                                <label class="block text-xs font-bold text-slate-700">👁️ อัปโหลดไฟล์ตัวอย่าง (Preview — ไม่บังคับ)</label>
+                                <input type="file" id="inp-preview-file" accept=".pdf,image/*,application/pdf" onchange="handleDocFileUpload(event, 'preview')" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-amber-100 file:text-amber-900 file:font-bold cursor-pointer">
+                                <div id="preview-file-badge" class="text-[11px] text-slate-500">ยังไม่ได้เลือกไฟล์ตัวอย่าง</div>
                             </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">🔒 ลิงก์หรือ File ID ไฟล์ฉบับเต็ม *</label>
-                                <input type="text" id="inp-file-full" class="w-full px-3.5 py-2 border rounded-xl text-xs bg-white outline-none">
+
+                            <div class="bg-white p-3 rounded-xl border border-amber-300 space-y-2">
+                                <label class="block text-xs font-bold text-slate-700">🔒 อัปโหลดไฟล์ฉบับเต็ม (PDF / เอกสาร) *</label>
+                                <input type="file" id="inp-full-file" accept=".pdf,image/*,application/pdf" onchange="handleDocFileUpload(event, 'full')" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-100 file:text-emerald-900 file:font-bold cursor-pointer">
+                                <div id="full-file-badge" class="text-[11px] text-slate-500">ยังไม่ได้เลือกไฟล์ฉบับเต็ม</div>
                             </div>
                         </div>
                     </div>
+
                     <div class="flex gap-2">
                         <button onclick="saveCourseForm()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold">💾 บันทึกข้อมูล</button>
                         <button onclick="resetCourseForm()" id="btn-cancel-course" class="hidden bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold">ยกเลิกแก้ไข</button>
                     </div>
                 </div>
+
                 <div class="bg-white p-5 rounded-2xl shadow-sm border space-y-3">
                     <h3 class="text-base font-bold text-slate-800">📚 รายการวิชา & ไฟล์ทั้งหมด (<span id="course-count">0</span> รายการ)</h3>
                     <div id="courses-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
@@ -181,7 +197,6 @@
                     </div>
                 </div>
 
-                <!-- สรุปรายรับแยกตามรายวิชา / ไฟล์ -->
                 <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border overflow-x-auto">
                     <h3 class="text-base font-bold text-slate-800 mb-3">📚 สรุปรายรับแยกตามรายวิชา / ไฟล์</h3>
                     <table class="w-full text-left text-xs sm:text-sm min-w-[540px]">
@@ -217,7 +232,7 @@
 
             <div id="view-settings" class="hidden">
                 <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border max-w-2xl space-y-4">
-                    <h2 class="text-base font-bold text-slate-800">⚙️ ตั้งค่าสถาบัน, โลโก้, ช่องทางติดต่อ, พร้อมเพย์ & ตัวกลางตรวจสิทธิ์ไฟล์</h2>
+                    <h2 class="text-base font-bold text-slate-800">⚙️ ตั้งค่าสถาบัน, โลโก้, ช่องทางติดต่อ & พร้อมเพย์</h2>
                     <div class="flex items-center gap-4 bg-slate-50 p-3.5 rounded-2xl border">
                         <div class="w-16 h-16 rounded-2xl bg-white border flex items-center justify-center overflow-hidden shrink-0">
                             <img id="set-logo-preview" src="" class="hidden w-full h-full object-cover">
@@ -264,10 +279,6 @@
                         <div id="admin-contacts-list" class="space-y-2"></div>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">🔗 ลิงก์ Google Apps Script Web App (/exec)</label>
-                        <input type="text" id="set-file-gate-url" class="w-full px-3.5 py-2 border rounded-xl text-xs font-mono outline-none">
-                    </div>
                     <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl">
                         <label class="flex items-start gap-2.5 cursor-pointer">
                             <input type="checkbox" id="set-auto-unlock" class="w-4 h-4 mt-0.5 accent-emerald-600">
@@ -355,8 +366,8 @@
         const SHOP_ID = (urlParams.get('shop') || 'demo-course').toLowerCase();
         const SUPER_ADMIN_EMAIL = 'admingeno@ss.com';
         const EXPECTED_EMAIL = `${SHOP_ID}@ss.com`;
-        const DEFAULT_FILE_GATE_URL = "https://script.google.com/macros/s/AKfycbzthLK8rDuJCT7ds7EyeybqGMnqLcp6pzFCUe7MPq2VloK6LzLjNzsRg1i1Jxm666uzgA/exec";
         const HUB_PROMPTPAY_ID = '0855750995';
+        const MAX_DOC_BYTES = 1.6 * 1024 * 1024; // ~1.6 MB
 
         document.getElementById('link-student').href = `course.html?shop=${SHOP_ID}`;
         document.getElementById('login-email').placeholder = EXPECTED_EMAIL;
@@ -372,13 +383,37 @@
         const defaultCover = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='180' viewBox='0 0 300 180'%3E%3Crect width='300' height='180' fill='%23eef2ff'/%3E%3Ccircle cx='150' cy='90' r='34' fill='%234f46e5'/%3E%3Cpolygon points='142,75 166,90 142,105' fill='%23ffffff'/%3E%3C/svg%3E";
 
         let courseMeta = { id: SHOP_ID, name: SHOP_ID };
-        let configData = { shopLogo: '', instName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, contacts: [], fileGateUrl: DEFAULT_FILE_GATE_URL, autoUnlockSlip: true };
+        let configData = { shopLogo: '', instName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, contacts: [], autoUnlockSlip: true };
         let draftContacts = [];
         let courses = [], orders = [], students = {};
         let currentCoverBase64 = '';
+        let previewDocData = { dataUrl: '', name: '' };
+        let fullDocData = { dataUrl: '', name: '' };
         let listenersStarted = false;
         let crnSlipBase64 = '';
         let crnSlipRef = '';
+
+        function handleDocFileUpload(event, target) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > MAX_DOC_BYTES) {
+                alert('ไฟล์ใหญ่เกิน ~1.6 MB ครับ กรุณาย่อไฟล์ PDF หรือลดจำนวนหน้าก่อนอัปโหลดลงระบบ');
+                event.target.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const payload = { dataUrl: ev.target.result, name: file.name };
+                if (target === 'preview') {
+                    previewDocData = payload;
+                    document.getElementById('preview-file-badge').innerText = `✅ เลือกแล้ว: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+                } else {
+                    fullDocData = payload;
+                    document.getElementById('full-file-badge').innerText = `✅ เลือกแล้ว: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
 
         function addContactItem() {
             const channel = document.getElementById('new-contact-channel').value;
@@ -493,7 +528,6 @@
                     promptpayId: cfg.promptpayId || '0855750995',
                     accountName: cfg.accountName || SHOP_ID,
                     contacts: loadedContacts,
-                    fileGateUrl: cfg.fileGateUrl || DEFAULT_FILE_GATE_URL,
                     autoUnlockSlip: cfg.autoUnlockSlip !== undefined ? cfg.autoUnlockSlip : true
                 };
                 draftContacts = loadedContacts.map(c => ({ ...c }));
@@ -502,7 +536,6 @@
                 document.getElementById('set-inst-name').value = configData.instName;
                 document.getElementById('set-promptpay').value = configData.promptpayId;
                 document.getElementById('set-acc-name').value = configData.accountName;
-                document.getElementById('set-file-gate-url').value = configData.fileGateUrl;
                 document.getElementById('set-auto-unlock').checked = configData.autoUnlockSlip;
             });
 
@@ -632,7 +665,6 @@
             configData.promptpayId = document.getElementById('set-promptpay').value.trim();
             configData.accountName = document.getElementById('set-acc-name').value.trim() || configData.instName;
             configData.contacts = draftContacts.map(c => ({ ...c }));
-            configData.fileGateUrl = document.getElementById('set-file-gate-url').value.trim() || DEFAULT_FILE_GATE_URL;
             configData.autoUnlockSlip = document.getElementById('set-auto-unlock').checked;
             db.ref(`courses_data/${SHOP_ID}/config`).set(configData).then(() => alert('บันทึกการตั้งค่าเรียบร้อยแล้วครับ'));
         }
@@ -665,42 +697,90 @@
             const desc = document.getElementById('inp-course-desc').value.trim();
             if (!title) return alert('กรุณากรอกชื่อวิชาหรือชื่อไฟล์ครับ');
 
-            let lessons = [], previewUrl = '', fullFileUrl = '';
+            let lessons = [];
+            let previewFileData = '';
+            let previewFileName = '';
+            let fullFileData = '';
+            let fullFileName = '';
+
             if (type === 'video') {
                 document.querySelectorAll('#lessons-container .lesson-row').forEach((row, idx) => {
                     const lTitle = row.querySelector('.ls-title').value.trim(), lVideo = row.querySelector('.ls-video').value.trim();
                     if (lTitle && lVideo) lessons.push({ id: `ls-${idx+1}`, title: lTitle, videoUrl: lVideo, docUrl: row.querySelector('.ls-doc').value.trim(), isFree: row.querySelector('.ls-free').checked });
                 });
             } else {
-                previewUrl = document.getElementById('inp-file-preview').value.trim();
-                fullFileUrl = document.getElementById('inp-file-full').value.trim();
-                if (!fullFileUrl) return alert('กรุณาวางลิงก์ไฟล์ฉบับเต็มครับ');
+                const existing = editId ? courses.find(c => String(c.id) === String(editId)) : null;
+                previewFileData = previewDocData.dataUrl || (existing && existing.previewFileData) || '';
+                previewFileName = previewDocData.name || (existing && existing.previewFileName) || '';
+                fullFileData = fullDocData.dataUrl || (existing && existing.fullFileData) || '';
+                fullFileName = fullDocData.name || (existing && existing.fullFileName) || `${title}.pdf`;
+
+                if (!fullFileData) return alert('กรุณาอัปโหลดไฟล์ฉบับเต็มก่อนบันทึกครับ');
             }
 
             if (editId) {
                 const idx = courses.findIndex(c => String(c.id) === String(editId));
-                if (idx !== -1) courses[idx] = { ...courses[idx], type, title, price, desc, lessons, previewUrl, fullFileUrl, cover: currentCoverBase64 || courses[idx].cover || defaultCover };
+                if (idx !== -1) {
+                    courses[idx] = {
+                        ...courses[idx],
+                        type, title, price, desc, lessons,
+                        previewFileData, previewFileName,
+                        fullFileData, fullFileName,
+                        cover: currentCoverBase64 || courses[idx].cover || defaultCover
+                    };
+                }
             } else {
-                courses.push({ id: 'itm-' + Date.now(), type, title, price, desc, lessons, previewUrl, fullFileUrl, cover: currentCoverBase64 || defaultCover });
+                courses.push({
+                    id: 'itm-' + Date.now(),
+                    type, title, price, desc, lessons,
+                    previewFileData, previewFileName,
+                    fullFileData, fullFileName,
+                    cover: currentCoverBase64 || defaultCover
+                });
             }
             db.ref(`courses_data/${SHOP_ID}/courses`).set(courses).then(() => { resetCourseForm(); alert('บันทึกเรียบร้อยแล้วครับ'); });
         }
 
         function editCourse(id) {
             const c = courses.find(x => String(x.id) === String(id)); if (!c) return;
-            document.getElementById('edit-course-id').value = c.id; document.getElementById('inp-item-type').value = c.type || 'video'; toggleItemTypeFields();
-            document.getElementById('inp-course-title').value = c.title; document.getElementById('inp-course-price').value = c.price; document.getElementById('inp-course-desc').value = c.desc || '';
-            document.getElementById('inp-file-preview').value = c.previewUrl || ''; document.getElementById('inp-file-full').value = c.fullFileUrl || '';
-            currentCoverBase64 = c.cover || ''; document.getElementById('lessons-container').innerHTML = '';
+            document.getElementById('edit-course-id').value = c.id;
+            document.getElementById('inp-item-type').value = c.type || 'video';
+            toggleItemTypeFields();
+            document.getElementById('inp-course-title').value = c.title;
+            document.getElementById('inp-course-price').value = c.price;
+            document.getElementById('inp-course-desc').value = c.desc || '';
+
+            previewDocData = { dataUrl: '', name: '' };
+            fullDocData = { dataUrl: '', name: '' };
+            document.getElementById('inp-preview-file').value = '';
+            document.getElementById('inp-full-file').value = '';
+            document.getElementById('preview-file-badge').innerText = c.previewFileData ? `✅ มีไฟล์ตัวอย่างอยู่แล้ว: ${c.previewFileName || 'preview.pdf'}` : 'ยังไม่ได้เลือกไฟล์ตัวอย่าง';
+            document.getElementById('full-file-badge').innerText = c.fullFileData ? `✅ มีไฟล์ฉบับเต็มอยู่แล้ว: ${c.fullFileName || 'document.pdf'}` : 'ยังไม่ได้เลือกไฟล์ฉบับเต็ม';
+
+            currentCoverBase64 = c.cover || '';
+            document.getElementById('lessons-container').innerHTML = '';
             (c.lessons || []).forEach(ls => addLessonRow(ls.title, ls.videoUrl, ls.docUrl, ls.isFree));
-            document.getElementById('course-form-title').innerText = '✏️ แก้ไขข้อมูล'; document.getElementById('btn-cancel-course').classList.remove('hidden');
+            document.getElementById('course-form-title').innerText = '✏️ แก้ไขข้อมูล';
+            document.getElementById('btn-cancel-course').classList.remove('hidden');
         }
 
         function resetCourseForm() {
-            document.getElementById('edit-course-id').value = ''; document.getElementById('inp-item-type').value = 'video'; toggleItemTypeFields();
-            document.getElementById('inp-course-title').value = ''; document.getElementById('inp-course-price').value = ''; document.getElementById('inp-course-desc').value = '';
-            document.getElementById('inp-file-preview').value = ''; document.getElementById('inp-file-full').value = ''; document.getElementById('lessons-container').innerHTML = '';
-            currentCoverBase64 = ''; document.getElementById('course-form-title').innerText = '➕ เพิ่มวิชาเรียน หรือ ไฟล์เรียนสำหรับขาย'; document.getElementById('btn-cancel-course').classList.add('hidden');
+            document.getElementById('edit-course-id').value = '';
+            document.getElementById('inp-item-type').value = 'video';
+            toggleItemTypeFields();
+            document.getElementById('inp-course-title').value = '';
+            document.getElementById('inp-course-price').value = '';
+            document.getElementById('inp-course-desc').value = '';
+            document.getElementById('inp-preview-file').value = '';
+            document.getElementById('inp-full-file').value = '';
+            document.getElementById('preview-file-badge').innerText = 'ยังไม่ได้เลือกไฟล์ตัวอย่าง';
+            document.getElementById('full-file-badge').innerText = 'ยังไม่ได้เลือกไฟล์ฉบับเต็ม';
+            previewDocData = { dataUrl: '', name: '' };
+            fullDocData = { dataUrl: '', name: '' };
+            document.getElementById('lessons-container').innerHTML = '';
+            currentCoverBase64 = '';
+            document.getElementById('course-form-title').innerText = '➕ เพิ่มวิชาเรียน หรือ ไฟล์เรียนสำหรับขาย';
+            document.getElementById('btn-cancel-course').classList.add('hidden');
         }
 
         function deleteCourse(id) { if (confirm('ยืนยันการลบ?')) { courses = courses.filter(c => String(c.id) !== String(id)); db.ref(`courses_data/${SHOP_ID}/courses`).set(courses); } }
@@ -709,7 +789,13 @@
             document.getElementById('course-count').innerText = courses.length;
             const el = document.getElementById('courses-list');
             if (courses.length === 0) { el.innerHTML = `<p class="text-slate-400 text-sm col-span-2 text-center py-6">ยังไม่มีวิชาหรือไฟล์เรียน</p>`; return; }
-            el.innerHTML = courses.map(c => `<div class="border rounded-2xl overflow-hidden bg-slate-50 flex flex-col justify-between"><div><img src="${c.cover||defaultCover}" class="w-full h-36 object-cover"><div class="p-3.5"><span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${c.type==='file'?'bg-amber-100 text-amber-900':'bg-indigo-100 text-indigo-800'}">${c.type==='file'?'📄 ไฟล์เรียน':'🎬 วิดีโอ'}</span><div class="flex justify-between mt-1"><h4 class="font-bold text-slate-800 text-sm">${c.title}</h4><span class="font-bold text-indigo-700 text-sm">${c.price===0?'ฟรี':c.price+' บ.'}</span></div><p class="text-xs text-slate-500 mt-1">${c.desc||''}</p></div></div><div class="px-3.5 pb-3.5 flex gap-2"><button onclick="editCourse('${c.id}')" class="flex-1 bg-indigo-100 text-indigo-800 py-1.5 rounded-xl text-xs font-bold">แก้ไข</button><button onclick="deleteCourse('${c.id}')" class="bg-red-100 text-red-700 px-3 py-1.5 rounded-xl text-xs font-bold">ลบ</button></div></div>`).join('');
+            el.innerHTML = courses.map(c => {
+                const isFile = c.type === 'file';
+                const subInfo = isFile
+                    ? (c.fullFileData ? `📄 ไฟล์พร้อมใช้ (${c.fullFileName || 'PDF'})` : '⚠️ ยังไม่มีไฟล์ฉบับเต็ม')
+                    : `🎬 ${(c.lessons || []).length} ตอนเรียน`;
+                return `<div class="border rounded-2xl overflow-hidden bg-slate-50 flex flex-col justify-between"><div><img src="${c.cover||defaultCover}" class="w-full h-36 object-cover"><div class="p-3.5"><span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isFile?'bg-amber-100 text-amber-900':'bg-indigo-100 text-indigo-800'}">${isFile?'📄 ไฟล์เรียน':'🎬 วิดีโอ'}</span><div class="flex justify-between mt-1"><h4 class="font-bold text-slate-800 text-sm">${c.title}</h4><span class="font-bold text-indigo-700 text-sm">${c.price===0?'ฟรี':c.price+' บ.'}</span></div><p class="text-xs text-slate-500 mt-1">${c.desc||''}</p><p class="text-[11px] font-semibold text-emerald-700 mt-2">${subInfo}</p></div></div><div class="px-3.5 pb-3.5 flex gap-2"><button onclick="editCourse('${c.id}')" class="flex-1 bg-indigo-100 text-indigo-800 py-1.5 rounded-xl text-xs font-bold">แก้ไข</button><button onclick="deleteCourse('${c.id}')" class="bg-red-100 text-red-700 px-3 py-1.5 rounded-xl text-xs font-bold">ลบ</button></div></div>`;
+            }).join('');
         }
 
         function approveOrderAndUnlock(orderKey, username, itemId, approve) {
