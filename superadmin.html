@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sapsong HUB - ศูนย์ควบคุมกลางหลายธุรกิจ (Multi-Business SaaS)</title>
+  <title>Sapsong HUB - ศูนย์ควบคุมกลางหลายธุรกิจ & บัญชีเงินเข้า-ออก</title>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Firebase SDK (App + Auth + Database) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -46,7 +46,6 @@
     /* Shop Row Logo */
     .shop-cell { display: flex; align-items: center; gap: 10px; }
     .shop-avatar { width: 40px; height: 40px; border-radius: 10px; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem; flex-shrink: 0; overflow: hidden; border: 1px solid var(--border); }
-    .shop-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
     /* Buttons */
     .btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
@@ -64,6 +63,11 @@
     .btn-outline { background: white; border: 1px solid var(--border); color: var(--text); }
     .btn-outline:hover { background: #f8fafc; }
 
+    /* Nav Tabs */
+    .hub-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .hub-tab { padding: 10px 18px; border-radius: 10px; border: 1px solid var(--border); background: white; color: var(--text); font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+    .hub-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
     /* Filter Pills */
     .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .filter-pill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: white; color: var(--muted); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.15s; }
@@ -76,7 +80,7 @@
     .stat-value { font-size: 1.75rem; font-weight: 700; }
 
     /* Table Card */
-    .card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 24px; }
     .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .search-box { padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; width: 250px; font-size: 0.9rem; }
     .table-responsive { overflow-x: auto; }
@@ -95,6 +99,14 @@
     .biz-food { background: #ffedd5; color: #9a3412; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-top: 3px; }
     .biz-course { background: #e0e7ff; color: #3730a3; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-top: 3px; }
 
+    /* Renewals Grid */
+    .renewals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; padding: 20px; }
+    .renewal-card { border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: #fff; display: flex; flex-direction: column; gap: 10px; }
+    .slip-thumb { width: 100%; max-height: 160px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border); background: #f8fafc; cursor: pointer; }
+
+    /* Ledger Form */
+    .ledger-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; padding: 20px; border-bottom: 1px solid var(--border); background: #f8fafc; align-items: end; }
+
     /* Modal */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 16px; }
     .modal { background: white; width: 100%; max-width: 480px; border-radius: 14px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
@@ -104,11 +116,7 @@
     .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
     .deduct-bar { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-    .plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
-    .plan-btn { border: 1px solid var(--border); background: #f8fafc; padding: 12px; border-radius: 10px; text-align: left; cursor: pointer; transition: 0.15s; }
-    .plan-btn:hover { border-color: var(--primary); background: #eff6ff; }
-    .plan-btn strong { display: block; font-size: 0.95rem; color: var(--text); }
-    .plan-btn span { font-size: 0.8rem; color: var(--primary); font-weight: 600; }
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 
     .toast { position: fixed; bottom: 20px; right: 20px; background: #0f172a; color: white; padding: 12px 20px; border-radius: 8px; font-size: 0.9rem; display: none; z-index: 2000; }
   </style>
@@ -166,12 +174,19 @@
       <div class="stat-value" style="color: var(--danger);" id="stat-alert">0</div>
     </div>
     <div class="stat-card">
-      <div class="stat-title">รายได้เฉลี่ยต่อเดือน (MRR)</div>
-      <div class="stat-value" style="color: var(--primary);" id="stat-revenue">0 ฿</div>
+      <div class="stat-title">ยอดเงินคงเหลือในระบบ HUB</div>
+      <div class="stat-value" style="color: var(--primary);" id="stat-net-cash">0 ฿</div>
     </div>
   </div>
 
-  <div class="card">
+  <div class="hub-tabs">
+    <button class="hub-tab active" id="htab-shops" onclick="switchHubSection('shops')">📋 รายชื่อธุรกิจ & ต่ออายุเอง</button>
+    <button class="hub-tab" id="htab-renewals" onclick="switchHubSection('renewals')">🧾 ตรวจสลิปต่ออายุ (<span id="pending-renew-count">0</span>)</button>
+    <button class="hub-tab" id="htab-ledger" onclick="switchHubSection('ledger')">💰 บัญชีเงินเข้า - เงินออก</button>
+  </div>
+
+  <!-- ส่วนที่ 1: รายชื่อธุรกิจ -->
+  <div id="sec-shops" class="card">
     <div class="card-header">
       <div class="filter-row">
         <button class="filter-pill active" id="pill-ALL" onclick="setBizFilter('ALL')">ทั้งหมด</button>
@@ -186,7 +201,7 @@
           <tr>
             <th>รหัส (ID)</th>
             <th>ธุรกิจ / เจ้าของ</th>
-            <th>แพ็กเกจล่าสุด</th>
+            <th>แพ็กเกจ / ราคา</th>
             <th>วันหมดอายุ</th>
             <th>สถานะ</th>
             <th>ลิงก์ใช้งาน</th>
@@ -197,15 +212,66 @@
       </table>
     </div>
   </div>
+
+  <!-- ส่วนที่ 2: ตรวจสลิปคำขอต่ออายุจากเจ้าของร้านและเจ้าของคอร์สเรียน -->
+  <div id="sec-renewals" class="card" style="display: none;">
+    <div class="card-header">
+      <h2 style="font-size: 1.05rem; font-weight: 700;">🧾 คำขอต่ออายุ & ตรวจสลิปโอนเงินจากลูกค้า</h2>
+    </div>
+    <div id="renewalsContainer" class="renewals-grid"></div>
+  </div>
+
+  <!-- ส่วนที่ 3: บัญชีเงินเข้า - เงินออก -->
+  <div id="sec-ledger" class="card" style="display: none;">
+    <div class="card-header">
+      <h2 style="font-size: 1.05rem; font-weight: 700;">💰 บัญชีเงินเข้า - เงินออก ของระบบ HUB</h2>
+      <div style="display:flex; gap:14px; font-size:0.85rem; font-weight:600; flex-wrap:wrap;">
+        <span style="color:var(--success);">เงินเข้า: <strong id="led-income">0 ฿</strong></span>
+        <span style="color:var(--danger);">เงินออก: <strong id="led-expense">0 ฿</strong></span>
+        <span style="color:var(--primary);">คงเหลือ: <strong id="led-balance">0 ฿</strong></span>
+      </div>
+    </div>
+
+    <div class="ledger-form">
+      <div class="form-group" style="margin-bottom:0;">
+        <label>ประเภทรายการ</label>
+        <select id="led-type">
+          <option value="income">💚 เงินเข้า (รายรับ)</option>
+          <option value="expense">❤️ เงินออก (รายจ่าย)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>รายละเอียด</label>
+        <input type="text" id="led-desc" placeholder="เช่น ต่ออายุร้านปังหน้าวัด / ค่าโดเมน">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>จำนวนเงิน (บาท)</label>
+        <input type="number" id="led-amount" placeholder="500">
+      </div>
+      <button class="btn btn-primary" onclick="addManualLedger()">+ บันทึกรายการ</button>
+    </div>
+
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>วัน-เวลา</th>
+            <th>ประเภท</th>
+            <th>รายละเอียด</th>
+            <th>จำนวนเงิน</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="ledgerTableBody"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
-<!-- Modal เพิ่มลูกค้า / ธุรกิจใหม่ -->
+<!-- Modal เพิ่มลูกค้า / ธุรกิจใหม่ (กำหนดจำนวนวันและราคาได้เอง) -->
 <div class="modal-overlay" id="addModal">
   <div class="modal">
     <h2>➕ เพิ่มลูกค้าเข้า Sapsong HUB</h2>
-    <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 12px; border-radius: 8px; font-size: 0.78rem; color: #1e40af; margin-bottom: 14px;">
-      💡 <strong>หมายเหตุ:</strong> หลังสร้างรายการแล้ว อย่าลืมไปกด <em>Add user</em> ใน Firebase Authentication โดยตั้งอีเมลเป็น <strong>[ID]@ss.com</strong> เพื่อให้เจ้าของระบบเข้าหลังบ้านได้ครับ
-    </div>
     <div class="form-group">
       <label>ประเภทระบบธุรกิจ</label>
       <select id="inp-biztype">
@@ -226,14 +292,24 @@
       <input type="text" id="inp-contact" placeholder="เช่น 081-234-5678">
     </div>
     <div class="form-group">
-      <label>เลือกระยะเวลา & แพ็กเกจเช่า</label>
-      <select id="inp-plan">
-        <option value="1m">1 เดือน (30 วัน) — ราคา 500 บาท</option>
-        <option value="3m">3 เดือน (90 วัน) — ราคา 1,400 บาท</option>
-        <option value="6m">6 เดือน (180 วัน) — ราคา 2,700 บาท</option>
-        <option value="1y">1 ปี (365 วัน) — ราคา 5,000 บาท</option>
-        <option value="lifetime">♾️ ฟรีตลอดชีพ (สิทธิ์แอดมิน / VIP) — 0 บาท</option>
+      <label>รูปแบบแพ็กเกจ</label>
+      <select id="inp-plan" onchange="toggleAddCustomFields()">
+        <option value="custom">กำหนดวันและราคาเอง (Custom)</option>
+        <option value="30d">30 วัน — 500 บาท</option>
+        <option value="90d">90 วัน — 1,400 บาท</option>
+        <option value="365d">365 วัน — 5,000 บาท</option>
+        <option value="lifetime">♾️ ฟรีตลอดชีพ (VIP) — 0 บาท</option>
       </select>
+    </div>
+    <div id="add-custom-box" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="form-group">
+        <label>จำนวนวันใช้งาน</label>
+        <input type="number" id="inp-custom-days" value="30" min="1">
+      </div>
+      <div class="form-group">
+        <label>ราคาแพ็กเกจ (บาท)</label>
+        <input type="number" id="inp-custom-price" value="500" min="0">
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('addModal')">ยกเลิก</button>
@@ -266,23 +342,26 @@
       <input type="text" id="edit-contact">
     </div>
     <div class="form-group">
-      <label>แพ็กเกจ</label>
+      <label>โหมดอายุ</label>
       <select id="edit-plan" onchange="handleEditPlanChange()">
-        <option value="1m">1 เดือน (500 บาท)</option>
-        <option value="3m">3 เดือน (1,400 บาท)</option>
-        <option value="6m">6 เดือน (2,700 บาท)</option>
-        <option value="1y">1 ปี (5,000 บาท)</option>
+        <option value="custom">กำหนดวันหมดอายุและราคาเอง</option>
         <option value="lifetime">♾️ ฟรีตลอดชีพ (0 บาท)</option>
       </select>
     </div>
-    <div class="form-group" id="editDateGroup">
-      <label>วันหมดอายุ</label>
-      <input type="date" id="edit-expire">
-      <div class="deduct-bar">
-        <button type="button" class="btn btn-sm btn-danger" onclick="adjustEditDays(-1)">-1 วัน</button>
-        <button type="button" class="btn btn-sm btn-danger" onclick="adjustEditDays(-7)">-7 วัน</button>
-        <button type="button" class="btn btn-sm btn-danger" onclick="adjustEditDays(-30)">-30 วัน</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="setExpireToday()">ตั้งเป็นวันนี้</button>
+    <div id="editDateGroup">
+      <div class="form-group">
+        <label>ราคาแพ็กเกจล่าสุด (บาท)</label>
+        <input type="number" id="edit-price" min="0">
+      </div>
+      <div class="form-group">
+        <label>วันหมดอายุ</label>
+        <input type="date" id="edit-expire">
+        <div class="deduct-bar">
+          <button type="button" class="btn btn-sm btn-danger" onclick="adjustEditDays(-1)">-1 วัน</button>
+          <button type="button" class="btn btn-sm btn-danger" onclick="adjustEditDays(-7)">-7 วัน</button>
+          <button type="button" class="btn btn-sm btn-danger" onclick="adjustEditDays(-30)">-30 วัน</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="setExpireToday()">ตั้งเป็นวันนี้</button>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -292,23 +371,48 @@
   </div>
 </div>
 
-<!-- Modal ต่ออายุ -->
+<!-- Modal ต่ออายุ (กำหนดจำนวนวันและราคาได้เอง) -->
 <div class="modal-overlay" id="renewModal">
   <div class="modal">
-    <h2>🔄 ต่ออายุการใช้งาน</h2>
+    <h2>🔄 ต่ออายุการใช้งาน (กำหนดเอง)</h2>
     <p id="renewShopTitle" style="font-size: 0.9rem; color: var(--muted); margin-bottom: 12px;"></p>
-    <div class="plan-grid">
-      <button class="plan-btn" onclick="confirmRenew('1m')"><strong>1 เดือน (+30 วัน)</strong><span>500 บาท</span></button>
-      <button class="plan-btn" onclick="confirmRenew('3m')"><strong>3 เดือน (+90 วัน)</strong><span>1,400 บาท</span></button>
-      <button class="plan-btn" onclick="confirmRenew('6m')"><strong>6 เดือน (+180 วัน)</strong><span>2,700 บาท</span></button>
-      <button class="plan-btn" onclick="confirmRenew('1y')"><strong>1 ปี (+365 วัน)</strong><span>5,000 บาท</span></button>
-      <button class="plan-btn" style="grid-column: span 2; background: #f5f3ff; border-color: #ddd6fe;" onclick="confirmRenew('lifetime')">
-        <strong style="color: var(--purple);">♾️ เปลี่ยนเป็น ฟรีตลอดชีพ (Lifetime)</strong>
-        <span style="color: var(--purple);">0 บาท (ไม่จำกัดวันใช้งาน)</span>
-      </button>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="form-group">
+        <label>จำนวนวันที่ต่ออายุ (+วัน)</label>
+        <input type="number" id="renew-days" value="30" min="1">
+      </div>
+      <div class="form-group">
+        <label>ราคาต่ออายุ (บาท)</label>
+        <input type="number" id="renew-price" value="500" min="0">
+      </div>
+    </div>
+    <div class="preset-row">
+      <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(30, 500)">30 วัน / 500 ฿</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(90, 1400)">90 วัน / 1,400 ฿</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(365, 5000)">365 วัน / 5,000 ฿</button>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="renew-record-ledger" checked> บันทึกรายรับเข้าบัญชีเงินเข้า-เงินออกอัตโนมัติ
+      </label>
+    </div>
+    <div style="margin-top:10px;">
+      <button type="button" class="btn btn-sm btn-purple" style="width:100%;" onclick="confirmLifetimeRenew()">♾️ เปลี่ยนเป็น ฟรีตลอดชีพ (Lifetime)</button>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('renewModal')">ปิดหน้าต่าง</button>
+      <button class="btn btn-outline" onclick="closeModal('renewModal')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="confirmCustomRenew()">✅ ยืนยันต่ออายุ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal ขยายดูสลิปต่ออายุ -->
+<div class="modal-overlay" id="slipViewModal" onclick="closeModal('slipViewModal')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:420px; text-align:center;">
+    <h2>สลิปโอนเงินต่ออายุ</h2>
+    <img id="slipViewImg" src="" style="width:100%; max-height:65vh; object-fit:contain; border-radius:10px; background:#f8fafc;">
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('slipViewModal')">ปิด</button>
     </div>
   </div>
 </div>
@@ -327,23 +431,25 @@
     measurementId: "G-0SPWW0K3WD"
   };
 
-  if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-  }
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
 
   const SUPER_ADMIN_EMAIL = 'admingeno@ss.com';
-  let shopLogos = {};
-  let logoListeners = {};
   let currentBizFilter = 'ALL';
+  let shops = [];
+  let renewals = [];
+  let ledgerItems = [];
+  let currentRenewIndex = null;
+  let currentEditIndex = null;
+  let dataLoaded = false;
 
   auth.onAuthStateChanged((user) => {
     if (user && user.email.toLowerCase() === SUPER_ADMIN_EMAIL) {
       document.getElementById('authWrapper').style.display = 'none';
       document.getElementById('mainDashboard').style.display = 'block';
       document.getElementById('loggedAdminEmail').innerText = `🛡️ ยืนยันสิทธิ์แล้ว: ${user.email}`;
-      loadShops();
+      startHubData();
     } else {
       if (user) {
         auth.signOut();
@@ -360,11 +466,7 @@
     const pass = document.getElementById('auth-pass').value;
     const btn = document.getElementById('btn-login');
     const err = document.getElementById('authError');
-
-    btn.disabled = true;
-    btn.innerText = 'กำลังตรวจสอบ...';
-    err.innerText = '';
-
+    btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...'; err.innerText = '';
     auth.signInWithEmailAndPassword(email, pass)
       .catch(() => { err.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'; })
       .finally(() => { btn.disabled = false; btn.innerText = 'เข้าสู่ระบบอย่างปลอดภัย'; });
@@ -372,67 +474,56 @@
 
   function secureLogout() { auth.signOut(); }
 
-  const PLANS = {
-    '1m': { label: '1 เดือน (500 ฿)', days: 30, price: 500, monthlyAvg: 500 },
-    '3m': { label: '3 เดือน (1,400 ฿)', days: 90, price: 1400, monthlyAvg: Math.round(1400 / 3) },
-    '6m': { label: '6 เดือน (2,700 ฿)', days: 180, price: 2700, monthlyAvg: Math.round(2700 / 6) },
-    '1y': { label: '1 ปี (5,000 ฿)', days: 365, price: 5000, monthlyAvg: Math.round(5000 / 12) },
-    'lifetime': { label: 'ฟรีตลอดชีพ (VIP)', days: 0, price: 0, monthlyAvg: 0 }
-  };
-
-  const defaultShops = [{
-    id: 'pangnawat', bizType: 'food', name: 'ปังหน้าวัด', contact: '085-5750995 (ร้านต้นแบบ)',
-    planKey: 'lifetime', expireDate: '9999-12-31', isSuspended: false
-  }];
-
-  let shops = [];
-  let currentRenewIndex = null;
-  let currentEditIndex = null;
-
-  function setBizFilter(type) {
-    currentBizFilter = type;
-    ['ALL', 'food', 'course'].forEach(k => {
-      document.getElementById('pill-' + k).classList.toggle('active', k === type);
+  function switchHubSection(sec) {
+    ['shops', 'renewals', 'ledger'].forEach(s => {
+      document.getElementById('sec-' + s).style.display = (s === sec) ? 'block' : 'none';
+      document.getElementById('htab-' + s).classList.toggle('active', s === sec);
     });
-    renderTable();
   }
 
-  function loadShops() {
-    db.ref('sapsong_hub_shops').on('value', (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        shops = Object.values(data).map(s => ({ bizType: 'food', ...s }));
+  function startHubData() {
+    if (dataLoaded) return;
+    dataLoaded = true;
+
+    db.ref('sapsong_hub_shops').on('value', (snap) => {
+      const val = snap.val();
+      if (val) {
+        shops = Object.values(val).map(s => ({ bizType: 'food', days: 30, price: 0, ...s }));
       } else {
-        shops = defaultShops;
+        shops = [{
+          id: 'pangnawat', bizType: 'food', name: 'ปังหน้าวัด', contact: '085-5750995',
+          planKey: 'lifetime', days: 0, price: 0, expireDate: '9999-12-31', isSuspended: false
+        }];
         saveShops();
       }
-      shops.forEach(s => {
-        if (!logoListeners[s.id]) {
-          logoListeners[s.id] = true;
-          const logoPath = s.bizType === 'course'
-            ? `courses_data/${s.id}/config/shopLogo`
-            : `shops_data/${s.id}/paymentConfig/shopLogo`;
-          db.ref(logoPath).on('value', snap => {
-            shopLogos[s.id] = snap.val() || '';
-            renderTable();
-          });
-        }
-      });
       renderTable();
+    });
+
+    db.ref('sapsong_hub_renewals').on('value', (snap) => {
+      const val = snap.val() || {};
+      renewals = Object.entries(val).map(([k, v]) => ({ ...v, key: k })).reverse();
+      const pendingCnt = renewals.filter(r => r.status === 'pending').length;
+      document.getElementById('pending-renew-count').innerText = pendingCnt;
+      renderRenewals();
+    });
+
+    db.ref('sapsong_hub_ledger').on('value', (snap) => {
+      const val = snap.val() || {};
+      ledgerItems = Object.entries(val).map(([k, v]) => ({ ...v, key: k })).reverse();
+      renderLedger();
     });
   }
 
   function saveShops() {
-    const shopsObj = {};
-    shops.forEach(s => { shopsObj[s.id] = s; });
-    db.ref('sapsong_hub_shops').set(shopsObj)
-      .catch(err => alert('เกิดข้อผิดพลาดในการบันทึก: ' + err.message));
+    const obj = {};
+    shops.forEach(s => { obj[s.id] = s; });
+    db.ref('sapsong_hub_shops').set(obj).catch(err => alert('บันทึกไม่สำเร็จ: ' + err.message));
   }
 
   function addDaysToDate(dateObj, days) {
-    const result = new Date(dateObj);
-    result.setDate(result.getDate() + days);
-    return result.toISOString().split('T')[0];
+    const res = new Date(dateObj);
+    res.setDate(res.getDate() + Number(days));
+    return res.toISOString().split('T')[0];
   }
 
   function getDaysRemaining(expireStr) {
@@ -446,240 +537,3 @@
     t.innerText = msg; t.style.display = 'block';
     setTimeout(() => t.style.display = 'none', 3000);
   }
-
-  function copyHandoverText(index) {
-    const shop = shops[index];
-    if (!shop) return;
-    const bizType = shop.bizType || 'food';
-    const plan = PLANS[shop.planKey] || PLANS['1m'];
-    const baseDir = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
-    const frontUrl = bizType === 'course'
-      ? `${baseDir}/course.html?shop=${shop.id}`
-      : `${baseDir}/index.html?shop=${shop.id}`;
-    const backUrl = bizType === 'course'
-      ? `${baseDir}/course-admin.html?shop=${shop.id}`
-      : `${baseDir}/admin.html?shop=${shop.id}`;
-    const expText = shop.planKey === 'lifetime' ? 'ฟรีตลอดชีพ' : shop.expireDate;
-
-    const text = [
-      `📌 ข้อมูลระบบ: ${shop.name} (${shop.id})`,
-      `• ประเภท: ${bizType === 'course' ? 'ระบบเรียนออนไลน์ & ขายไฟล์ชีท' : 'ระบบสั่งอาหาร & บิลร้านค้า'}`,
-      `• ลิงก์หน้าใช้งาน: ${frontUrl}`,
-      `• ลิงก์หลังบ้าน: ${backUrl}`,
-      `• อีเมลล็อกอินหลังบ้าน: ${shop.id}@ss.com`,
-      `• แพ็กเกจ: ${plan.label} | วันหมดอายุ: ${expText}`
-    ].join('\n');
-
-    navigator.clipboard.writeText(text);
-    showToast(`คัดลอกข้อความส่งงาน "${shop.name}" แล้วครับ`);
-  }
-
-  function renderTable() {
-    const tbody = document.getElementById('shopTableBody');
-    const keyword = document.getElementById('searchInput').value.toLowerCase();
-    tbody.innerHTML = '';
-
-    let activeCount = 0, alertCount = 0, totalMonthlyAvg = 0;
-    const baseDir = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
-
-    shops.forEach((shop, index) => {
-      const bizType = shop.bizType || 'food';
-      const plan = PLANS[shop.planKey] || PLANS['1m'];
-      const isLifetime = shop.planKey === 'lifetime';
-      const daysLeft = isLifetime ? 99999 : getDaysRemaining(shop.expireDate);
-      let statusBadge = '';
-
-      if (shop.isSuspended) {
-        statusBadge = `<span class="badge badge-suspended">ระงับชั่วคราว</span>`;
-        alertCount++;
-      } else if (isLifetime) {
-        statusBadge = `<span class="badge badge-lifetime">♾️ ฟรีตลอดชีพ</span>`;
-        activeCount++;
-      } else if (daysLeft < 0) {
-        statusBadge = `<span class="badge badge-expired">หมดอายุ (${Math.abs(daysLeft)} วันก่อน)</span>`;
-        alertCount++;
-      } else if (daysLeft <= 5) {
-        statusBadge = `<span class="badge badge-near">ใกล้หมดอายุ (เหลือ ${daysLeft} วัน)</span>`;
-        activeCount++; alertCount++; totalMonthlyAvg += plan.monthlyAvg;
-      } else {
-        statusBadge = `<span class="badge badge-active">ใช้งานปกติ (เหลือ ${daysLeft} วัน)</span>`;
-        activeCount++; totalMonthlyAvg += plan.monthlyAvg;
-      }
-
-      if (currentBizFilter !== 'ALL' && bizType !== currentBizFilter) return;
-      if (!shop.name.toLowerCase().includes(keyword) && !shop.id.toLowerCase().includes(keyword)) return;
-
-      const frontUrl = bizType === 'course'
-        ? `${baseDir}/course.html?shop=${shop.id}`
-        : `${baseDir}/index.html?shop=${shop.id}`;
-      const backUrl = bizType === 'course'
-        ? `${baseDir}/course-admin.html?shop=${shop.id}`
-        : `${baseDir}/admin.html?shop=${shop.id}`;
-
-      const frontLabel = bizType === 'course' ? '🎓 หน้าเรียน' : '🛒 หน้าร้าน';
-      const backLabel = bizType === 'course' ? '🎬 ผู้สอน' : '⚙️ หลังบ้าน';
-      const bizBadge = bizType === 'course'
-        ? `<span class="biz-course">🎓 คอร์สเรียนออนไลน์</span>`
-        : `<span class="biz-food">🍜 ร้านอาหาร</span>`;
-
-      const logoImg = shopLogos[shop.id];
-      const avatarHTML = logoImg
-        ? `<img src="${logoImg}" alt="${shop.name}">`
-        : shop.name.substring(0, 2).toUpperCase();
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><strong>${shop.id}</strong></td>
-        <td>
-          <div class="shop-cell">
-            <div class="shop-avatar">${avatarHTML}</div>
-            <div>
-              <div style="font-weight:600;">${shop.name}</div>
-              <div style="font-size:0.8rem; color:var(--muted);">${shop.contact}</div>
-              ${bizBadge}
-            </div>
-          </div>
-        </td>
-        <td>${plan.label}</td>
-        <td>${isLifetime ? '<span style="color:var(--purple); font-weight:500;">ไม่มีวันหมดอายุ</span>' : shop.expireDate}</td>
-        <td>${statusBadge}</td>
-        <td>
-          <div style="display:flex; gap:4px; flex-wrap:wrap;">
-            <button class="btn btn-sm btn-outline" onclick="copyLink('${frontUrl}', '${frontLabel}')">${frontLabel}</button>
-            <button class="btn btn-sm btn-outline" onclick="copyLink('${backUrl}', '${backLabel}')">${backLabel}</button>
-            <button class="btn btn-sm btn-purple" onclick="copyHandoverText(${index})">📋 ส่งงาน</button>
-          </div>
-        </td>
-        <td>
-          <div style="display:flex; gap:6px; flex-wrap:wrap;">
-            <button class="btn btn-sm btn-success" onclick="openRenewModal(${index})">🔄 ต่ออายุ</button>
-            <button class="btn btn-sm btn-info" onclick="openEditModal(${index})">✏️ แก้ไข</button>
-            <button class="btn btn-sm ${shop.isSuspended ? 'btn-primary' : 'btn-warning'}" onclick="toggleSuspend(${index})">
-              ${shop.isSuspended ? 'เปิดใช้งาน' : 'ระงับ'}
-            </button>
-            <button class="btn btn-sm btn-danger" onclick="deleteShop(${index})">ลบ</button>
-          </div>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    document.getElementById('stat-total').innerText = shops.length;
-    document.getElementById('stat-active').innerText = activeCount;
-    document.getElementById('stat-alert').innerText = alertCount;
-    document.getElementById('stat-revenue').innerText = totalMonthlyAvg.toLocaleString() + ' ฿';
-  }
-
-  function openEditModal(index) {
-    currentEditIndex = index;
-    const shop = shops[index];
-    document.getElementById('edit-id').value = shop.id;
-    document.getElementById('edit-biztype').value = shop.bizType || 'food';
-    document.getElementById('edit-name').value = shop.name;
-    document.getElementById('edit-contact').value = shop.contact;
-    document.getElementById('edit-plan').value = shop.planKey;
-    const dateInput = document.getElementById('edit-expire');
-    dateInput.value = shop.expireDate === '9999-12-31' ? addDaysToDate(new Date(), 30) : shop.expireDate;
-    handleEditPlanChange();
-    document.getElementById('editModal').style.display = 'flex';
-  }
-
-  function handleEditPlanChange() {
-    document.getElementById('editDateGroup').style.display = (document.getElementById('edit-plan').value === 'lifetime') ? 'none' : 'block';
-  }
-
-  function adjustEditDays(days) {
-    const dateInput = document.getElementById('edit-expire');
-    dateInput.value = addDaysToDate(dateInput.value ? new Date(dateInput.value) : new Date(), days);
-  }
-
-  function setExpireToday() { document.getElementById('edit-expire').value = addDaysToDate(new Date(), 0); }
-
-  function saveEditShop() {
-    if (currentEditIndex === null) return;
-    const shop = shops[currentEditIndex];
-    const name = document.getElementById('edit-name').value.trim();
-    if (!name) return alert('กรุณากรอกชื่อครับ');
-
-    shop.bizType = document.getElementById('edit-biztype').value;
-    shop.name = name;
-    shop.contact = document.getElementById('edit-contact').value.trim() || '-';
-    shop.planKey = document.getElementById('edit-plan').value;
-    shop.expireDate = (shop.planKey === 'lifetime') ? '9999-12-31' : document.getElementById('edit-expire').value;
-
-    saveShops();
-    closeModal('editModal');
-    showToast(`บันทึกการแก้ไข "${shop.name}" เรียบร้อย!`);
-  }
-
-  function openRenewModal(index) {
-    currentRenewIndex = index;
-    document.getElementById('renewShopTitle').innerText = `รายการ: ${shops[index].name} (${shops[index].id})`;
-    document.getElementById('renewModal').style.display = 'flex';
-  }
-
-  function confirmRenew(planKey) {
-    if (currentRenewIndex === null) return;
-    const shop = shops[currentRenewIndex];
-    const plan = PLANS[planKey];
-
-    shop.planKey = planKey;
-    shop.isSuspended = false;
-
-    if (planKey === 'lifetime') {
-      shop.expireDate = '9999-12-31';
-    } else {
-      const daysLeft = shop.expireDate === '9999-12-31' ? -1 : getDaysRemaining(shop.expireDate);
-      shop.expireDate = addDaysToDate(daysLeft < 0 ? new Date() : new Date(shop.expireDate), plan.days);
-    }
-
-    saveShops();
-    closeModal('renewModal');
-    showToast(`อัปเดตแพ็กเกจ "${shop.name}" เป็น ${plan.label} เรียบร้อย!`);
-  }
-
-  function toggleSuspend(index) {
-    shops[index].isSuspended = !shops[index].isSuspended;
-    saveShops();
-    showToast(shops[index].isSuspended ? 'ระงับการใช้งานแล้ว' : 'เปิดใช้งานแล้ว');
-  }
-
-  function deleteShop(index) {
-    if (confirm(`ยืนยันการลบ "${shops[index].name}" ออกจาก Sapsong HUB?`)) {
-      shops.splice(index, 1);
-      saveShops();
-      showToast('ลบเรียบร้อย');
-    }
-  }
-
-  function copyLink(url, label) { navigator.clipboard.writeText(url); showToast(`คัดลอก${label}แล้ว: ${url}`); }
-  function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
-  function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-  function addShop() {
-    const bizType = document.getElementById('inp-biztype').value;
-    const id = document.getElementById('inp-id').value.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '');
-    const name = document.getElementById('inp-name').value.trim();
-    const contact = document.getElementById('inp-contact').value.trim();
-    const planKey = document.getElementById('inp-plan').value;
-    const plan = PLANS[planKey];
-
-    if (!id || !name) return alert('กรุณากรอกรหัส (ID) และชื่อครับ');
-    if (shops.some(s => s.id === id)) return alert('รหัส (ID) นี้มีในระบบแล้ว กรุณาใช้ชื่ออื่นครับ');
-
-    shops.push({
-      id, bizType, name, contact: contact || '-', planKey,
-      expireDate: planKey === 'lifetime' ? '9999-12-31' : addDaysToDate(new Date(), plan.days),
-      isSuspended: false
-    });
-
-    saveShops();
-    closeModal('addModal');
-    document.getElementById('inp-id').value = '';
-    document.getElementById('inp-name').value = '';
-    document.getElementById('inp-contact').value = '';
-    showToast(`เพิ่ม "${name}" (${plan.label}) เรียบร้อย!`);
-  }
-</script>
-</body>
-</html>
