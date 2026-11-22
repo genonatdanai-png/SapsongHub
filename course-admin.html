@@ -124,8 +124,53 @@
                                 <h3 class="text-sm font-bold text-indigo-950">🎬 รายการตอนเรียน</h3>
                                 <p class="text-[11px] text-indigo-700">วางลิงก์ YouTube (Unlisted) / Google Drive / วิดีโอของแต่ละตอน</p>
                             </div>
-                            <button type="button" onclick="addLessonRow()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold">+ เพิ่มตอนเรียน</button>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="toggleVideoGuide()" class="bg-white hover:bg-indigo-100 text-indigo-800 border border-indigo-300 px-3 py-1.5 rounded-xl text-xs font-bold">📖 วิธีตั้งค่าลิงก์วิดีโอทุกแบบ</button>
+                                <button type="button" onclick="addLessonRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold">+ เพิ่มตอนเรียน</button>
+                            </div>
                         </div>
+
+                        <!-- กล่องคู่มือวิธีตั้งค่าลิงก์วิดีโอทุกแบบสำหรับผู้สอน -->
+                        <div id="video-guide-box" class="hidden bg-white border border-indigo-200 rounded-2xl p-4 space-y-3 text-xs text-slate-700 shadow-xs">
+                            <div class="flex justify-between items-center border-b pb-2">
+                                <h4 class="font-bold text-indigo-950 text-sm">📖 คู่มือวิธีตั้งค่าและคัดลอกลิงก์วิดีโอมาวาง (รองรับ 3 แบบ)</h4>
+                                <button type="button" onclick="toggleVideoGuide()" class="text-slate-400 hover:text-slate-700 font-bold px-2">✕ ปิด</button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div class="bg-red-50/70 border border-red-200 rounded-xl p-3 space-y-1.5">
+                                    <p class="font-bold text-red-900">1. YouTube (แนะนำ — ไม่เป็นสาธารณะ)</p>
+                                    <ol class="list-decimal pl-4 space-y-1 text-[11px] text-slate-700">
+                                        <li>อัปโหลดคลิปลง <strong>YouTube Studio</strong></li>
+                                        <li>ตั้งค่าการมองเห็นเป็น <strong>Unlisted (ไม่เป็นสาธารณะ)</strong> เพื่อให้คนอื่นค้นหาไม่เจอ</li>
+                                        <li>กด <strong>แชร์ (Share)</strong> แล้วคัดลอกลิงก์ เช่น <code class="bg-white px-1 rounded border">https://youtu.be/xxxx</code> มาวางในช่องลิงก์วิดีโอ</li>
+                                    </ol>
+                                </div>
+
+                                <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-3 space-y-1.5">
+                                    <p class="font-bold text-blue-900">2. Google Drive (คลิปที่อัปขึ้น Drive)</p>
+                                    <ol class="list-decimal pl-4 space-y-1 text-[11px] text-slate-700">
+                                        <li>คลิกขวาที่ไฟล์วิดีโอใน Google Drive เลือก <strong>แชร์ (Share)</strong></li>
+                                        <li>เปลี่ยนสิทธิ์เป็น <strong>ทุกคนที่มีลิงก์ (Anyone with the link)</strong> → <strong>ผู้มีสิทธิ์อ่าน (Viewer)</strong></li>
+                                        <li>กด <strong>คัดลอกลิงก์</strong> เช่น <code class="bg-white px-1 rounded border">https://drive.google.com/file/d/xxxx/view</code> มาวางได้เลย</li>
+                                    </ol>
+                                </div>
+
+                                <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 space-y-1.5">
+                                    <p class="font-bold text-emerald-900">3. ลิงก์ไฟล์วิดีโอตรง (.mp4 / โฮสต์อื่น)</p>
+                                    <ol class="list-decimal pl-4 space-y-1 text-[11px] text-slate-700">
+                                        <li>ใช้ลิงก์ที่ขึ้นต้นด้วย <code class="bg-white px-1 rounded border">https://</code> และลงท้ายด้วย <code class="bg-white px-1 rounded border">.mp4</code></li>
+                                        <li>โฮสต์ต้นทางต้องเปิดให้ฝังเล่นในเว็บภายนอกได้</li>
+                                        <li>วางลิงก์แล้วกด <strong>บันทึกข้อมูล</strong> จากนั้นลองเปิดดูในหน้าเรียนจริงเพื่อเช็กภาพและเสียง</li>
+                                    </ol>
+                                </div>
+                            </div>
+
+                            <p class="text-[11px] text-indigo-800 bg-indigo-50 px-3 py-2 rounded-xl font-medium">
+                                💡 <strong>เคล็ดลับ:</strong> หากต้องการให้ผู้เรียนที่ยังไม่ซื้อกดทดลองดูบางตอนก่อนได้ ให้ติ๊กช่อง <strong>"ฟรี"</strong> ด้านขวาของตอนนั้นครับ
+                            </p>
+                        </div>
+
                         <div id="lessons-container" class="space-y-2.5"></div>
                     </div>
 
@@ -392,6 +437,10 @@
         let listenersStarted = false;
         let crnSlipBase64 = '';
         let crnSlipRef = '';
+
+        function toggleVideoGuide() {
+            document.getElementById('video-guide-box').classList.toggle('hidden');
+        }
 
         function handleDocFileUpload(event, target) {
             const file = event.target.files[0];
@@ -685,7 +734,7 @@
         function addLessonRow(title = '', videoUrl = '', docUrl = '', isFree = false) {
             const div = document.createElement('div');
             div.className = 'lesson-row bg-white p-3 rounded-xl border border-indigo-100 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center';
-            div.innerHTML = `<input type="text" class="ls-title sm:col-span-3 px-2.5 py-1.5 border rounded-lg text-xs" placeholder="ชื่อตอน" value="${title}"><input type="text" class="ls-video sm:col-span-4 px-2.5 py-1.5 border rounded-lg text-xs" placeholder="ลิงก์วิดีโอ" value="${videoUrl}"><input type="text" class="ls-doc sm:col-span-3 px-2.5 py-1.5 border rounded-lg text-xs" placeholder="ลิงก์ชีท" value="${docUrl}"><div class="sm:col-span-2 flex items-center justify-between gap-1"><label class="text-[11px] flex items-center gap-1 cursor-pointer"><input type="checkbox" class="ls-free" ${isFree?'checked':''}> ฟรี</label><button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-500 text-xs font-bold px-1.5">✕</button></div>`;
+            div.innerHTML = `<input type="text" class="ls-title sm:col-span-3 px-2.5 py-1.5 border rounded-lg text-xs" placeholder="ชื่อตอน" value="${title}"><input type="text" class="ls-video sm:col-span-4 px-2.5 py-1.5 border rounded-lg text-xs" placeholder="ลิงก์ YouTube / Drive / วิดีโอ" value="${videoUrl}"><input type="text" class="ls-doc sm:col-span-3 px-2.5 py-1.5 border rounded-lg text-xs" placeholder="ลิงก์ชีท (ไม่บังคับ)" value="${docUrl}"><div class="sm:col-span-2 flex items-center justify-between gap-1"><label class="text-[11px] flex items-center gap-1 cursor-pointer"><input type="checkbox" class="ls-free" ${isFree?'checked':''}> ฟรี</label><button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-500 text-xs font-bold px-1.5">✕</button></div>`;
             document.getElementById('lessons-container').appendChild(div);
         }
 
