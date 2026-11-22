@@ -289,7 +289,8 @@
         let crnSlipRef = '';
 
         auth.onAuthStateChanged(user => {
-            if (user && (user.email.toLowerCase() === SUPER_ADMIN_EMAIL || user.email.toLowerCase() === EXPECTED_EMAIL)) {
+            const email = user && user.email ? user.email.toLowerCase() : '';
+            if (user && (email === SUPER_ADMIN_EMAIL || email === EXPECTED_EMAIL)) {
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
                 startListeners();
@@ -342,9 +343,10 @@
                 document.getElementById('nav-expire').innerText = m.planKey === 'lifetime' ? '♾️ ตลอดชีพ' : `หมดอายุ: ${m.expireDate}`;
             });
 
-            db.ref(`courses_data/${SHOP_ID}`).on('value', snap => {
-                const d = snap.val() || {};
-                const cfg = d.config || {};
+            const courseRef = db.ref(`courses_data/${SHOP_ID}`);
+
+            courseRef.child('config').on('value', snap => {
+                const cfg = snap.val() || {};
                 configData = {
                     shopLogo: cfg.shopLogo || '',
                     instName: cfg.instName || SHOP_ID,
@@ -353,18 +355,30 @@
                     fileGateUrl: cfg.fileGateUrl || DEFAULT_FILE_GATE_URL,
                     autoUnlockSlip: cfg.autoUnlockSlip !== undefined ? cfg.autoUnlockSlip : true
                 };
-                courses = d.courses || [];
-                students = d.students || {};
-                orders = Object.entries(d.orders || {}).map(([k, v]) => ({ ...v, key: k })).reverse();
-
                 applyLogoUI(configData.shopLogo);
                 document.getElementById('set-inst-name').value = configData.instName;
                 document.getElementById('set-promptpay').value = configData.promptpayId;
                 document.getElementById('set-acc-name').value = configData.accountName;
                 document.getElementById('set-file-gate-url').value = configData.fileGateUrl;
                 document.getElementById('set-auto-unlock').checked = configData.autoUnlockSlip;
+            });
 
-                renderOrders(); renderCourses(); renderStudents();
+            courseRef.child('courses').on('value', snap => {
+                const raw = snap.val() || [];
+                courses = Array.isArray(raw) ? raw : Object.values(raw);
+                renderCourses();
+                renderStudents();
+            });
+
+            courseRef.child('students').on('value', snap => {
+                students = snap.val() || {};
+                renderStudents();
+            });
+
+            courseRef.child('orders').on('value', snap => {
+                const rawOrders = snap.val() || {};
+                orders = Object.entries(rawOrders).map(([k, v]) => ({ ...v, key: k })).reverse();
+                renderOrders();
             });
         }
 
@@ -487,7 +501,14 @@
             document.getElementById('student-count').innerText = `${arr.length} บัญชี`;
             const el = document.getElementById('students-list');
             if (arr.length === 0) { el.innerHTML = `<p class="text-slate-400 text-sm col-span-2 text-center py-8 bg-white rounded-2xl">ยังไม่มีผู้เรียน</p>`; return; }
-            el.innerHTML = arr.map(st => `<div class="bg-white p-4 rounded-2xl shadow-sm border space-y-1.5"><h4 class="font-bold text-slate-800 text-sm">${st.fullName} <span class="font-mono text-xs text-indigo-600">(@${st.username})</span></h4><p class="text-xs text-slate-500">โทร: ${st.phone} • รหัสผ่าน: <span class="font-mono font-bold text-slate-700">${st.password}</span></p><p class="text-xs text-emerald-700 font-semibold">🔓 ปลดล็อกแล้ว ${Object.keys(st.unlockedItems||{}).length} รายการ</p></div>`).join('');
+            el.innerHTML = arr.map(st => {
+                const unlockedIds = Object.keys(st.unlockedItems || {});
+                const unlockedNames = unlockedIds.map(id => {
+                    const found = courses.find(c => String(c.id) === String(id));
+                    return found ? found.title : id;
+                });
+                return `<div class="bg-white p-4 rounded-2xl shadow-sm border space-y-1.5"><h4 class="font-bold text-slate-800 text-sm">${st.fullName} <span class="font-mono text-xs text-indigo-600">(@${st.username})</span></h4><p class="text-xs text-slate-500">โทร: ${st.phone} • รหัสผ่าน: <span class="font-mono font-bold text-slate-700">${st.password}</span></p><p class="text-xs text-emerald-700 font-semibold">🔓 ปลดล็อกแล้ว ${unlockedIds.length} รายการ</p><p class="text-xs text-slate-600 bg-slate-50 p-2 rounded-xl">${unlockedNames.length > 0 ? '🔓 ' + unlockedNames.join(', ') : 'ยังไม่ได้ปลดล็อกวิชาหรือไฟล์ใดๆ'}</p></div>`;
+            }).join('');
         }
 
         function switchTab(tab) {
