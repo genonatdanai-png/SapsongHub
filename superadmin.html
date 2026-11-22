@@ -108,6 +108,9 @@
     /* Ledger Form */
     .ledger-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; padding: 20px; border-bottom: 1px solid var(--border); background: #f8fafc; align-items: end; }
 
+    /* Settings Box */
+    .settings-body { padding: 24px; max-width: 520px; }
+
     /* Modal */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 16px; }
     .modal { background: white; width: 100%; max-width: 480px; border-radius: 14px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
@@ -184,6 +187,7 @@
     <button class="hub-tab active" id="htab-shops" onclick="switchHubSection('shops')">📋 รายชื่อธุรกิจ & ต่ออายุเอง</button>
     <button class="hub-tab" id="htab-renewals" onclick="switchHubSection('renewals')">🧾 ตรวจสลิปต่ออายุ (<span id="pending-renew-count">0</span>)</button>
     <button class="hub-tab" id="htab-ledger" onclick="switchHubSection('ledger')">💰 บัญชีเงินเข้า - เงินออก</button>
+    <button class="hub-tab" id="htab-settings" onclick="switchHubSection('settings')">⚙️ ตั้งค่าพร้อมเพย์ HUB</button>
   </div>
 
   <div id="sec-shops" class="card">
@@ -262,6 +266,27 @@
         </thead>
         <tbody id="ledgerTableBody"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- แท็บตั้งค่าพร้อมเพย์ HUB -->
+  <div id="sec-settings" class="card" style="display: none;">
+    <div class="card-header">
+      <h2 style="font-size: 1.05rem; font-weight: 700;">⚙️ ตั้งค่าพร้อมเพย์รับเงินต่ออายุ (Sapsong HUB)</h2>
+    </div>
+    <div class="settings-body">
+      <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 18px;">
+        ข้อมูลนี้จะถูกนำไปสร้าง QR Code พร้อมเพย์และแสดงชื่อบัญชีในหน้าต่ออายุของทุกร้านค้าและผู้สอนโดยอัตโนมัติ
+      </p>
+      <div class="form-group">
+        <label>เบอร์พร้อมเพย์ (10 หลัก) หรือ เลขบัตรประชาชน (13 หลัก)</label>
+        <input type="text" id="hub-promptpay-id" placeholder="เช่น 0855750995">
+      </div>
+      <div class="form-group">
+        <label>ชื่อบัญชีรับเงิน (แสดงให้ลูกค้าเห็นตอนสแกนจ่าย)</label>
+        <input type="text" id="hub-account-name" placeholder="เช่น ณัฐดนัย ทรัพย์ส่ง (Sapsong HUB)">
+      </div>
+      <button class="btn btn-primary" onclick="saveHubPaymentConfig()">💾 บันทึกข้อมูลพร้อมเพย์ HUB</button>
     </div>
   </div>
 </div>
@@ -488,7 +513,7 @@
   function secureLogout() { auth.signOut(); }
 
   function switchHubSection(sec) {
-    ['shops', 'renewals', 'ledger'].forEach(s => {
+    ['shops', 'renewals', 'ledger', 'settings'].forEach(s => {
       document.getElementById('sec-' + s).style.display = (s === sec) ? 'block' : 'none';
       document.getElementById('htab-' + s).classList.toggle('active', s === sec);
     });
@@ -497,6 +522,12 @@
   function startHubData() {
     if (dataLoaded) return;
     dataLoaded = true;
+
+    db.ref('sapsong_hub_config').on('value', (snap) => {
+      const cfg = snap.val() || {};
+      document.getElementById('hub-promptpay-id').value = cfg.promptpayId || '0855750995';
+      document.getElementById('hub-account-name').value = cfg.accountName || 'Sapsong HUB';
+    });
 
     db.ref('sapsong_hub_shops').on('value', (snap) => {
       const val = snap.val();
@@ -525,6 +556,24 @@
       ledgerItems = Object.entries(val).map(([k, v]) => ({ ...v, key: k })).reverse();
       renderLedger();
     });
+  }
+
+  function saveHubPaymentConfig() {
+    const promptpayId = document.getElementById('hub-promptpay-id').value.trim().replace(/[^0-9]/g, '');
+    const accountName = document.getElementById('hub-account-name').value.trim();
+    if (promptpayId.length !== 10 && promptpayId.length !== 13 && promptpayId.length !== 15) {
+      return alert('กรุณากรอกเบอร์พร้อมเพย์ 10 หลัก หรือเลขบัตรประชาชน 13 หลักให้ถูกต้องครับ');
+    }
+    if (!accountName) {
+      return alert('กรุณากรอกชื่อบัญชีรับเงินครับ');
+    }
+    db.ref('sapsong_hub_config').set({
+      promptpayId,
+      accountName,
+      updatedAt: Date.now()
+    }).then(() => {
+      showToast('บันทึกเบอร์พร้อมเพย์และชื่อบัญชี HUB เรียบร้อยแล้วครับ!');
+    }).catch(err => alert('บันทึกไม่สำเร็จ: ' + err.message));
   }
 
   function saveShops() {
