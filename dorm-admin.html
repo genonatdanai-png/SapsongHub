@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบแจ้งบิล & ชำระค่าเช่า - Sapsong HUB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+        #pay-qr-box img, #pay-qr-box canvas { margin: 0 auto; border-radius: 0.75rem; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen pb-16">
+
+    <!-- Lock Gate (Sapsong HUB) -->
+    <div id="sapsong-lock-overlay" class="hidden fixed inset-0 bg-slate-950 text-white z-[99999] flex flex-col justify-center items-center text-center p-6">
+        <div class="bg-slate-900 border border-slate-700 max-w-md w-full p-8 rounded-3xl shadow-2xl space-y-3">
+            <div class="text-5xl">🔒</div>
+            <h2 id="sapsong-lock-title" class="text-xl font-bold">ปิดให้บริการชั่วคราว</h2>
+            <p id="sapsong-lock-msg" class="text-sm text-slate-400">ระบบแจ้งบิลหอพักปิดให้บริการชั่วคราว</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-teal-950 text-white shadow-md p-3.5 sm:p-4 sticky top-0 z-40">
+        <div class="max-w-4xl mx-auto flex justify-between items-center gap-3">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <img id="hdr-logo" src="" class="hidden w-11 h-11 rounded-xl object-cover bg-white border shrink-0">
+                <div class="truncate">
+                    <h1 id="hdr-title" class="text-base sm:text-xl font-bold truncate">กำลังโหลดข้อมูลหอพัก...</h1>
+                    <p class="text-[11px] text-teal-300">ระบบตรวจสอบใบแจ้งหนี้ & ชำระค่าเช่าออนไลน์</p>
+                </div>
+            </div>
+            <span id="hdr-room-badge" class="hidden bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-xl shrink-0">
+                🚪 ห้อง -
+            </span>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-3 sm:p-5 space-y-5">
+
+        <!-- ประกาศจากหอพัก -->
+        <div id="announcement-bar" class="hidden bg-amber-50 border border-amber-200 text-amber-950 px-4 py-3 rounded-2xl text-xs sm:text-sm font-medium">
+            📢 <span id="announcement-text"></span>
+        </div>
+
+        <!-- ช่องทางการติดต่อหอพัก -->
+        <div id="dynamic-contact-bar" class="hidden bg-white p-3.5 rounded-2xl shadow-sm border border-teal-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div class="text-xs sm:text-sm font-semibold text-slate-700">
+                📞 ติดต่อสำนักงานหอพัก / แจ้งซ่อม:
+            </div>
+            <div id="contact-buttons-wrap" class="flex flex-wrap gap-2 w-full sm:w-auto"></div>
+        </div>
+
+        <!-- กล่องเลือกห้องพัก -->
+        <div class="bg-white p-4 sm:p-5 rounded-3xl shadow-sm border border-slate-200 space-y-3">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800">🚪 เลือกหมายเลขห้องพักของคุณ</h2>
+                    <p class="text-xs text-slate-500">เลือกห้องเพื่อดูใบแจ้งหนี้ค่าเช่า ค่าน้ำ-ค่าไฟ และสแกนจ่ายเงิน</p>
+                </div>
+                <select id="room-selector" onchange="onSelectRoom(this.value)" class="w-full sm:w-64 px-3.5 py-2.5 border-2 border-teal-500 rounded-xl text-sm font-bold text-teal-950 bg-teal-50/60 outline-none">
+                    <option value="">-- กรุณาเลือกห้องพัก --</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- รายการบิลของห้องที่เลือก -->
+        <div id="room-bills-section" class="hidden space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 id="room-bills-heading" class="text-base font-bold text-slate-800">🧾 รายการใบแจ้งหนี้</h3>
+                <span id="room-bills-count" class="text-xs font-bold bg-teal-100 text-teal-800 px-3 py-1 rounded-full">0 บิล</span>
+            </div>
+            <div id="tenant-bills-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+
+    </main>
+
+    <!-- Modal ชำระค่าเช่าพร้อมเพย์ & ระบบอ่านสลิป -->
+    <div id="pay-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-2.5">
+                <h3 class="font-bold text-slate-800 text-base">💳 ชำระค่าเช่า & ค่าน้ำ-ไฟ</h3>
+                <button onclick="document.getElementById('pay-modal').classList.add('hidden')" class="text-xl font-bold text-gray-400 px-2">&times;</button>
+            </div>
+
+            <div class="bg-teal-50 p-3.5 rounded-2xl flex justify-between items-center">
+                <div>
+                    <span id="pay-bill-month" class="text-[11px] bg-teal-200 text-teal-950 font-bold px-2.5 py-0.5 rounded-full">รอบบิล -</span>
+                    <p id="pay-room-title" class="font-bold text-slate-800 text-sm mt-1">ห้อง -</p>
+                </div>
+                <p id="pay-total-amount" class="font-bold text-teal-700 text-lg shrink-0">0 บ.</p>
+            </div>
+
+            <div class="bg-blue-50/80 border-2 border-blue-200 rounded-2xl p-3.5 space-y-2.5 text-center">
+                <span class="inline-block bg-blue-600 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full">PromptPay QR Code</span>
+                <p class="text-xs text-slate-600">บัญชี: <strong id="pay-acc-name">-</strong> (<span id="pay-pp-id" class="font-mono">-</span>)</p>
+                <div id="pay-qr-box" class="bg-white p-2.5 rounded-xl border border-blue-100 inline-block"></div>
+
+                <div class="text-left bg-white p-3 rounded-xl border border-blue-200 space-y-2">
+                    <label class="block text-xs font-bold text-slate-700">📎 แนบรูปสลิปโอนเงิน (ระบบอ่าน QR สลิปอัตโนมัติ) *</label>
+                    <input type="file" id="slip-input" accept="image/*" onchange="processSlipImage(event)" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-100 file:text-emerald-800 file:font-bold cursor-pointer">
+                    <div id="slip-scan-status" class="hidden p-2.5 rounded-xl text-xs font-semibold"></div>
+                    <img id="slip-preview" src="" class="hidden w-full max-h-36 object-contain rounded-lg border bg-slate-50">
+                </div>
+            </div>
+
+            <button onclick="confirmBillPayment()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-xl font-bold text-sm shadow-md transition">
+                📤 ยืนยันการชำระเงิน & ส่งสลิป
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhtvwqgAP-5-ITl1TIopqIWEFrZ2deQtg",
+            authDomain: "sapsonghub.firebaseapp.com",
+            databaseURL: "https://sapsonghub-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "sapsonghub",
+            storageBucket: "sapsonghub.firebasestorage.app",
+            messagingSenderId: "448301529212",
+            appId: "1:448301529212:web:7366898a663dcbd556f1f9",
+            measurementId: "G-0SPWW0K3WD"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const SHOP_ID = (urlParams.get('shop') || 'demo-dorm').toLowerCase();
+        const INITIAL_ROOM = urlParams.get('room') || '';
+
+        const CHANNEL_STYLE = {
+            phone: { icon: '📞', cls: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
+            line: { icon: '💬', cls: 'bg-green-500 hover:bg-green-600 text-white' },
+            facebook: { icon: '📘', cls: 'bg-blue-600 hover:bg-blue-700 text-white' },
+            ig: { icon: '📸', cls: 'bg-pink-600 hover:bg-pink-700 text-white' },
+            other: { icon: '🔗', cls: 'bg-slate-800 hover:bg-slate-900 text-white' }
+        };
+
+        let configData = {
+            shopLogo: '', dormName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID,
+            announcement: '', contacts: [], autoApproveSlip: true
+        };
+        let rooms = [];
+        let bills = [];
+        let selectedRoomNo = INITIAL_ROOM;
+        let pendingPayBill = null;
+        let slipBase64 = '';
+        let slipTransRef = '';
+
+        function isExpired(d) {
+            if (!d || d === '9999-12-31') return false;
+            const t = new Date(); t.setHours(0, 0, 0, 0);
+            const e = new Date(d); e.setHours(0, 0, 0, 0);
+            return t > e;
+        }
+
+        function showLock(title, msg) {
+            document.getElementById('sapsong-lock-title').innerText = title;
+            document.getElementById('sapsong-lock-msg').innerText = msg;
+            document.getElementById('sapsong-lock-overlay').classList.remove('hidden');
+        }
+
+        function buildContactHref(channel, rawVal) {
+            const val = String(rawVal || '').trim();
+            if (!val) return '';
+            if (channel === 'phone') return `tel:${val.replace(/[^0-9+]/g, '')}`;
+            if (val.startsWith('http://') || val.startsWith('https://')) return val;
+            const cleanHandle = val.replace(/^@+/, '');
+            if (channel === 'line') return `https://line.me/ti/p/~${cleanHandle}`;
+            if (channel === 'ig') return `https://instagram.com/${cleanHandle}`;
+            if (channel === 'facebook') return `https://facebook.com/${cleanHandle}`;
+            return `https://${val}`;
+        }
+
+        function renderContacts() {
+            const bar = document.getElementById('dynamic-contact-bar');
+            const wrap = document.getElementById('contact-buttons-wrap');
+            const items = Array.isArray(configData.contacts) ? configData.contacts.filter(c => c && c.value) : [];
+            if (items.length === 0) {
+                bar.classList.add('hidden');
+                return;
+            }
+            wrap.innerHTML = items.map(item => {
+                const ch = item.channel || 'other';
+                const href = buildContactHref(ch, item.value);
+                const st = CHANNEL_STYLE[ch] || CHANNEL_STYLE.other;
+                const text = item.label || item.value;
+                const targetAttr = ch === 'phone' ? '' : `target="_blank" rel="noopener noreferrer"`;
+                return `<a href="${href}" ${targetAttr} class="flex-1 sm:flex-none text-center ${st.cls} active:scale-95 text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm">${st.icon} ${text}</a>`;
+            }).join('');
+            bar.classList.remove('hidden');
+        }
+
+        db.ref('sapsong_hub_shops/' + SHOP_ID).on('value', snap => {
+            const m = snap.val();
+            if (!m) return showLock('ไม่พบข้อมูลหอพักในระบบ', `รหัส "${SHOP_ID}" ยังไม่ได้ลงทะเบียนใน Sapsong HUB`);
+            if (m.isSuspended) return showLock('ปิดให้บริการชั่วคราว', `ระบบของ "${m.name}" ถูกระงับการใช้งาน`);
+            if (m.planKey !== 'lifetime' && isExpired(m.expireDate)) return showLock('หมดอายุการใช้งาน', `แพ็กเกจของหอพักหมดอายุเมื่อ ${m.expireDate}`);
+            document.getElementById('sapsong-lock-overlay').classList.add('hidden');
+        });
+
+        const dormBaseRef = db.ref(`dorms_data/${SHOP_ID}`);
+
+        dormBaseRef.child('config').on('value', snap => {
+            const cfg = snap.val() || {};
+            configData = {
+                shopLogo: cfg.shopLogo || '',
+                dormName: cfg.dormName || SHOP_ID,
+                promptpayId: cfg.promptpayId || '0855750995',
+                accountName: cfg.accountName || SHOP_ID,
+                announcement: cfg.announcement || '',
+                contacts: Array.isArray(cfg.contacts) ? cfg.contacts : [],
+                autoApproveSlip: cfg.autoApproveSlip !== undefined ? cfg.autoApproveSlip : true
+            };
+            document.title = `${configData.dormName} - แจ้งบิลค่าเช่า`;
+            document.getElementById('hdr-title').innerText = configData.dormName;
+            if (configData.shopLogo) {
+                const logoEl = document.getElementById('hdr-logo');
+                logoEl.src = configData.shopLogo;
+                logoEl.classList.remove('hidden');
+            }
+            const annBar = document.getElementById('announcement-bar');
+            if (configData.announcement) {
+                document.getElementById('announcement-text').innerText = configData.announcement;
+                annBar.classList.remove('hidden');
+            } else {
+                annBar.classList.add('hidden');
+            }
+            renderContacts();
+        });
+
+        dormBaseRef.child('rooms').on('value', snap => {
+            const raw = snap.val() || [];
+            rooms = Array.isArray(raw) ? raw : Object.values(raw);
+            renderRoomSelector();
+            renderTenantBills();
+        });
+
+        dormBaseRef.child('bills').on('value', snap => {
+            const raw = snap.val() || {};
+            bills = Object.entries(raw).map(([k, v]) => ({ ...v, key: k })).reverse();
+            renderTenantBills();
+        });
+
+        function renderRoomSelector() {
+            const sel = document.getElementById('room-selector');
+            let opts = `<option value="">-- กรุณาเลือกห้องพัก --</option>`;
+            rooms.forEach(r => {
+                const label = r.tenantName ? `ห้อง ${r.roomNo} (${r.tenantName})` : `ห้อง ${r.roomNo}`;
+                opts += `<option value="${r.roomNo}" ${String(r.roomNo) === String(selectedRoomNo) ? 'selected' : ''}>${label}</option>`;
+            });
+            sel.innerHTML = opts;
+
+            const badge = document.getElementById('hdr-room-badge');
+            if (selectedRoomNo) {
+                badge.innerText = `🚪 ห้อง ${selectedRoomNo}`;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function onSelectRoom(roomNo) {
+            selectedRoomNo = roomNo;
+            const badge = document.getElementById('hdr-room-badge');
+            if (selectedRoomNo) {
+                badge.innerText = `🚪 ห้อง ${selectedRoomNo}`;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+            renderTenantBills();
+        }
+
+        function renderTenantBills() {
+            const sec = document.getElementById('room-bills-section');
+            const list = document.getElementById('tenant-bills-list');
+            if (!selectedRoomNo) {
+                sec.classList.add('hidden');
+                return;
+            }
+            sec.classList.remove('hidden');
+            const roomBills = bills.filter(b => String(b.roomNo) === String(selectedRoomNo));
+            document.getElementById('room-bills-heading').innerText = `🧾 ใบแจ้งหนี้ ห้อง ${selectedRoomNo}`;
+            document.getElementById('room-bills-count').innerText = `${roomBills.length} บิล`;
+
+            if (roomBills.length === 0) {
+                list.innerHTML = `<div class="col-span-full bg-white p-8 rounded-3xl border text-center text-slate-400 text-sm">ยังไม่มีใบแจ้งหนี้สำหรับห้อง ${selectedRoomNo}</div>`;
+                return;
+            }
+
+            list.innerHTML = roomBills.map(b => {
+                let badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">⏳ ค้างชำระ</span>`;
+                if (b.status === 'pending_review') badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">🔍 ส่งสลิปแล้ว (รอตรวจสอบ)</span>`;
+                else if (b.status === 'paid') badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">✅ ชำระเรียบร้อยแล้ว</span>`;
+
+                return `
+                    <div class="bg-white p-4 sm:p-5 rounded-3xl shadow-sm border space-y-3">
+                        <div class="flex justify-between items-start gap-2">
+                            <div>
+                                <span class="font-mono text-xs text-slate-400">${b.billId}</span>
+                                <h4 class="font-bold text-slate-800 text-base">รอบบิลเดือน ${b.billingMonth}</h4>
+                                <p class="text-xs text-slate-500">ผู้เช่า: ${b.tenantName || '-'}</p>
+                            </div>
+                            ${badge}
+                        </div>
+
+                        <div class="bg-slate-50 p-3.5 rounded-2xl text-xs space-y-1.5 text-slate-700">
+                            <div class="flex justify-between"><span>ค่าเช่าห้อง:</span><span class="font-semibold">${Number(b.rent || 0).toLocaleString()} บ.</span></div>
+                            <div class="flex justify-between"><span>💧 ค่าน้ำ (${b.prevWater} → ${b.currWater} = ${b.waterUnits} หน่วย x ${b.waterRate}บ.):</span><span class="font-semibold">${Number(b.waterCost || 0).toLocaleString()} บ.</span></div>
+                            <div class="flex justify-between"><span>⚡ ค่าไฟ (${b.prevElec} → ${b.currElec} = ${b.elecUnits} หน่วย x ${b.elecRate}บ.):</span><span class="font-semibold">${Number(b.elecCost || 0).toLocaleString()} บ.</span></div>
+                            ${b.extraFee > 0 ? `<div class="flex justify-between"><span>ค่าส่วนกลาง/อื่นๆ:</span><span class="font-semibold">${Number(b.extraFee).toLocaleString()} บ.</span></div>` : ''}
+                            <div class="flex justify-between font-bold text-base text-teal-800 pt-2 border-t">
+                                <span>ยอดชำระสุทธิ:</span>
+                                <span>${Number(b.total || 0).toLocaleString()} บาท</span>
+                            </div>
+                        </div>
+
+                        ${b.status !== 'paid'
+                            ? `<button onclick="openPayModal('${b.key}')" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-2xl text-xs sm:text-sm font-bold shadow-sm">
+                                💳 สแกนจ่ายพร้อมเพย์ & แนบสลิป (${Number(b.total || 0).toLocaleString()} บ.)
+                               </button>`
+                            : `<div class="text-center text-xs font-bold text-emerald-700 bg-emerald-50 py-2.5 rounded-2xl">ขอบคุณที่ชำระค่าเช่าตรงเวลาครับ</div>`
+                        }
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function crc16(data) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < data.length; i++) { crc ^= data.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) crc = ((crc & 0x8000) !== 0) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF; }
+            return crc.toString(16).toUpperCase().padStart(4, '0');
+        }
+        function tlv(t, v) { return `${t}${v.length.toString().padStart(2,'0')}${v}`; }
+        function buildPromptPayQR(id, amt) {
+            const clean = String(id || '').replace(/[^0-9]/g, '');
+            const target = (clean.length === 10 && clean.startsWith('0')) ? tlv('01', '0066' + clean.substring(1)) : tlv('02', clean);
+            const m = tlv('00', 'A000000677010111') + target;
+            let p = tlv('00','01') + tlv('01', amt>0?'12':'11') + tlv('29', m) + tlv('53','764');
+            if (amt > 0) p += tlv('54', Number(amt).toFixed(2));
+            p += tlv('58','TH') + '6304';
+            return p + crc16(p);
+        }
+
+        function openPayModal(billKey) {
+            const bill = bills.find(b => b.key === billKey);
+            if (!bill) return;
+            pendingPayBill = bill;
+            slipBase64 = '';
+            slipTransRef = '';
+            document.getElementById('slip-input').value = '';
+            document.getElementById('slip-preview').classList.add('hidden');
+            document.getElementById('slip-scan-status').classList.add('hidden');
+
+            const amt = Number(bill.total || 0);
+            document.getElementById('pay-bill-month').innerText = `รอบบิลเดือน ${bill.billingMonth}`;
+            document.getElementById('pay-room-title').innerText = `🚪 ห้อง ${bill.roomNo} (${bill.tenantName || '-'})`;
+            document.getElementById('pay-total-amount').innerText = `${amt.toLocaleString()} บาท`;
+            document.getElementById('pay-acc-name').innerText = configData.accountName || configData.dormName;
+            document.getElementById('pay-pp-id').innerText = configData.promptpayId || '-';
+
+            const qrBox = document.getElementById('pay-qr-box');
+            qrBox.innerHTML = '';
+            if (configData.promptpayId && amt > 0) {
+                new QRCode(qrBox, { text: buildPromptPayQR(configData.promptpayId, amt), width: 160, height: 160 });
+            }
+            document.getElementById('pay-modal').classList.remove('hidden');
+        }
+
+        function processSlipImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const stBox = document.getElementById('slip-scan-status');
+            stBox.className = 'p-2.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700';
+            stBox.innerText = '🔍 กำลังสแกน QR บนสลิป...';
+            stBox.classList.remove('hidden');
+
+            const r = new FileReader();
+            r.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    const sc = document.createElement('canvas');
+                    const max = 1000;
+                    let sw = img.width, sh = img.height;
+                    if (sw > max || sh > max) {
+                        if (sw > sh) { sh = Math.round(sh * max / sw); sw = max; }
+                        else { sw = Math.round(sw * max / sh); sh = max; }
+                    }
+                    sc.width = sw; sc.height = sh;
+                    const ctx = sc.getContext('2d');
+                    ctx.drawImage(img, 0, 0, sw, sh);
+                    const qr = (typeof jsQR === 'function') ? jsQR(ctx.getImageData(0, 0, sw, sh).data, sw, sh) : null;
+
+                    const vc = document.createElement('canvas');
+                    const w = 500, h = Math.round((img.height / img.width) * 500) || 500;
+                    vc.width = w; vc.height = h;
+                    vc.getContext('2d').drawImage(img, 0, 0, w, h);
+                    slipBase64 = vc.toDataURL('image/jpeg', 0.75);
+                    const prev = document.getElementById('slip-preview');
+                    prev.src = slipBase64;
+                    prev.classList.remove('hidden');
+
+                    if (qr && qr.data) {
+                        const m = qr.data.match(/02\d{2}([A-Za-z0-9]{10,})/);
+                        slipTransRef = m ? m[1] : qr.data.slice(-16);
+                        const usedRefs = new Set(
+                            bills.filter(b => b.slipTransRef && b.key !== pendingPayBill.key).map(b => b.slipTransRef)
+                        );
+                        if (usedRefs.has(slipTransRef)) {
+                            stBox.className = 'p-2.5 rounded-xl text-xs font-bold bg-red-100 text-red-700';
+                            stBox.innerText = '❌ สลิปรหัสนี้ถูกใช้งานไปแล้ว กรุณาใช้สลิปใหม่';
+                            slipTransRef = '';
+                        } else {
+                            stBox.className = 'p-2.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800';
+                            stBox.innerText = `✅ ตรวจสอบ QR สลิปผ่าน (Ref: ${slipTransRef.slice(-8)})`;
+                        }
+                    } else {
+                        slipTransRef = '';
+                        stBox.className = 'p-2.5 rounded-xl text-xs font-semibold bg-amber-100 text-amber-800';
+                        stBox.innerText = '⚠️ ไม่พบ QR บนสลิป ระบบจะส่งให้เจ้าของหอพักตรวจสลิป';
+                    }
+                };
+                img.src = ev.target.result;
+            };
+            r.readAsDataURL(file);
+        }
+
+        function confirmBillPayment() {
+            if (!pendingPayBill) return;
+            const amt = Number(pendingPayBill.total || 0);
+            if (amt > 0 && !slipBase64) return alert('กรุณาแนบรูปสลิปโอนเงินก่อนครับ');
+
+            const autoPaid = Boolean(configData.autoApproveSlip && slipTransRef);
+            const newStatus = autoPaid ? 'paid' : 'pending_review';
+
+            dormBaseRef.child(`bills/${pendingPayBill.key}`).update({
+                slipImage: slipBase64,
+                slipTransRef,
+                status: newStatus,
+                paidAt: Date.now()
+            }).then(() => {
+                document.getElementById('pay-modal').classList.add('hidden');
+                alert(autoPaid
+                    ? 'ชำระค่าเช่าเรียบร้อยแล้วครับ! ระบบบันทึกสถานะ "ชำระแล้ว" อัตโนมัติ'
+                    : 'ส่งสลิปเรียบร้อยแล้วครับ รอเจ้าของหอพักตรวจสอบ'
+                );
+            }).catch(err => {
+                alert('บันทึกการชำระเงินไม่สำเร็จ: ' + err.message);
+            });
+        }
+    </script>
+</body>
+</html>
