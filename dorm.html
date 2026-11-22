@@ -125,15 +125,15 @@
                 <div id="pay-qr-box" class="bg-white p-2.5 rounded-xl border border-blue-100 inline-block"></div>
 
                 <div class="text-left bg-white p-3 rounded-xl border border-blue-200 space-y-2">
-                    <label class="block text-xs font-bold text-slate-700">📎 แนบรูปสลิปโอนเงิน (ระบบอ่าน QR สลิปอัตโนมัติ) *</label>
+                    <label class="block text-xs font-bold text-slate-700">📎 แนบรูปสลิปโอนเงิน (เช็ก QR สลิปซ้ำเบื้องต้น & ส่งให้เจ้าของหอตรวจ) *</label>
                     <input type="file" id="slip-input" accept="image/*" onchange="processSlipImage(event)" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-100 file:text-emerald-800 file:font-bold cursor-pointer">
                     <div id="slip-scan-status" class="hidden p-2.5 rounded-xl text-xs font-semibold"></div>
                     <img id="slip-preview" src="" class="hidden w-full max-h-36 object-contain rounded-lg border bg-slate-50">
                 </div>
             </div>
 
-            <button onclick="confirmBillPayment()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-xl font-bold text-sm shadow-md transition">
-                📤 ยืนยันการชำระเงิน & ส่งสลิป
+            <button id="btn-confirm-bill-pay" onclick="confirmBillPayment()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-xl font-bold text-sm shadow-md transition">
+                📤 ส่งสลิปรอเจ้าของหอพักตรวจสอบ
             </button>
         </div>
     </div>
@@ -167,7 +167,7 @@
 
         let configData = {
             shopLogo: '', dormName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID,
-            announcement: '', contacts: [], autoApproveSlip: true,
+            announcement: '', contacts: [], autoApproveSlip: false,
             requireRoomPin: true, maskTenantName: true
         };
         let rooms = [];
@@ -178,6 +178,7 @@
         let pendingPayBill = null;
         let slipBase64 = '';
         let slipTransRef = '';
+        let isDuplicateSlip = false;
 
         function formatDisplayTenantName(fullName) {
             const raw = String(fullName || '').trim();
@@ -256,7 +257,7 @@
                 accountName: cfg.accountName || SHOP_ID,
                 announcement: cfg.announcement || '',
                 contacts: Array.isArray(cfg.contacts) ? cfg.contacts : [],
-                autoApproveSlip: cfg.autoApproveSlip !== undefined ? cfg.autoApproveSlip : true,
+                autoApproveSlip: false,
                 requireRoomPin: cfg.requireRoomPin !== undefined ? cfg.requireRoomPin : true,
                 maskTenantName: cfg.maskTenantName !== undefined ? cfg.maskTenantName : true
             };
@@ -295,7 +296,6 @@
             const sel = document.getElementById('room-selector');
             let opts = `<option value="">-- กรุณาเลือกห้องพัก --</option>`;
             rooms.forEach(r => {
-                // แสดงเฉพาะเลขห้อง ไม่แสดงชื่อผู้เช่า (PDPA)
                 opts += `<option value="${r.roomNo}" ${String(r.roomNo) === String(selectedRoomNo) ? 'selected' : ''}>🚪 ห้อง ${r.roomNo}</option>`;
             });
             sel.innerHTML = opts;
@@ -327,7 +327,7 @@
             if (!roomObj) return false;
             if (!configData.requireRoomPin) return true;
             const pin = String(roomObj.roomPin || '').trim();
-            if (!pin) return true; // หากเจ้าของหอยังไม่ได้ตั้ง PIN ห้องนี้ ให้เปิดดูได้
+            if (!pin) return true;
             return Boolean(unlockedRooms[roomObj.roomNo]);
         }
 
@@ -414,7 +414,7 @@
 
             list.innerHTML = roomBills.map(b => {
                 let badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">⏳ ค้างชำระ</span>`;
-                if (b.status === 'pending_review') badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">🔍 ส่งสลิปแล้ว (รอตรวจสอบ)</span>`;
+                if (b.status === 'pending_review') badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">🔍 ส่งสลิปแล้ว (รอเจ้าของหอยืนยัน)</span>`;
                 else if (b.status === 'paid') badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">✅ ชำระเรียบร้อยแล้ว</span>`;
 
                 const displayTenant = formatDisplayTenantName(b.tenantName);
@@ -477,6 +477,7 @@
             pendingPayBill = bill;
             slipBase64 = '';
             slipTransRef = '';
+            isDuplicateSlip = false;
             document.getElementById('slip-input').value = '';
             document.getElementById('slip-preview').classList.add('hidden');
             document.getElementById('slip-scan-status').classList.add('hidden');
@@ -503,50 +504,58 @@
             stBox.className = 'p-2.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700';
             stBox.innerText = '🔍 กำลังสแกน QR บนสลิป...';
             stBox.classList.remove('hidden');
+            isDuplicateSlip = false;
 
             const r = new FileReader();
             r.onload = ev => {
                 const img = new Image();
                 img.onload = () => {
-                    const sc = document.createElement('canvas');
-                    const max = 1000;
-                    let sw = img.width, sh = img.height;
-                    if (sw > max || sh > max) {
-                        if (sw > sh) { sh = Math.round(sh * max / sw); sw = max; }
-                        else { sw = Math.round(sw * max / sh); sh = max; }
-                    }
-                    sc.width = sw; sc.height = sh;
-                    const ctx = sc.getContext('2d');
-                    ctx.drawImage(img, 0, 0, sw, sh);
-                    const qr = (typeof jsQR === 'function') ? jsQR(ctx.getImageData(0, 0, sw, sh).data, sw, sh) : null;
-
-                    const vc = document.createElement('canvas');
-                    const w = 500, h = Math.round((img.height / img.width) * 500) || 500;
-                    vc.width = w; vc.height = h;
-                    vc.getContext('2d').drawImage(img, 0, 0, w, h);
-                    slipBase64 = vc.toDataURL('image/jpeg', 0.75);
-                    const prev = document.getElementById('slip-preview');
-                    prev.src = slipBase64;
-                    prev.classList.remove('hidden');
-
-                    if (qr && qr.data) {
-                        const m = qr.data.match(/02\d{2}([A-Za-z0-9]{10,})/);
-                        slipTransRef = m ? m[1] : qr.data.slice(-16);
-                        const usedRefs = new Set(
-                            bills.filter(b => b.slipTransRef && b.key !== pendingPayBill.key).map(b => b.slipTransRef)
-                        );
-                        if (usedRefs.has(slipTransRef)) {
-                            stBox.className = 'p-2.5 rounded-xl text-xs font-bold bg-red-100 text-red-700';
-                            stBox.innerText = '❌ สลิปรหัสนี้ถูกใช้งานไปแล้ว กรุณาใช้สลิปใหม่';
-                            slipTransRef = '';
-                        } else {
-                            stBox.className = 'p-2.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800';
-                            stBox.innerText = `✅ ตรวจสอบ QR สลิปผ่าน (Ref: ${slipTransRef.slice(-8)})`;
+                    try {
+                        const sc = document.createElement('canvas');
+                        const max = 800;
+                        let sw = img.width, sh = img.height;
+                        if (sw > max || sh > max) {
+                            if (sw > sh) { sh = Math.round(sh * max / sw); sw = max; }
+                            else { sw = Math.round(sw * max / sh); sh = max; }
                         }
-                    } else {
+                        sc.width = sw; sc.height = sh;
+                        const ctx = sc.getContext('2d');
+                        ctx.drawImage(img, 0, 0, sw, sh);
+                        const qr = (typeof jsQR === 'function') ? jsQR(ctx.getImageData(0, 0, sw, sh).data, sw, sh) : null;
+
+                        const vc = document.createElement('canvas');
+                        const w = 500, h = Math.round((img.height / img.width) * 500) || 500;
+                        vc.width = w; vc.height = h;
+                        vc.getContext('2d').drawImage(img, 0, 0, w, h);
+                        slipBase64 = vc.toDataURL('image/jpeg', 0.72);
+                        const prev = document.getElementById('slip-preview');
+                        prev.src = slipBase64;
+                        prev.classList.remove('hidden');
+
+                        if (qr && qr.data) {
+                            const m = qr.data.match(/02\d{2}([A-Za-z0-9]{10,})/);
+                            slipTransRef = m ? m[1] : qr.data.slice(-16);
+                            const usedRefs = new Set(
+                                bills.filter(b => b.slipTransRef && b.key !== pendingPayBill.key).map(b => b.slipTransRef)
+                            );
+                            if (usedRefs.has(slipTransRef)) {
+                                isDuplicateSlip = true;
+                                stBox.className = 'p-2.5 rounded-xl text-xs font-bold bg-red-100 text-red-700';
+                                stBox.innerText = '❌ สลิปรหัสนี้ถูกใช้งานไปแล้ว กรุณาใช้สลิปใหม่';
+                                slipTransRef = '';
+                            } else {
+                                stBox.className = 'p-2.5 rounded-xl text-xs font-bold bg-blue-100 text-blue-900';
+                                stBox.innerText = `✅ พบ QR สลิป (Ref: ${slipTransRef.slice(-8)}) • ส่งแล้วรอเจ้าของหอยืนยัน`;
+                            }
+                        } else {
+                            slipTransRef = '';
+                            stBox.className = 'p-2.5 rounded-xl text-xs font-semibold bg-amber-100 text-amber-800';
+                            stBox.innerText = '⚠️ ไม่พบ QR บนสลิป ระบบจะส่งรูปให้เจ้าของหอพักตรวจสอบ';
+                        }
+                    } catch (err) {
                         slipTransRef = '';
                         stBox.className = 'p-2.5 rounded-xl text-xs font-semibold bg-amber-100 text-amber-800';
-                        stBox.innerText = '⚠️ ไม่พบ QR บนสลิป ระบบจะส่งให้เจ้าของหอพักตรวจสลิป';
+                        stBox.innerText = '⚠️ แนบรูปสลิปแล้ว รอเจ้าของหอพักตรวจสอบ';
                     }
                 };
                 img.src = ev.target.result;
@@ -556,25 +565,25 @@
 
         function confirmBillPayment() {
             if (!pendingPayBill) return;
+            if (isDuplicateSlip) return alert('สลิปรหัสนี้ถูกใช้งานไปแล้ว กรุณาใช้สลิปใหม่ครับ');
             const amt = Number(pendingPayBill.total || 0);
             if (amt > 0 && !slipBase64) return alert('กรุณาแนบรูปสลิปโอนเงินก่อนครับ');
 
-            const autoPaid = Boolean(configData.autoApproveSlip && slipTransRef);
-            const newStatus = autoPaid ? 'paid' : 'pending_review';
+            const btn = document.getElementById('btn-confirm-bill-pay');
+            btn.disabled = true;
 
             dormBaseRef.child(`bills/${pendingPayBill.key}`).update({
                 slipImage: slipBase64,
                 slipTransRef,
-                status: newStatus,
+                status: 'pending_review',
                 paidAt: Date.now()
             }).then(() => {
                 document.getElementById('pay-modal').classList.add('hidden');
-                alert(autoPaid
-                    ? 'ชำระค่าเช่าเรียบร้อยแล้วครับ! ระบบบันทึกสถานะ "ชำระแล้ว" อัตโนมัติ'
-                    : 'ส่งสลิปเรียบร้อยแล้วครับ รอเจ้าของหอพักตรวจสอบ'
-                );
+                alert('ส่งสลิปเรียบร้อยแล้วครับ! สถานะอยู่ระหว่างรอเจ้าของหอพักตรวจสอบและยืนยัน');
             }).catch(err => {
-                alert('บันทึกการชำระเงินไม่สำเร็จ: ' + err.message);
+                alert('ส่งสลิปไม่สำเร็จ: ' + err.message);
+            }).finally(() => {
+                btn.disabled = false;
             });
         }
     </script>
