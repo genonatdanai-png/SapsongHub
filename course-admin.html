@@ -365,7 +365,10 @@
             </div>
 
             <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3.5 text-center space-y-2.5">
-                <p class="text-xs font-bold text-indigo-950">สแกนจ่ายพร้อมเพย์ Sapsong HUB (<span id="crn-pp-display" class="font-mono">0855750995</span>)</p>
+                <div class="space-y-0.5">
+                    <p class="text-xs font-bold text-indigo-950">สแกนจ่ายพร้อมเพย์ (<span id="crn-pp-display" class="font-mono">-</span>)</p>
+                    <p class="text-[11px] text-indigo-900">ชื่อบัญชี: <strong id="crn-acc-display">Sapsong HUB</strong></p>
+                </div>
                 <div id="rn-qr-box" class="bg-white p-2 rounded-xl border inline-block"></div>
 
                 <div id="crn-slip-wrap" class="text-left bg-white p-3 rounded-xl border space-y-2">
@@ -410,8 +413,28 @@
         const SHOP_ID = (urlParams.get('shop') || 'demo-course').toLowerCase();
         const SUPER_ADMIN_EMAIL = 'admingeno@ss.com';
         const EXPECTED_EMAIL = `${SHOP_ID}@ss.com`;
-        const HUB_PROMPTPAY_ID = '0855750995';
         const MAX_DOC_BYTES = 1.6 * 1024 * 1024; // ~1.6 MB
+
+        let hubPaymentConfig = {
+            promptpayId: '0855750995',
+            accountName: 'Sapsong HUB'
+        };
+
+        // ดึงค่าพร้อมเพย์และชื่อบัญชีกลางจาก Super Admin แบบเรียลไทม์
+        db.ref('sapsong_hub_config').on('value', (snap) => {
+            const cfg = snap.val() || {};
+            hubPaymentConfig = {
+                promptpayId: cfg.promptpayId || '0855750995',
+                accountName: cfg.accountName || 'Sapsong HUB'
+            };
+            const ppEl = document.getElementById('crn-pp-display');
+            const accEl = document.getElementById('crn-acc-display');
+            if (ppEl) ppEl.innerText = hubPaymentConfig.promptpayId;
+            if (accEl) accEl.innerText = hubPaymentConfig.accountName;
+            if (!document.getElementById('course-renew-modal').classList.contains('hidden')) {
+                renderCourseRenewQR();
+            }
+        });
 
         document.getElementById('link-student').href = `course.html?shop=${SHOP_ID}`;
         document.getElementById('login-email').placeholder = EXPECTED_EMAIL;
@@ -923,7 +946,8 @@
             document.getElementById('crn-slip-prev').classList.add('hidden');
             document.getElementById('crn-slip-status').classList.add('hidden');
             document.getElementById('crn-inst-info').innerText = `${configData.instName || courseMeta.name || SHOP_ID} (${SHOP_ID})`;
-            document.getElementById('crn-pp-display').innerText = HUB_PROMPTPAY_ID;
+            document.getElementById('crn-pp-display').innerText = hubPaymentConfig.promptpayId;
+            document.getElementById('crn-acc-display').innerText = hubPaymentConfig.accountName;
             buildCourseRenewPresetOptions();
             onCourseRenewPresetChange();
             document.getElementById('course-renew-modal').classList.remove('hidden');
@@ -942,7 +966,7 @@
             box.innerHTML = '';
             if (amt > 0) {
                 slipWrap.classList.remove('hidden');
-                new QRCode(box, { text: buildPromptPayQR(HUB_PROMPTPAY_ID, amt), width: 150, height: 150 });
+                new QRCode(box, { text: buildPromptPayQR(hubPaymentConfig.promptpayId, amt), width: 150, height: 150 });
             } else {
                 slipWrap.classList.add('hidden');
                 box.innerHTML = `<p class="text-xs font-bold text-emerald-700 py-4 px-2">🎁 สิทธิ์พิเศษจาก Super Admin: ฟรี 3 เดือน (0 บาท — ไม่ต้องโอนเงิน)</p>`;
@@ -979,7 +1003,7 @@
                     } else {
                         crnSlipRef = '';
                         stBox.className = 'p-2 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800';
-                        stBox.innerText = '⚠️ ไม่พบ QR บนสลิป ระบบจะส่งให้ HUB ตรวจสลิป';
+                        stBox.innerText = '⚠️ แนบสลิปแล้ว (HUB จะตรวจสลิปให้)';
                     }
                 };
                 img.src = ev.target.result;
