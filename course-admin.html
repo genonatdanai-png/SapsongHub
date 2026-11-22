@@ -128,15 +128,15 @@
 
                     <!-- ฟิลด์สำหรับโหมด "ไฟล์เรียน / เอกสาร" -->
                     <div id="file-fields-box" class="hidden bg-amber-50/80 border border-amber-200 rounded-2xl p-4 space-y-3">
-                        <h3 class="text-sm font-bold text-amber-950">📄 ตั้งค่าลิงก์พรีวิว และ ไฟล์ฉบับเต็ม (ล็อกจนกว่าจะชำระเงิน)</h3>
+                        <h3 class="text-sm font-bold text-amber-950">📄 ตั้งค่าลิงก์พรีวิว และ ไฟล์ฉบับเต็ม (ล็อกใน Google Drive แบบส่วนตัวได้)</h3>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1">👁️ ลิงก์ไฟล์ตัวอย่าง (Preview — ดูฟรีได้ก่อนซื้อ)</label>
                                 <input type="text" id="inp-file-preview" placeholder="ลิงก์ Google Drive / PDF ตัวอย่าง 3-5 หน้าแรก" class="w-full px-3.5 py-2 border rounded-xl text-xs bg-white outline-none">
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">🔒 ลิงก์ไฟล์ฉบับเต็ม (Full File — เปิดได้เมื่อปลดล็อกแล้ว) *</label>
-                                <input type="text" id="inp-file-full" placeholder="ลิงก์ Google Drive / PDF ฉบับสมบูรณ์" class="w-full px-3.5 py-2 border rounded-xl text-xs bg-white outline-none">
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">🔒 ลิงก์หรือ File ID ของไฟล์ฉบับเต็ม (Google Drive Restricted) *</label>
+                                <input type="text" id="inp-file-full" placeholder="วางลิงก์ Google Drive หรือ File ID ของไฟล์ PDF" class="w-full px-3.5 py-2 border rounded-xl text-xs bg-white outline-none">
                             </div>
                         </div>
                     </div>
@@ -153,7 +153,7 @@
                 </div>
             </div>
 
-            <!-- 3. จัดการไอดีผู้เรียน & ปลดล็อกรายบุคคล -->
+            <!-- 3. จัดการไอดีผู้เรียน -->
             <div id="view-students" class="hidden space-y-4">
                 <div class="flex justify-between items-center">
                     <h2 class="text-lg font-bold text-slate-800">👥 รายชื่อไอดีผู้เรียนที่สมัครในระบบ</h2>
@@ -162,10 +162,10 @@
                 <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
 
-            <!-- 4. ตั้งค่าสถาบัน, โลโก้, พร้อมเพย์ & โหมดอ่านสลิป -->
+            <!-- 4. ตั้งค่าสถาบัน, โลโก้, พร้อมเพย์, ตัวกลางตรวจสิทธิ์ไฟล์ & โหมดอ่านสลิป -->
             <div id="view-settings" class="hidden">
                 <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border max-w-2xl space-y-4">
-                    <h2 class="text-base font-bold text-slate-800">⚙️ ตั้งค่าสถาบัน, โลโก้, พร้อมเพย์ & ระบบอ่านสลิป</h2>
+                    <h2 class="text-base font-bold text-slate-800">⚙️ ตั้งค่าสถาบัน, โลโก้, พร้อมเพย์ & ระบบตรวจสิทธิ์ไฟล์</h2>
 
                     <div class="flex items-center gap-4 bg-slate-50 p-3.5 rounded-2xl border">
                         <div class="w-16 h-16 rounded-2xl bg-white border flex items-center justify-center overflow-hidden shrink-0">
@@ -192,6 +192,11 @@
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบัญชีรับเงิน</label>
                         <input type="text" id="set-acc-name" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">🔗 ลิงก์ Google Apps Script Web App (/exec) สำหรับตรวจสิทธิ์ไฟล์ PDF</label>
+                        <input type="text" id="set-file-gate-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3.5 py-2 border rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
 
                     <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl">
@@ -242,13 +247,14 @@
         const SHOP_ID = (urlParams.get('shop') || 'demo-course').toLowerCase();
         const SUPER_ADMIN_EMAIL = 'admingeno@ss.com';
         const EXPECTED_EMAIL = `${SHOP_ID}@ss.com`;
+        const DEFAULT_FILE_GATE_URL = "https://script.google.com/macros/s/AKfycbzthLK8rDuJCT7ds7EyeybqGMnqLcp6pzFCUe7MPq2VloK6LzLjNzsRg1i1Jxm666uzgA/exec";
 
         document.getElementById('link-student').href = `course.html?shop=${SHOP_ID}`;
         document.getElementById('login-email').placeholder = EXPECTED_EMAIL;
 
         const defaultCover = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='180' viewBox='0 0 300 180'%3E%3Crect width='300' height='180' fill='%23eef2ff'/%3E%3Ccircle cx='150' cy='90' r='34' fill='%234f46e5'/%3E%3Cpolygon points='142,75 166,90 142,105' fill='%23ffffff'/%3E%3C/svg%3E";
 
-        let configData = { shopLogo: '', instName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, autoUnlockSlip: true };
+        let configData = { shopLogo: '', instName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, fileGateUrl: DEFAULT_FILE_GATE_URL, autoUnlockSlip: true };
         let courses = [];
         let orders = [];
         let students = {};
@@ -316,6 +322,7 @@
                     instName: cfg.instName || SHOP_ID,
                     promptpayId: cfg.promptpayId || '0855750995',
                     accountName: cfg.accountName || SHOP_ID,
+                    fileGateUrl: cfg.fileGateUrl || DEFAULT_FILE_GATE_URL,
                     autoUnlockSlip: cfg.autoUnlockSlip !== undefined ? cfg.autoUnlockSlip : true
                 };
                 courses = d.courses || [];
@@ -326,6 +333,7 @@
                 document.getElementById('set-inst-name').value = configData.instName;
                 document.getElementById('set-promptpay').value = configData.promptpayId;
                 document.getElementById('set-acc-name').value = configData.accountName;
+                document.getElementById('set-file-gate-url').value = configData.fileGateUrl;
                 document.getElementById('set-auto-unlock').checked = configData.autoUnlockSlip;
 
                 renderOrders();
@@ -367,6 +375,7 @@
             configData.instName = document.getElementById('set-inst-name').value.trim() || SHOP_ID;
             configData.promptpayId = document.getElementById('set-promptpay').value.trim();
             configData.accountName = document.getElementById('set-acc-name').value.trim() || configData.instName;
+            configData.fileGateUrl = document.getElementById('set-file-gate-url').value.trim() || DEFAULT_FILE_GATE_URL;
             configData.autoUnlockSlip = document.getElementById('set-auto-unlock').checked;
             db.ref(`courses_data/${SHOP_ID}/config`).set(configData).then(() => alert('บันทึกการตั้งค่าเรียบร้อยแล้วครับ'));
         }
@@ -435,7 +444,7 @@
             } else {
                 previewUrl = document.getElementById('inp-file-preview').value.trim();
                 fullFileUrl = document.getElementById('inp-file-full').value.trim();
-                if (!fullFileUrl) return alert('กรุณาวางลิงก์ไฟล์ฉบับเต็ม (Full File) ครับ');
+                if (!fullFileUrl) return alert('กรุณาวางลิงก์หรือ File ID ของไฟล์ฉบับเต็มครับ');
             }
 
             if (editId) {
@@ -526,7 +535,7 @@
                             </div>
                             <p class="text-xs text-slate-500 mt-1 line-clamp-2">${c.desc || '-'}</p>
                             <p class="text-[11px] font-semibold text-emerald-700 mt-2">
-                                ${isFile ? (c.previewUrl ? '👁️ มีพรีวิว + 🔒 ไฟล์เต็ม' : '🔒 ไฟล์ฉบับเต็ม') : `🎬 ${(c.lessons || []).length} ตอนเรียน`}
+                                ${isFile ? (c.previewUrl ? '👁️ มีพรีวิว + 🔒 ไฟล์เต็ม (ตรวจสิทธิ์อัตโนมัติ)' : '🔒 ไฟล์ฉบับเต็ม (ตรวจสิทธิ์อัตโนมัติ)') : `🎬 ${(c.lessons || []).length} ตอนเรียน`}
                             </p>
                         </div>
                     </div>
