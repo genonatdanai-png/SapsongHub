@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ใบเสร็จ & สถานะออเดอร์ - Sapsong HUB</title>
+    <title>ใบเสร็จรับเงิน - Sapsong HUB</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -14,7 +15,7 @@
         @media print {
             body { background: #ffffff !important; padding: 0 !important; }
             .no-print { display: none !important; }
-            .receipt-paper { box-shadow: none !important; border: none !important; max-width: 100% !important; }
+            .receipt-paper { box-shadow: none !important; border: none !important; max-width: 80mm !important; margin: 0 auto !important; }
         }
     </style>
 </head>
@@ -36,20 +37,26 @@
             <a id="back-shop-btn" href="index.html" class="bg-white hover:bg-gray-50 text-slate-700 border px-3.5 py-2 rounded-xl text-xs font-bold shadow-2xs transition">
                 ← กลับหน้าร้าน
             </a>
-            <button onclick="window.print()" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-2xs transition">
-                🖨️ พิมพ์ใบเสร็จ
-            </button>
+            <div class="flex gap-1.5">
+                <button onclick="downloadReceiptPNG()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-2xs transition">
+                    💾 บันทึกรูป
+                </button>
+                <button onclick="window.print()" class="bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-2xs transition">
+                    🖨️ พิมพ์
+                </button>
+            </div>
         </div>
 
-        <!-- ช่องค้นหา / เลือกบิล -->
-        <div class="bg-white p-3.5 rounded-2xl shadow-sm border space-y-2.5 no-print">
-            <label class="block text-xs font-bold text-slate-700">🔎 เลือกบิล หรือ พิมพ์รหัสบิล / ชื่อลูกค้า / โต๊ะ</label>
-            <div class="flex gap-2">
-                <input type="text" id="search-receipt" oninput="renderSelectedReceipt()" placeholder="เช่น ORD-1234 หรือ โต๊ะ 1" class="flex-1 px-3 py-2 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-500">
-                <select id="receipt-select" onchange="onSelectReceiptChange()" class="px-2.5 py-2 border rounded-xl text-xs font-bold bg-gray-50 outline-none max-w-[155px]">
-                    <option value="">-- บิลล่าสุด --</option>
-                </select>
-            </div>
+        <!-- แบนเนอร์แจ้งเตือนเมื่อเพิ่งสั่งซื้อสำเร็จ -->
+        <div id="new-order-banner" class="hidden bg-emerald-50 border border-emerald-300 text-emerald-900 px-4 py-3 rounded-2xl text-xs font-semibold flex items-center gap-2 no-print">
+            <span class="text-lg">✅</span>
+            <span>ส่งออเดอร์เรียบร้อยแล้ว! สามารถบันทึกรูปใบเสร็จนี้ไว้เป็นหลักฐานได้เลยครับ</span>
+        </div>
+
+        <!-- เลือกประวัติบิลที่เคยสั่งจากเครื่องนี้ -->
+        <div id="history-bar" class="hidden bg-white p-3.5 rounded-2xl shadow-sm border space-y-2 no-print">
+            <label class="block text-xs font-bold text-slate-700">🧾 ประวัติบิลที่สั่งจากอุปกรณ์นี้</label>
+            <select id="receipt-select" onchange="onSelectReceiptChange()" class="w-full px-3 py-2 border rounded-xl text-xs font-bold bg-gray-50 outline-none"></select>
         </div>
 
         <!-- กระดาษใบเสร็จ -->
@@ -61,18 +68,22 @@
                 <p id="rc-time" class="text-[11px] text-gray-400">-</p>
             </div>
 
-            <div class="bg-slate-50 rounded-2xl p-3 text-xs space-y-1 border">
-                <div class="flex justify-between">
-                    <span class="text-gray-500">ลูกค้า / โต๊ะ:</span>
-                    <strong id="rc-customer" class="text-slate-800">-</strong>
+            <div class="bg-slate-50 rounded-2xl p-3 text-xs space-y-1.5 border">
+                <div class="flex justify-between gap-2">
+                    <span class="text-gray-500 shrink-0">ลูกค้า / โต๊ะ:</span>
+                    <strong id="rc-customer" class="text-slate-800 text-right">-</strong>
                 </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-500">ประเภท:</span>
-                    <span id="rc-type" class="font-semibold text-slate-700">-</span>
+                <div class="flex justify-between gap-2">
+                    <span class="text-gray-500 shrink-0">ประเภท:</span>
+                    <span id="rc-type" class="font-semibold text-slate-700 text-right">-</span>
                 </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-500">การชำระเงิน:</span>
-                    <span id="rc-payment" class="font-semibold text-slate-700">-</span>
+                <div id="rc-address-row" class="hidden flex justify-between gap-2">
+                    <span class="text-gray-500 shrink-0">ที่อยู่จัดส่ง:</span>
+                    <span id="rc-address" class="font-medium text-slate-700 text-right">-</span>
+                </div>
+                <div class="flex justify-between gap-2">
+                    <span class="text-gray-500 shrink-0">การชำระเงิน:</span>
+                    <span id="rc-payment" class="font-semibold text-slate-700 text-right">-</span>
                 </div>
                 <div class="flex justify-between items-center pt-1">
                     <span class="text-gray-500">สถานะบิล:</span>
@@ -85,13 +96,14 @@
                     <span>รายการ</span>
                     <span>รวม</span>
                 </div>
-                <div id="rc-items-list" class="space-y-2 text-xs">
+                <div id="rc-items-list" class="space-y-2.5 text-xs">
                     <p class="text-center text-gray-400 py-6">กำลังโหลดรายการบิล...</p>
                 </div>
             </div>
 
-            <div id="rc-note-box" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-900">
-                <strong>หมายเหตุ:</strong> <span id="rc-note-text"></span>
+            <div id="rc-delivery-row" class="hidden border-t border-dashed pt-2.5 flex justify-between items-center text-xs text-slate-600">
+                <span>ค่าจัดส่ง</span>
+                <span id="rc-delivery-fee" class="font-bold">0 บาท</span>
             </div>
 
             <div class="border-t border-dashed pt-3 flex justify-between items-baseline">
@@ -99,8 +111,9 @@
                 <span id="rc-total" class="text-2xl font-bold text-amber-600">0 บาท</span>
             </div>
 
-            <div class="text-center pt-2 border-t border-dashed">
-                <p id="rc-footer" class="text-xs text-gray-500">ขอบคุณที่มาอุดหนุนครับ</p>
+            <div class="text-center pt-2 border-t border-dashed space-y-1">
+                <p id="rc-footer" class="text-xs text-gray-600 font-medium">ขอบคุณที่มาอุดหนุนครับ</p>
+                <p class="text-[10px] text-gray-400">Powered by Sapsong HUB</p>
             </div>
         </div>
 
@@ -123,16 +136,22 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const SHOP_ID = (urlParams.get('shop') || 'pangnawat').toLowerCase();
-        document.getElementById('back-shop-btn').href = `index.html?shop=${SHOP_ID}`;
+        const IS_NEW_ORDER = urlParams.get('new') === '1';
 
-        let paymentConfig = { shopName: SHOP_ID, shopLogo: '', receiptFooter: 'ขอบคุณที่มาอุดหนุนครับ' };
-        let ordersList = [];
-        let selectedKey = '';
+        document.getElementById('back-shop-btn').href = `index.html?shop=${SHOP_ID}`;
+        if (IS_NEW_ORDER) {
+            document.getElementById('new-order-banner').classList.remove('hidden');
+        }
+
+        let hubShopName = SHOP_ID === 'pangnawat' ? 'ปังหน้าวัด' : SHOP_ID;
+        let paymentConfig = { shopLogo: '', receiptFooter: 'ขอบคุณที่มาอุดหนุนครับ' };
+        let localOrders = [];
+        let selectedIndex = 0;
 
         function isExpired(d) {
             if (!d || d === '9999-12-31') return false;
-            const t = new Date(); t.setHours(0,0,0,0);
-            const e = new Date(d); e.setHours(0,0,0,0);
+            const t = new Date(); t.setHours(0, 0, 0, 0);
+            const e = new Date(d); e.setHours(0, 0, 0, 0);
             return t > e;
         }
 
@@ -142,103 +161,158 @@
             document.getElementById('sapsong-lock-overlay').classList.remove('hidden');
         }
 
-        db.ref('sapsong_hub_shops/' + SHOP_ID).on('value', snap => {
-            const m = snap.val();
-            if (!m) return showLock('ไม่พบร้านค้าในระบบ', `รหัส "${SHOP_ID}" ยังไม่ได้ลงทะเบียนใน Sapsong HUB`);
-            if (m.isSuspended) return showLock('ปิดให้บริการชั่วคราว', `ร้าน "${m.name}" งดให้บริการชั่วคราว`);
-            if (m.planKey !== 'lifetime' && isExpired(m.expireDate)) return showLock('ปิดให้บริการชั่วคราว', `ระบบของ "${m.name}" ปิดให้บริการชั่วคราว`);
-            document.getElementById('sapsong-lock-overlay').classList.add('hidden');
-        });
+        // โหลดประวัติออเดอร์ที่สั่งจากเครื่องนี้
+        function loadLocalReceipts() {
+            const historyKey = `my_orders_history_${SHOP_ID}`;
+            const lastKey = `my_last_order_data_${SHOP_ID}`;
+            let history = [];
+            try {
+                history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+                if (!Array.isArray(history)) history = [];
+            } catch (e) { history = []; }
 
-        db.ref(`shops_data/${SHOP_ID}`).on('value', snap => {
-            const d = snap.val() || {};
-            const cfg = d.paymentConfig || {};
-            paymentConfig = {
-                shopName: cfg.shopName || SHOP_ID,
-                shopLogo: cfg.shopLogo || '',
-                receiptFooter: cfg.receiptFooter || 'ขอบคุณที่มาอุดหนุนครับ'
-            };
+            try {
+                const lastRaw = localStorage.getItem(lastKey);
+                if (lastRaw) {
+                    const lastObj = JSON.parse(lastRaw);
+                    if (lastObj && lastObj.id && !history.some(h => h.id === lastObj.id && h.createdAt === lastObj.createdAt)) {
+                        history.unshift(lastObj);
+                        localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 20)));
+                    }
+                }
+            } catch (e) {}
 
-            document.getElementById('rc-shop-name').innerText = paymentConfig.shopName;
-            document.getElementById('rc-footer').innerText = paymentConfig.receiptFooter;
-            if (paymentConfig.shopLogo) {
-                const logo = document.getElementById('rc-logo');
-                logo.src = paymentConfig.shopLogo;
-                logo.classList.remove('hidden');
-            }
-
-            ordersList = Object.entries(d.orders || {}).map(([k, v]) => ({
-                ...v,
-                key: k,
-                items: Array.isArray(v.items) ? v.items : []
-            })).reverse();
-
-            populateReceiptSelect();
-            renderSelectedReceipt();
-        });
-
-        function populateReceiptSelect() {
+            localOrders = history;
+            const historyBar = document.getElementById('history-bar');
             const sel = document.getElementById('receipt-select');
-            const prevVal = selectedKey || sel.value;
-            sel.innerHTML = `<option value="">-- บิลล่าสุด --</option>` + ordersList.map(o =>
-                `<option value="${o.key}">${o.orderId || o.key.slice(-4)} (${o.customerName || 'ลูกค้า'})</option>`
-            ).join('');
-            if (prevVal && ordersList.some(o => o.key === prevVal)) {
-                sel.value = prevVal;
+            if (localOrders.length > 1) {
+                historyBar.classList.remove('hidden');
+                sel.innerHTML = localOrders.map((o, idx) =>
+                    `<option value="${idx}">${o.id} • ${o.date || ''} ${o.time || ''} (${Number(o.total || 0).toLocaleString()} บ.)</option>`
+                ).join('');
+            } else {
+                historyBar.classList.add('hidden');
             }
         }
 
         function onSelectReceiptChange() {
-            selectedKey = document.getElementById('receipt-select').value;
-            renderSelectedReceipt();
+            selectedIndex = Number(document.getElementById('receipt-select').value) || 0;
+            renderReceipt();
         }
 
-        function renderSelectedReceipt() {
-            const kw = document.getElementById('search-receipt').value.trim().toLowerCase();
-            let target = null;
+        // ตรวจสอบสถานะร้านจาก Sapsong HUB
+        db.ref('sapsong_hub_shops/' + SHOP_ID).on('value', snap => {
+            const m = snap.val();
+            if (!m && SHOP_ID === 'pangnawat') {
+                document.getElementById('sapsong-lock-overlay').classList.add('hidden');
+                hubShopName = 'ปังหน้าวัด';
+                renderReceipt();
+                return;
+            }
+            if (!m) return showLock('ไม่พบร้านค้าในระบบ', `รหัส "${SHOP_ID}" ยังไม่ได้ลงทะเบียนใน Sapsong HUB`);
+            if (m.isSuspended) return showLock('ปิดให้บริการชั่วคราว', `ร้าน "${m.name}" งดให้บริการชั่วคราว`);
+            if (m.planKey !== 'lifetime' && isExpired(m.expireDate)) return showLock('ปิดให้บริการชั่วคราว', `ระบบของ "${m.name}" ปิดให้บริการชั่วคราว`);
+            document.getElementById('sapsong-lock-overlay').classList.add('hidden');
+            hubShopName = m.name || hubShopName;
+            renderReceipt();
+        });
 
-            if (kw) {
-                target = ordersList.find(o =>
-                    String(o.orderId || '').toLowerCase().includes(kw) ||
-                    String(o.customerName || '').toLowerCase().includes(kw) ||
-                    String(o.key || '').toLowerCase().includes(kw)
-                );
-            } else if (selectedKey) {
-                target = ordersList.find(o => o.key === selectedKey);
+        // อ่านเฉพาะ paymentConfig ที่เปิดสิทธิ์ให้อ่านสาธารณะ
+        db.ref(`shops_data/${SHOP_ID}/paymentConfig`).on('value', snap => {
+            const cfg = snap.val() || {};
+            paymentConfig = {
+                shopLogo: cfg.shopLogo || '',
+                receiptFooter: cfg.receiptFooter || 'ขอบคุณที่มาอุดหนุนครับ'
+            };
+            renderReceipt();
+        });
+
+        function renderReceipt() {
+            const target = localOrders[selectedIndex] || null;
+            const shopTitle = (target && target.shopName) ? target.shopName : hubShopName;
+
+            document.title = `ใบเสร็จ - ${shopTitle}`;
+            document.getElementById('rc-shop-name').innerText = shopTitle;
+            document.getElementById('rc-footer').innerText = paymentConfig.receiptFooter || 'ขอบคุณที่มาอุดหนุนครับ';
+
+            const logo = document.getElementById('rc-logo');
+            if (paymentConfig.shopLogo) {
+                logo.src = paymentConfig.shopLogo;
+                logo.classList.remove('hidden');
             } else {
-                target = ordersList[0] || null;
+                logo.classList.add('hidden');
             }
 
             if (!target) {
-                document.getElementById('rc-order-id').innerText = 'ไม่พบข้อมูลบิล';
-                document.getElementById('rc-items-list').innerHTML = `<p class="text-center text-gray-400 py-6">ไม่พบบิลที่ค้นหา</p>`;
+                document.getElementById('rc-order-id').innerText = 'ยังไม่มีประวัติการสั่งซื้อในอุปกรณ์นี้';
+                document.getElementById('rc-time').innerText = '-';
+                document.getElementById('rc-customer').innerText = '-';
+                document.getElementById('rc-type').innerText = '-';
+                document.getElementById('rc-payment').innerText = '-';
+                document.getElementById('rc-status').innerText = '-';
+                document.getElementById('rc-items-list').innerHTML = `<p class="text-center text-gray-400 py-6">กรุณาสั่งอาหารจากหน้าร้านก่อนครับ</p>`;
                 document.getElementById('rc-total').innerText = '0 บาท';
                 return;
             }
 
-            selectedKey = target.key;
-            document.getElementById('rc-order-id').innerText = `เลขที่บิล: ${target.orderId || target.key.slice(-6)}`;
-            document.getElementById('rc-time').innerText = target.createdAt
-                ? new Date(target.createdAt).toLocaleString('th-TH')
-                : '-';
-            document.getElementById('rc-customer').innerText = target.customerName || 'ลูกค้า';
-            document.getElementById('rc-type').innerText = target.orderType || 'ทานที่ร้าน';
-            document.getElementById('rc-payment').innerText = target.paymentMethod || 'เงินสด';
+            document.getElementById('rc-order-id').innerText = `เลขที่บิล: ${target.id || '-'}`;
+            const dateTimeText = (target.date || target.time)
+                ? `${target.date || ''} ${target.time || ''}`.trim()
+                : (target.createdAt ? new Date(target.createdAt).toLocaleString('th-TH') : '-');
+            document.getElementById('rc-time').innerText = dateTimeText;
+
+            const customerLabel = target.tableName && !String(target.customerName || '').includes(target.tableName)
+                ? `${target.customerName} (${target.tableName})`
+                : (target.customerName || 'ลูกค้า');
+            document.getElementById('rc-customer').innerText = customerLabel;
+
+            const typeMap = {
+                dinein: `🍽️ ทานที่ร้าน${target.tableName ? ' (' + target.tableName + ')' : ''}`,
+                delivery: '🛵 ขับรถไปส่ง',
+                takeaway: '🛍️ รับหน้าร้าน'
+            };
+            document.getElementById('rc-type').innerText = typeMap[target.orderType] || target.orderType || 'รับหน้าร้าน';
+
+            const addrRow = document.getElementById('rc-address-row');
+            if (target.orderType === 'delivery' && target.address) {
+                document.getElementById('rc-address').innerText = target.address;
+                addrRow.classList.remove('hidden');
+            } else {
+                addrRow.classList.add('hidden');
+            }
+
+            const payMap = {
+                transfer: 'โอนเงินพร้อมเพย์ (แนบสลิปแล้ว)',
+                cash: target.orderType === 'dinein' ? 'ชำระที่โต๊ะ / เคาน์เตอร์' : 'จ่ายเงินหน้าร้าน'
+            };
+            document.getElementById('rc-payment').innerText = payMap[target.paymentMethod] || target.paymentMethod || 'เงินสด';
 
             const stEl = document.getElementById('rc-status');
-            const stText = target.status || 'รอรับออเดอร์';
-            stEl.innerText = stText;
-            stEl.className = stText === 'เสร็จแล้ว'
+            const statusMap = {
+                pending: 'ส่งออเดอร์เข้าร้านแล้ว',
+                cooking: 'กำลังทำอาหาร',
+                done: 'เสร็จสมบูรณ์'
+            };
+            stEl.innerText = statusMap[target.status] || target.status || 'ส่งออเดอร์แล้ว';
+            stEl.className = target.status === 'done'
                 ? 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700'
                 : 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800';
 
             const itemsHtml = (target.items || []).map(it => {
                 const qty = Number(it.qty || 1);
                 const price = Number(it.price || 0);
+                const toppingsHtml = (Array.isArray(it.toppings) && it.toppings.length > 0)
+                    ? `<p class="text-[11px] text-emerald-700">+ ${it.toppings.map(t => t.name).join(', ')}</p>`
+                    : '';
+                const noteHtml = it.note
+                    ? `<p class="text-[11px] text-amber-700">* ${it.note}</p>`
+                    : '';
                 return `
                 <div class="flex justify-between items-start gap-2">
                     <div>
                         <p class="font-bold text-slate-800">${it.name}</p>
+                        ${toppingsHtml}
+                        ${noteHtml}
                         <p class="text-[11px] text-gray-400">${price.toLocaleString()} x ${qty}</p>
                     </div>
                     <span class="font-bold text-slate-800 shrink-0">${(price * qty).toLocaleString()} บ.</span>
@@ -248,18 +322,33 @@
 
             document.getElementById('rc-items-list').innerHTML = itemsHtml || `<p class="text-center text-gray-400 py-4">ไม่มีรายการสินค้า</p>`;
 
-            const noteBox = document.getElementById('rc-note-box');
-            if (target.note) {
-                document.getElementById('rc-note-text').innerText = target.note;
-                noteBox.classList.remove('hidden');
+            const delivRow = document.getElementById('rc-delivery-row');
+            const delivFee = Number(target.deliveryFee || 0);
+            if (delivFee > 0) {
+                document.getElementById('rc-delivery-fee').innerText = `${delivFee.toLocaleString()} บาท`;
+                delivRow.classList.remove('hidden');
             } else {
-                noteBox.classList.add('hidden');
+                delivRow.classList.add('hidden');
             }
 
-            const calcTotal = (target.items || []).reduce((s, it) => s + (Number(it.price || 0) * Number(it.qty || 1)), 0);
+            const calcTotal = (target.items || []).reduce((s, it) => s + (Number(it.price || 0) * Number(it.qty || 1)), 0) + delivFee;
             const totalVal = target.total !== undefined ? Number(target.total) : calcTotal;
             document.getElementById('rc-total').innerText = `${totalVal.toLocaleString()} บาท`;
         }
+
+        function downloadReceiptPNG() {
+            const area = document.getElementById('print-area');
+            const target = localOrders[selectedIndex];
+            html2canvas(area, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Receipt-${target && target.id ? target.id : SHOP_ID}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        loadLocalReceipts();
+        renderReceipt();
     </script>
 </body>
 </html>
