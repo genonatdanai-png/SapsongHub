@@ -444,7 +444,8 @@
   let dataLoaded = false;
 
   auth.onAuthStateChanged((user) => {
-    if (user && user.email.toLowerCase() === SUPER_ADMIN_EMAIL) {
+    const email = user && user.email ? user.email.toLowerCase() : '';
+    if (user && email === SUPER_ADMIN_EMAIL) {
       document.getElementById('authWrapper').style.display = 'none';
       document.getElementById('mainDashboard').style.display = 'block';
       document.getElementById('loggedAdminEmail').innerText = `🛡️ ยืนยันสิทธิ์แล้ว: ${user.email}`;
@@ -845,6 +846,12 @@
     showToast('ปฏิเสธคำขอต่ออายุแล้ว');
   }
 
+  function deleteRenewalRequest(reqKey) {
+    if (!confirm('ยืนยันการลบรายการคำขอนี้?')) return;
+    db.ref(`sapsong_hub_renewals/${reqKey}`).remove();
+    showToast('ลบรายการคำขอแล้ว');
+  }
+
   function renderRenewals() {
     const box = document.getElementById('renewalsContainer');
     if (renewals.length === 0) {
@@ -889,7 +896,11 @@
               <button class="btn btn-sm btn-success" style="flex:1;" onclick="approveRenewalRequest('${r.key}')">✅ อนุมัติ & บวกวัน</button>
               <button class="btn btn-sm btn-danger" onclick="rejectRenewalRequest('${r.key}')">❌ ปฏิเสธ</button>
             </div>
-          ` : ''}
+          ` : `
+            <div style="display:flex; justify-content:flex-end; margin-top:auto;">
+              <button class="btn btn-sm btn-outline" onclick="deleteRenewalRequest('${r.key}')">🗑️ ลบรายการ</button>
+            </div>
+          `}
         </div>
       `;
     }).join('');
