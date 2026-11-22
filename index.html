@@ -62,7 +62,7 @@
     </div>
 
     <main id="main-store-content" class="max-w-5xl mx-auto p-3 sm:p-4 mt-2 grid grid-cols-1 md:grid-cols-3 gap-5">
-        
+
         <!-- แถบประกาศ / โปรโมชันหน้าร้าน -->
         <div id="announcement-bar" class="hidden md:col-span-3 bg-white border-l-4 theme-border-main p-3.5 rounded-2xl shadow-sm flex items-center gap-2.5 text-sm font-semibold text-slate-800">
             <span class="text-lg shrink-0">📢</span>
@@ -94,7 +94,7 @@
             <div class="bg-white border-l-4 theme-border-main p-3.5 rounded-xl shadow-sm text-gray-700 text-xs sm:text-sm">
                 เลือกเมนูที่ต้องการ แล้วสามารถติ๊กเพิ่มท็อปปิ้งหรือพิมพ์หมายเหตุในตะกร้าได้เลยครับ
             </div>
-            
+
             <!-- แถบเลือกหมวดหมู่สินค้า -->
             <div>
                 <h2 class="text-lg font-bold text-gray-800 mb-2.5">หมวดหมู่สินค้า</h2>
@@ -110,7 +110,7 @@
                 <span>ตะกร้าของคุณ</span>
                 <span id="cart-count-badge" class="text-xs bg-slate-100 text-slate-800 px-2.5 py-1 rounded-full font-bold">0 รายการ</span>
             </h2>
-            
+
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">รูปแบบการรับสินค้า</label>
                 <select id="order-type" onchange="handleOrderTypeChange()" class="w-full px-3 py-2.5 border rounded-xl text-sm outline-none bg-white font-semibold">
@@ -173,7 +173,7 @@
                 <div class="bg-white p-3 rounded-xl border border-blue-200 space-y-2">
                     <label class="block text-xs font-bold text-slate-700">📎 แนบรูปสลิปการโอนเงิน <span class="text-red-500">*</span></label>
                     <input type="file" id="slip-file-input" accept="image/*" onchange="handleSlipUpload(event)" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200 cursor-pointer">
-                    
+
                     <div id="slip-preview-container" class="hidden relative mt-2">
                         <img id="slip-preview-img" src="" alt="สลิปโอนเงิน" class="w-full max-h-40 object-contain rounded-lg border bg-gray-50">
                         <button type="button" onclick="clearSlip()" class="mt-1 text-xs text-red-600 underline font-semibold">ลบรูปสลิป / เลือกใหม่</button>
@@ -249,6 +249,14 @@
             '#2563eb': '#eff6ff', '#7c3aed': '#f5f3ff', '#db2777': '#fdf2f8', '#0f172a': '#f8fafc'
         };
 
+        const CHANNEL_STYLE = {
+            phone: { icon: '📞', cls: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
+            facebook: { icon: '📘', cls: 'bg-blue-600 hover:bg-blue-700 text-white' },
+            line: { icon: '💬', cls: 'bg-green-500 hover:bg-green-600 text-white' },
+            ig: { icon: '📸', cls: 'bg-pink-600 hover:bg-pink-700 text-white' },
+            other: { icon: '🔗', cls: 'bg-slate-800 hover:bg-slate-900 text-white' }
+        };
+
         const placeholderToast = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23fef3c7'/%3E%3Crect x='45' y='55' width='110' height='95' rx='20' fill='%23d97706'/%3E%3Crect x='55' y='65' width='90' height='75' rx='14' fill='%23fcd34d'/%3E%3C/svg%3E";
         const placeholderDrink = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23ffedd5'/%3E%3Cpolygon points='65,60 135,60 125,155 75,155' fill='%23ea580c'/%3E%3Crect x='60' y='52' width='80' height='10' rx='5' fill='%239a3412'/%3E%3C/svg%3E";
 
@@ -278,6 +286,8 @@
             contactPhone: '',
             contactFb: '',
             contactLine: '',
+            contactIg: '',
+            contacts: [],
             receiptFooter: ''
         };
         let isStoreOpen = true;
@@ -349,6 +359,44 @@
             }
         }
 
+        function buildContactHref(channel, rawVal) {
+            const val = String(rawVal || '').trim();
+            if (!val) return '';
+            if (channel === 'phone') {
+                return `tel:${val.replace(/[^0-9+]/g, '')}`;
+            }
+            if (val.startsWith('http://') || val.startsWith('https://')) {
+                return val;
+            }
+            const cleanHandle = val.replace(/^@+/, '');
+            if (channel === 'line') {
+                return `https://line.me/ti/p/~${cleanHandle}`;
+            }
+            if (channel === 'ig') {
+                return `https://instagram.com/${cleanHandle}`;
+            }
+            if (channel === 'facebook') {
+                return `https://facebook.com/${cleanHandle}`;
+            }
+            return `https://${val}`;
+        }
+
+        function resolveContactList(cfg) {
+            if (Array.isArray(cfg.contacts) && cfg.contacts.length > 0) {
+                return cfg.contacts.filter(c => c && c.value);
+            }
+            const list = [];
+            const phone = cfg.contactPhone || (SHOP_ID === 'pangnawat' ? '085-5750995' : '');
+            const fb = cfg.contactFb || (SHOP_ID === 'pangnawat' ? 'https://www.facebook.com/araya.thapsong' : '');
+            const line = cfg.contactLine || '';
+            const ig = cfg.contactIg || '';
+            if (phone) list.push({ channel: 'phone', label: `โทร ${phone}`, value: phone });
+            if (fb) list.push({ channel: 'facebook', label: 'Facebook', value: fb });
+            if (line) list.push({ channel: 'line', label: 'LINE', value: line });
+            if (ig) list.push({ channel: 'ig', label: 'IG', value: ig });
+            return list;
+        }
+
         function applyStoreCustomization() {
             const color = paymentConfig.themeColor || '#d97706';
             document.documentElement.style.setProperty('--theme-color', color);
@@ -372,24 +420,16 @@
 
             const contactBar = document.getElementById('dynamic-contact-bar');
             const wrap = document.getElementById('contact-buttons-wrap');
-            let btns = [];
+            const items = resolveContactList(paymentConfig);
 
-            const phone = paymentConfig.contactPhone || (SHOP_ID === 'pangnawat' ? '085-5750995' : '');
-            const fb = paymentConfig.contactFb || (SHOP_ID === 'pangnawat' ? 'https://www.facebook.com/araya.thapsong' : '');
-            const line = paymentConfig.contactLine || '';
-
-            if (phone) {
-                const cleanTel = phone.replace(/[^0-9+]/g, '');
-                btns.push(`<a href="tel:${cleanTel}" class="flex-1 sm:flex-none text-center bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm">📞 โทร ${phone}</a>`);
-            }
-            if (fb) {
-                const fbUrl = fb.startsWith('http') ? fb : 'https://' + fb;
-                btns.push(`<a href="${fbUrl}" target="_blank" rel="noopener noreferrer" class="flex-1 sm:flex-none text-center bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm">📘 Facebook</a>`);
-            }
-            if (line) {
-                const lineUrl = line.startsWith('http') ? line : `https://line.me/ti/p/~${line.replace('@', '')}`;
-                btns.push(`<a href="${lineUrl}" target="_blank" rel="noopener noreferrer" class="flex-1 sm:flex-none text-center bg-green-500 hover:bg-green-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm">💬 LINE</a>`);
-            }
+            const btns = items.map(item => {
+                const ch = item.channel || 'other';
+                const href = buildContactHref(ch, item.value);
+                const st = CHANNEL_STYLE[ch] || CHANNEL_STYLE.other;
+                const text = item.label || item.value;
+                const targetAttr = ch === 'phone' ? '' : `target="_blank" rel="noopener noreferrer"`;
+                return `<a href="${href}" ${targetAttr} class="flex-1 sm:flex-none text-center ${st.cls} active:scale-95 text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm">${st.icon} ${text}</a>`;
+            });
 
             if (btns.length > 0) {
                 wrap.innerHTML = btns.join('');
@@ -434,6 +474,8 @@
                 contactPhone: cfg.contactPhone || '',
                 contactFb: cfg.contactFb || '',
                 contactLine: cfg.contactLine || '',
+                contactIg: cfg.contactIg || '',
+                contacts: Array.isArray(cfg.contacts) ? cfg.contacts : [],
                 receiptFooter: cfg.receiptFooter || ''
             };
             applyStoreCustomization();
@@ -740,7 +782,7 @@
             const menuList = document.getElementById('menu-list');
             let availableMenus = menus.filter(m => m.available);
             if (selectedCategory !== 'ALL') availableMenus = availableMenus.filter(m => (m.category || 'ทั่วไป') === selectedCategory);
-            
+
             if (availableMenus.length === 0) {
                 menuList.innerHTML = `<p class="text-gray-400 col-span-2 text-center py-8 text-sm">ไม่มีสินค้าพร้อมขายในหมวดหมู่นี้</p>`;
                 return;
@@ -767,7 +809,7 @@
                         </div>
                     </div>
                     <div class="px-3 pb-3">
-                        ${!blocked 
+                        ${!blocked
                             ? `<button onclick="handleMenuClick(${m.id})" class="w-full bg-slate-100 hover:opacity-90 theme-text-main py-2 rounded-xl text-xs sm:text-sm font-bold active:scale-95 transition border border-slate-200">${btnLabel}</button>`
                             : `<button disabled class="w-full bg-gray-200 text-gray-400 py-2 rounded-xl text-xs font-semibold cursor-not-allowed">ปิดรับออเดอร์</button>`
                         }
@@ -926,8 +968,19 @@
                     </div>
                 `;
             }).join('');
-            
+
             updatePaymentQR();
+        }
+
+        function saveLocalOrderHistory(orderObj) {
+            try {
+                localStorage.setItem('my_last_order_data_' + SHOP_ID, JSON.stringify(orderObj));
+                const histKey = 'my_orders_history_' + SHOP_ID;
+                let hist = JSON.parse(localStorage.getItem(histKey) || '[]');
+                if (!Array.isArray(hist)) hist = [];
+                hist.unshift(orderObj);
+                localStorage.setItem(histKey, JSON.stringify(hist.slice(0, 20)));
+            } catch (e) {}
         }
 
         function checkout() {
@@ -1003,7 +1056,7 @@
 
             shopBaseRef.child('orders').push(newOrder)
                 .then(() => {
-                    localStorage.setItem('my_last_order_data_' + SHOP_ID, JSON.stringify(newOrder));
+                    saveLocalOrderHistory(newOrder);
                     cart = [];
                     clearSlip();
                     window.location.href = `receipt.html?shop=${SHOP_ID}&new=1`;
