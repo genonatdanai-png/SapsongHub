@@ -243,7 +243,7 @@
       </div>
       <div class="form-group" style="margin-bottom:0;">
         <label>จำนวนเงิน (บาท)</label>
-        <input type="number" id="led-amount" placeholder="500">
+        <input type="number" id="led-amount" placeholder="299">
       </div>
       <button class="btn btn-primary" onclick="addManualLedger()">+ บันทึกรายการ</button>
     </div>
@@ -292,20 +292,21 @@
       <label>รูปแบบแพ็กเกจ</label>
       <select id="inp-plan" onchange="toggleAddCustomFields()">
         <option value="custom">กำหนดวันและราคาเอง (Custom)</option>
-        <option value="30d">30 วัน — 500 บาท</option>
-        <option value="90d">90 วัน — 1,400 บาท</option>
-        <option value="365d">365 วัน — 5,000 บาท</option>
+        <option value="trial90d">ทดลอง 3 เดือน (90 วัน) — 0 บาท</option>
+        <option value="30d">1 เดือน (30 วัน) — 299 บาท</option>
+        <option value="180d">6 เดือน (180 วัน) — 1,649 บาท</option>
+        <option value="365d">1 ปี (365 วัน) — 2,990 บาท</option>
         <option value="lifetime">♾️ ฟรีตลอดชีพ (VIP) — 0 บาท</option>
       </select>
     </div>
     <div id="add-custom-box" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
       <div class="form-group">
         <label>จำนวนวันใช้งาน</label>
-        <input type="number" id="inp-custom-days" value="30" min="1">
+        <input type="number" id="inp-custom-days" value="90" min="1">
       </div>
       <div class="form-group">
         <label>ราคาแพ็กเกจ (บาท)</label>
-        <input type="number" id="inp-custom-price" value="500" min="0">
+        <input type="number" id="inp-custom-price" value="0" min="0">
       </div>
     </div>
     <div class="modal-footer">
@@ -380,13 +381,14 @@
       </div>
       <div class="form-group">
         <label>ราคาต่ออายุ (บาท)</label>
-        <input type="number" id="renew-price" value="500" min="0">
+        <input type="number" id="renew-price" value="299" min="0">
       </div>
     </div>
     <div class="preset-row">
-      <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(30, 500)">30 วัน / 500 ฿</button>
-      <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(90, 1400)">90 วัน / 1,400 ฿</button>
-      <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(365, 5000)">365 วัน / 5,000 ฿</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(90, 0)">ทดลอง 3 เดือน / 0 ฿</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(30, 299)">1 เดือน / 299 ฿</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(180, 1649)">6 เดือน / 1,649 ฿</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(365, 2990)">1 ปี / 2,990 ฿</button>
     </div>
     <div class="form-group" style="margin-top:12px;">
       <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
@@ -656,9 +658,10 @@
     const box = document.getElementById('add-custom-box');
     if (val === 'lifetime') { box.style.display = 'none'; return; }
     box.style.display = 'grid';
-    if (val === '30d') { daysInp.value = 30; priceInp.value = 500; }
-    else if (val === '90d') { daysInp.value = 90; priceInp.value = 1400; }
-    else if (val === '365d') { daysInp.value = 365; priceInp.value = 5000; }
+    if (val === 'trial90d') { daysInp.value = 90; priceInp.value = 0; }
+    else if (val === '30d') { daysInp.value = 30; priceInp.value = 299; }
+    else if (val === '180d') { daysInp.value = 180; priceInp.value = 1649; }
+    else if (val === '365d') { daysInp.value = 365; priceInp.value = 2990; }
   }
 
   function openAddModal() { toggleAddCustomFields(); document.getElementById('addModal').style.display = 'flex'; }
@@ -684,6 +687,15 @@
       expireDate: isLifetime ? '9999-12-31' : addDaysToDate(new Date(), days),
       isSuspended: false
     });
+
+    if (!isLifetime && price > 0) {
+      db.ref('sapsong_hub_ledger').push({
+        type: 'income',
+        desc: `สมัครแพ็กเกจ ${name} (${id}) ${days} วัน`,
+        amount: price,
+        createdAt: Date.now()
+      });
+    }
 
     saveShops();
     closeModal('addModal');
@@ -743,7 +755,7 @@
     const shop = shops[index];
     document.getElementById('renewShopTitle').innerText = `รายการ: ${shop.name} (${shop.id})`;
     document.getElementById('renew-days').value = Number(shop.days) > 0 ? Number(shop.days) : 30;
-    document.getElementById('renew-price').value = Number(shop.price) >= 0 ? Number(shop.price) : 500;
+    document.getElementById('renew-price').value = Number(shop.price) >= 0 ? Number(shop.price) : 299;
     document.getElementById('renewModal').style.display = 'flex';
   }
 
