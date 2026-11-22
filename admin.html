@@ -3,652 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>หลังบ้านผู้สอน - Sapsong HUB</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <style>
-        body { font-family: 'Prompt', sans-serif; }
-    </style>
-</head>
-<body class="bg-slate-100 min-h-screen pb-16">
-
-    <!-- Lock Gate -->
-    <div id="sapsong-lock-overlay" class="hidden fixed inset-0 bg-slate-950 text-white z-[99999] flex flex-col justify-center items-center text-center p-6">
-        <div class="bg-slate-900 border border-slate-700 max-w-md w-full p-8 rounded-3xl shadow-2xl space-y-4">
-            <div class="text-5xl">🔒</div>
-            <h2 id="sapsong-lock-title" class="text-xl font-bold text-white">บัญชีถูกระงับการใช้งาน</h2>
-            <p id="sapsong-lock-msg" class="text-sm text-slate-400">แพ็กเกจหมดอายุหรือถูกระงับชั่วคราว</p>
-        </div>
-    </div>
-
-    <!-- หน้าล็อกอินผู้สอน -->
-    <div id="login-screen" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-sm w-full p-7 shadow-2xl space-y-5 text-center">
-            <div id="login-logo-box" class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-3xl mx-auto overflow-hidden">🎓</div>
-            <div>
-                <h1 id="login-title" class="text-xl font-bold text-slate-800">หลังบ้านผู้สอน</h1>
-                <p class="text-xs text-slate-500 mt-1">เข้าสู่ระบบด้วยบัญชีผู้สอนที่ลงทะเบียนไว้</p>
-            </div>
-            <form onsubmit="handleLogin(event)" class="space-y-3 text-left">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">อีเมลผู้สอน</label>
-                    <input type="email" id="login-email" required class="w-full px-3.5 py-2.5 border-2 rounded-xl text-sm font-semibold outline-none focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสผ่าน</label>
-                    <input type="password" id="login-pass" required placeholder="••••••••" class="w-full px-3.5 py-2.5 border-2 rounded-xl text-sm font-semibold outline-none focus:border-indigo-500">
-                </div>
-                <p id="login-err" class="hidden text-xs text-red-600 font-semibold text-center"></p>
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm shadow-md">เข้าสู่ระบบผู้สอน</button>
-            </form>
-            <a id="link-student" href="course.html" class="inline-block text-xs text-slate-400 hover:text-slate-600 underline">← ไปยังหน้าเรียนสำหรับนักเรียน</a>
-        </div>
-    </div>
-
-    <!-- เนื้อหาหลังบ้านผู้สอน -->
-    <div id="main-app" class="hidden">
-        <nav class="bg-indigo-950 text-white shadow-md p-3.5 sticky top-0 z-40">
-            <div class="max-w-6xl mx-auto flex flex-wrap justify-between items-center gap-3">
-                <div class="flex items-center gap-2.5">
-                    <img id="nav-logo" src="" class="hidden w-10 h-10 rounded-xl object-cover bg-white border">
-                    <div>
-                        <h1 id="nav-title" class="font-bold text-base sm:text-lg">หลังบ้านคอร์สเรียน</h1>
-                        <p id="nav-expire" class="text-[11px] text-indigo-300"></p>
-                    </div>
-                </div>
-                <div class="flex flex-wrap gap-1.5">
-                    <button onclick="switchTab('orders')" id="tab-orders" class="px-3 py-2 bg-amber-400 text-slate-950 font-bold rounded-xl text-xs">รายการซื้อ & สลิป</button>
-                    <button onclick="switchTab('courses')" id="tab-courses" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">วิชาเรียน & ไฟล์ขาย</button>
-                    <button onclick="switchTab('students')" id="tab-students" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">ไอดีผู้เรียน</button>
-                    <button onclick="switchTab('settings')" id="tab-settings" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">ตั้งค่า & ระบบอ่านสลิป</button>
-                    <button onclick="logout()" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold">ออก</button>
-                </div>
-            </div>
-        </nav>
-
-        <main class="max-w-6xl mx-auto p-3 sm:p-5 space-y-5">
-
-            <!-- 1. รายการสั่งซื้อ & ตรวจสลิป -->
-            <div id="view-orders" class="space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-slate-800">💳 ประวัติการชำระเงิน & ปลดล็อกวิชา/ไฟล์</h2>
-                    <span id="order-count" class="text-xs font-bold bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">0 รายการ</span>
-                </div>
-                <div id="orders-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-            </div>
-
-            <!-- 2. จัดการวิชาเรียน (วิดีโอ) และ ไฟล์เรียน (PDF/เอกสาร) -->
-            <div id="view-courses" class="hidden space-y-5">
-                <div class="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
-                    <h2 id="course-form-title" class="text-base font-bold text-slate-800">➕ เพิ่มวิชาเรียน หรือ ไฟล์เรียนสำหรับขาย</h2>
-                    <input type="hidden" id="edit-course-id" value="">
-
-                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">ประเภทสินค้า</label>
-                            <select id="inp-item-type" onchange="toggleItemTypeFields()" class="w-full px-3 py-2 border rounded-xl text-sm font-bold bg-indigo-50 text-indigo-950 outline-none">
-                                <option value="video">🎬 คอร์สวิดีโอออนไลน์</option>
-                                <option value="file">📄 ไฟล์เรียน / ชีทสรุป (PDF/Drive)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อวิชา / ชื่อไฟล์ *</label>
-                            <input type="text" id="inp-course-title" placeholder="เช่น สรุปสูตรคณิต ม.ปลาย" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">ราคาขาย (บาท)</label>
-                            <input type="number" id="inp-course-price" placeholder="290" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">รูปปก</label>
-                            <input type="file" id="inp-course-cover" accept="image/*" onchange="handleCoverUpload(event)" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-800 file:font-bold">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">รายละเอียด</label>
-                        <textarea id="inp-course-desc" rows="2" placeholder="รายละเอียดเนื้อหา จำนวนหน้า หรือสิ่งที่ผู้เรียนจะได้รับ..." class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none"></textarea>
-                    </div>
-
-                    <!-- ฟิลด์สำหรับโหมด "คอร์สวิดีโอ" -->
-                    <div id="video-fields-box" class="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-4 space-y-3">
-                        <div class="flex justify-between items-center flex-wrap gap-2">
-                            <div>
-                                <h3 class="text-sm font-bold text-indigo-950">🎬 รายการตอนเรียน (ติ๊ก "ตัวอย่างฟรี" เพื่อให้ดูพรีวิวก่อนซื้อได้)</h3>
-                                <p class="text-[11px] text-indigo-700">วางลิงก์ YouTube Unlisted หรือลิงก์วิดีโอ/Google Drive</p>
-                            </div>
-                            <button type="button" onclick="addLessonRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold">+ เพิ่มตอนเรียน</button>
-                        </div>
-                        <div id="lessons-container" class="space-y-2.5"></div>
-                    </div>
-
-                    <!-- ฟิลด์สำหรับโหมด "ไฟล์เรียน / เอกสาร" -->
-                    <div id="file-fields-box" class="hidden bg-amber-50/80 border border-amber-200 rounded-2xl p-4 space-y-3">
-                        <h3 class="text-sm font-bold text-amber-950">📄 ตั้งค่าลิงก์พรีวิว และ ไฟล์ฉบับเต็ม (ล็อกใน Google Drive แบบส่วนตัวได้)</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">👁️ ลิงก์ไฟล์ตัวอย่าง (Preview — ดูฟรีได้ก่อนซื้อ)</label>
-                                <input type="text" id="inp-file-preview" placeholder="ลิงก์ Google Drive / PDF ตัวอย่าง 3-5 หน้าแรก" class="w-full px-3.5 py-2 border rounded-xl text-xs bg-white outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">🔒 ลิงก์หรือ File ID ของไฟล์ฉบับเต็ม (Google Drive Restricted) *</label>
-                                <input type="text" id="inp-file-full" placeholder="วางลิงก์ Google Drive หรือ File ID ของไฟล์ PDF" class="w-full px-3.5 py-2 border rounded-xl text-xs bg-white outline-none">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-2">
-                        <button onclick="saveCourseForm()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm">💾 บันทึกข้อมูล</button>
-                        <button onclick="resetCourseForm()" id="btn-cancel-course" class="hidden bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold">ยกเลิกแก้ไข</button>
-                    </div>
-                </div>
-
-                <div class="bg-white p-5 rounded-2xl shadow-sm border space-y-3">
-                    <h3 class="text-base font-bold text-slate-800">📚 รายการวิชา & ไฟล์ทั้งหมด (<span id="course-count">0</span> รายการ)</h3>
-                    <div id="courses-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-                </div>
-            </div>
-
-            <!-- 3. จัดการไอดีผู้เรียน -->
-            <div id="view-students" class="hidden space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-slate-800">👥 รายชื่อไอดีผู้เรียนที่สมัครในระบบ</h2>
-                    <span id="student-count" class="text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">0 บัญชี</span>
-                </div>
-                <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-            </div>
-
-            <!-- 4. ตั้งค่าสถาบัน, โลโก้, พร้อมเพย์, ตัวกลางตรวจสิทธิ์ไฟล์ & โหมดอ่านสลิป -->
-            <div id="view-settings" class="hidden">
-                <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border max-w-2xl space-y-4">
-                    <h2 class="text-base font-bold text-slate-800">⚙️ ตั้งค่าสถาบัน, โลโก้, พร้อมเพย์ & ระบบตรวจสิทธิ์ไฟล์</h2>
-
-                    <div class="flex items-center gap-4 bg-slate-50 p-3.5 rounded-2xl border">
-                        <div class="w-16 h-16 rounded-2xl bg-white border flex items-center justify-center overflow-hidden shrink-0">
-                            <img id="set-logo-preview" src="" class="hidden w-full h-full object-cover">
-                            <span id="set-logo-ph" class="text-[11px] text-slate-400">โลโก้</span>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="block text-xs font-bold text-slate-700">อัปโหลดโลโก้สถาบัน / ผู้สอน</label>
-                            <input type="file" accept="image/*" onchange="handleLogoUpload(event)" class="text-xs text-slate-500">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อสถาบัน / ชื่อผู้สอน</label>
-                            <input type="text" id="set-inst-name" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์พร้อมเพย์ / เลขบัตร</label>
-                            <input type="text" id="set-promptpay" class="w-full px-3.5 py-2 border rounded-xl text-sm font-mono font-bold outline-none">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบัญชีรับเงิน</label>
-                        <input type="text" id="set-acc-name" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">🔗 ลิงก์ Google Apps Script Web App (/exec) สำหรับตรวจสิทธิ์ไฟล์ PDF</label>
-                        <input type="text" id="set-file-gate-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3.5 py-2 border rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-
-                    <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl">
-                        <label class="flex items-start gap-2.5 cursor-pointer">
-                            <input type="checkbox" id="set-auto-unlock" class="w-4 h-4 mt-0.5 accent-emerald-600">
-                            <div>
-                                <span class="text-sm font-bold text-emerald-950">🤖 เปิดระบบอ่าน QR สลิปและปลดล็อกวิชา/ไฟล์อัตโนมัติ</span>
-                                <p class="text-xs text-emerald-700 mt-0.5">เมื่อระบบสแกนพบ QR Code สลิปธนาคารที่ไม่ซ้ำในระบบ จะปลดล็อกให้ผู้เรียนทันทีโดยไม่ต้องรอแอดมินกดอนุมัติ</p>
-                            </div>
-                        </label>
-                    </div>
-
-                    <button onclick="saveCourseSettings()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm">
-                        💾 บันทึกการตั้งค่า
-                    </button>
-                </div>
-            </div>
-
-        </main>
-    </div>
-
-    <!-- Modal ดูสลิป -->
-    <div id="slip-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div onclick="event.stopPropagation()" class="bg-white rounded-2xl max-w-md w-full p-4 space-y-3">
-            <h3 class="font-bold text-sm text-slate-800">หลักฐานสลิปโอนเงิน</h3>
-            <img id="slip-modal-img" src="" class="w-full max-h-[70vh] object-contain rounded-xl bg-slate-100">
-            <button onclick="document.getElementById('slip-modal').classList.add('hidden')" class="w-full bg-slate-800 text-white py-2 rounded-xl text-xs font-bold">ปิด</button>
-        </div>
-    </div>
-
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAhtvwqgAP-5-ITl1TIopqIWEFrZ2deQtg",
-            authDomain: "sapsonghub.firebaseapp.com",
-            databaseURL: "https://sapsonghub-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "sapsonghub",
-            storageBucket: "sapsonghub.firebasestorage.app",
-            messagingSenderId: "448301529212",
-            appId: "1:448301529212:web:7366898a663dcbd556f1f9",
-            measurementId: "G-0SPWW0K3WD"
-        };
-
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.database();
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const SHOP_ID = (urlParams.get('shop') || 'demo-course').toLowerCase();
-        const SUPER_ADMIN_EMAIL = 'admingeno@ss.com';
-        const EXPECTED_EMAIL = ${SHOP_ID}@ss.com;
-        const DEFAULT_FILE_GATE_URL = "https://script.google.com/macros/s/AKfycbzthLK8rDuJCT7ds7EyeybqGMnqLcp6pzFCUe7MPq2VloK6LzLjNzsRg1i1Jxm666uzgA/exec";
-
-        document.getElementById('link-student').href = course.html?shop=${SHOP_ID};
-        document.getElementById('login-email').placeholder = EXPECTED_EMAIL;
-
-        const defaultCover = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='180' viewBox='0 0 300 180'%3E%3Crect width='300' height='180' fill='%23eef2ff'/%3E%3Ccircle cx='150' cy='90' r='34' fill='%234f46e5'/%3E%3Cpolygon points='142,75 166,90 142,105' fill='%23ffffff'/%3E%3C/svg%3E";
-
-        let configData = { shopLogo: '', instName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, fileGateUrl: DEFAULT_FILE_GATE_URL, autoUnlockSlip: true };
-        let courses = [];
-        let orders = [];
-        let students = {};
-        let currentCoverBase64 = '';
-        let listenersStarted = false;
-
-        auth.onAuthStateChanged(user => {
-            if (user && (user.email.toLowerCase() === SUPER_ADMIN_EMAIL || user.email.toLowerCase() === EXPECTED_EMAIL)) {
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('main-app').classList.remove('hidden');
-                startListeners();
-            } else {
-                if (user) auth.signOut();
-                document.getElementById('login-screen').classList.remove('hidden');
-                document.getElementById('main-app').classList.add('hidden');
-            }
-        });
-
-        function handleLogin(e) {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value.trim();
-            const pass = document.getElementById('login-pass').value;
-            const err = document.getElementById('login-err');
-            err.classList.add('hidden');
-            auth.signInWithEmailAndPassword(email, pass).catch(() => {
-                err.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
-                err.classList.remove('hidden');
-            });
-        }
-
-        function logout() { auth.signOut(); }
-
-        function isExpired(d) {
-            if (!d || d === '9999-12-31') return false;
-            const t = new Date(); t.setHours(0,0,0,0);
-            const e = new Date(d); e.setHours(0,0,0,0);
-            return t > e;
-        }
-
-        function showLock(title, msg) {
-            document.getElementById('sapsong-lock-title').innerText = title;
-            document.getElementById('sapsong-lock-msg').innerText = msg;
-            document.getElementById('sapsong-lock-overlay').classList.remove('hidden');
-        }
-
-        function startListeners() {
-            if (listenersStarted) return;
-            listenersStarted = true;
-
-            db.ref('sapsong_hub_shops/' + SHOP_ID).on('value', snap => {
-                const m = snap.val();
-                if (!m) return showLock('ไม่พบข้อมูลในระบบ', รหัส "${SHOP_ID}" ยังไม่ได้ลงทะเบียนใน Sapsong HUB);
-                if (m.isSuspended) return showLock('บัญชีถูกระงับชั่วคราว', ระบบของ "${m.name}" ถูกระงับการใช้งาน);
-                if (m.planKey !== 'lifetime' && isExpired(m.expireDate)) return showLock('แพ็กเกจหมดอายุแล้ว', หมดอายุเมื่อวันที่ ${m.expireDate});
-                document.getElementById('sapsong-lock-overlay').classList.add('hidden');
-                document.getElementById('nav-title').innerText = ${m.name} (ผู้สอน);
-                document.getElementById('nav-expire').innerText = m.planKey === 'lifetime' ? '♾️ ตลอดชีพ' : หมดอายุ: ${m.expireDate};
-            });
-
-            db.ref(courses_data/${SHOP_ID}).on('value', snap => {
-                const d = snap.val() || {};
-                const cfg = d.config || {};
-                configData = {
-                    shopLogo: cfg.shopLogo || '',
-                    instName: cfg.instName || SHOP_ID,
-                    promptpayId: cfg.promptpayId || '0855750995',
-                    accountName: cfg.accountName || SHOP_ID,
-                    fileGateUrl: cfg.fileGateUrl || DEFAULT_FILE_GATE_URL,
-                    autoUnlockSlip: cfg.autoUnlockSlip !== undefined ? cfg.autoUnlockSlip : true
-                };
-                courses = d.courses || [];
-                students = d.students || {};
-                orders = Object.entries(d.orders || {}).map(([k, v]) => ({ ...v, key: k })).reverse();
-
-                applyLogoUI(configData.shopLogo);
-                document.getElementById('set-inst-name').value = configData.instName;
-                document.getElementById('set-promptpay').value = configData.promptpayId;
-                document.getElementById('set-acc-name').value = configData.accountName;
-                document.getElementById('set-file-gate-url').value = configData.fileGateUrl;
-                document.getElementById('set-auto-unlock').checked = configData.autoUnlockSlip;
-
-                renderOrders();
-                renderCourses();
-                renderStudents();
-            });
-        }
-
-        function applyLogoUI(b64) {
-            const lBox = document.getElementById('login-logo-box');
-            const nLogo = document.getElementById('nav-logo');
-            const sPrev = document.getElementById('set-logo-preview');
-            const sPh = document.getElementById('set-logo-ph');
-            if (b64) {
-                lBox.innerHTML = <img src="${b64}" class="w-full h-full object-cover">;
-                nLogo.src = b64; nLogo.classList.remove('hidden');
-                sPrev.src = b64; sPrev.classList.remove('hidden'); sPh.classList.add('hidden');
-            }
-        }
-
-        function handleLogoUpload(e) {
-            const f = e.target.files[0]; if (!f) return;
-            const r = new FileReader();
-            r.onload = ev => {
-                const img = new Image();
-                img.onload = () => {
-                    const c = document.createElement('canvas');
-                    c.width = 200; c.height = 200;
-                    c.getContext('2d').drawImage(img, 0, 0, 200, 200);
-                    configData.shopLogo = c.toDataURL('image/jpeg', 0.85);
-                    applyLogoUI(configData.shopLogo);
-                };
-                img.src = ev.target.result;
-            };
-            r.readAsDataURL(f);
-        }
-
-        function saveCourseSettings() {
-            configData.instName = document.getElementById('set-inst-name').value.trim() || SHOP_ID;
-            configData.promptpayId = document.getElementById('set-promptpay').value.trim();
-            configData.accountName = document.getElementById('set-acc-name').value.trim() || configData.instName;
-            configData.fileGateUrl = document.getElementById('set-file-gate-url').value.trim() || DEFAULT_FILE_GATE_URL;
-            configData.autoUnlockSlip = document.getElementById('set-auto-unlock').checked;
-            db.ref(courses_data/${SHOP_ID}/config).set(configData).then(() => alert('บันทึกการตั้งค่าเรียบร้อยแล้วครับ'));
-        }
-
-        function toggleItemTypeFields() {
-            const type = document.getElementById('inp-item-type').value;
-            document.getElementById('video-fields-box').classList.toggle('hidden', type !== 'video');
-            document.getElementById('file-fields-box').classList.toggle('hidden', type !== 'file');
-        }
-
-        function handleCoverUpload(e) {
-            const f = e.target.files[0]; if (!f) return;
-            const r = new FileReader();
-            r.onload = ev => {
-                const img = new Image();
-                img.onload = () => {
-                    const c = document.createElement('canvas');
-                    const w = 480, h = Math.round((img.height / img.width) * 480) || 270;
-                    c.width = w; c.height = h;
-                    c.getContext('2d').drawImage(img, 0, 0, w, h);
-                    currentCoverBase64 = c.toDataURL('image/jpeg', 0.8);
-                };
-                img.src = ev.target.result;
-            };
-            r.readAsDataURL(f);
-        }
-
-        function addLessonRow(title = '', videoUrl = '', docUrl = '', isFree = false) {
-            const div = document.createElement('div');
-            div.className = 'lesson-row bg-white p-3 rounded-xl border border-indigo-100 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center';
-            div.innerHTML = `
-                <input type="text" class="ls-title sm:col-span-3 px-2.5 py-1.5 border rounded-lg text-xs" placeholder="ชื่อตอน เช่น บทที่ 1" value="${title}">
-                <input type="text" class="ls-video sm:col-span-4 px-2.5 py-1.5 border rounded-lg text-xs" placeholder="ลิงก์ YouTube / วิดีโอ" value="${videoUrl}">
-                <input type="text" class="ls-doc sm:col-span-3 px-2.5 py-1.5 border rounded-lg text-xs" placeholder="ลิงก์ชีท/PDF (ไม่บังคับ)" value="${docUrl}">
-                <div class="sm:col-span-2 flex items-center justify-between gap-1">
-                    <label class="text-[11px] flex items-center gap-1 cursor-pointer"><input type="checkbox" class="ls-free" ${isFree ? 'checked' : ''}> ตัวอย่างฟรี</label>
-                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-500 text-xs font-bold px-1.5">✕</button>
-                </div>
-            `;
-            document.getElementById('lessons-container').appendChild(div);
-        }
-
-        function saveCourseForm() {
-            const editId = document.getElementById('edit-course-id').value;
-            const type = document.getElementById('inp-item-type').value;
-            const title = document.getElementById('inp-course-title').value.trim();
-            const price = Number(document.getElementById('inp-course-price').value) || 0;
-            const desc = document.getElementById('inp-course-desc').value.trim();
-
-            if (!title) return alert('กรุณากรอกชื่อวิชาหรือชื่อไฟล์ครับ');
-
-            let lessons = [];
-            let previewUrl = '';
-            let fullFileUrl = '';
-
-            if (type === 'video') {
-                document.querySelectorAll('#lessons-container .lesson-row').forEach((row, idx) => {
-                    const lTitle = row.querySelector('.ls-title').value.trim();
-                    const lVideo = row.querySelector('.ls-video').value.trim();
-                    const lDoc = row.querySelector('.ls-doc').value.trim();
-                    const lFree = row.querySelector('.ls-free').checked;
-                    if (lTitle && lVideo) {
-                        lessons.push({ id: ls-${idx+1}, title: lTitle, videoUrl: lVideo, docUrl: lDoc, isFree: lFree });
-                    }
-                });
-            } else {
-                previewUrl = document.getElementById('inp-file-preview').value.trim();
-                fullFileUrl = document.getElementById('inp-file-full').value.trim();
-                if (!fullFileUrl) return alert('กรุณาวางลิงก์หรือ File ID ของไฟล์ฉบับเต็มครับ');
-            }
-
-            if (editId) {
-                const idx = courses.findIndex(c => String(c.id) === String(editId));
-                if (idx !== -1) {
-                    courses[idx] = {
-                        ...courses[idx],
-                        type, title, price, desc, lessons, previewUrl, fullFileUrl,
-                        cover: currentCoverBase64 || courses[idx].cover || defaultCover
-                    };
-                }
-            } else {
-                courses.push({
-                    id: 'itm-' + Date.now(),
-                    type, title, price, desc, lessons, previewUrl, fullFileUrl,
-                    cover: currentCoverBase64 || defaultCover
-                });
-            }
-
-            db.ref(courses_data/${SHOP_ID}/courses).set(courses).then(() => {
-                resetCourseForm();
-                alert('บันทึกข้อมูลเรียบร้อยแล้วครับ');
-            });
-        }
-
-        function editCourse(id) {
-            const c = courses.find(x => String(x.id) === String(id));
-            if (!c) return;
-            document.getElementById('edit-course-id').value = c.id;
-            document.getElementById('inp-item-type').value = c.type || 'video';
-            toggleItemTypeFields();
-            document.getElementById('inp-course-title').value = c.title;
-            document.getElementById('inp-course-price').value = c.price;
-            document.getElementById('inp-course-desc').value = c.desc || '';
-            document.getElementById('inp-file-preview').value = c.previewUrl || '';
-            document.getElementById('inp-file-full').value = c.fullFileUrl || '';
-            currentCoverBase64 = c.cover || '';
-            document.getElementById('lessons-container').innerHTML = '';
-            (c.lessons || []).forEach(ls => addLessonRow(ls.title, ls.videoUrl, ls.docUrl, ls.isFree));
-            document.getElementById('course-form-title').innerText = '✏️ แก้ไขข้อมูลวิชา / ไฟล์เรียน';
-            document.getElementById('btn-cancel-course').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function resetCourseForm() {
-            document.getElementById('edit-course-id').value = '';
-            document.getElementById('inp-item-type').value = 'video';
-            toggleItemTypeFields();
-            document.getElementById('inp-course-title').value = '';
-            document.getElementById('inp-course-price').value = '';
-            document.getElementById('inp-course-desc').value = '';
-            document.getElementById('inp-course-cover').value = '';
-            document.getElementById('inp-file-preview').value = '';
-            document.getElementById('inp-file-full').value = '';
-            document.getElementById('lessons-container').innerHTML = '';
-            currentCoverBase64 = '';
-            document.getElementById('course-form-title').innerText = '➕ เพิ่มวิชาเรียน หรือ ไฟล์เรียนสำหรับขาย';
-            document.getElementById('btn-cancel-course').classList.add('hidden');
-        }
-
-        function deleteCourse(id) {
-            if (confirm('ยืนยันการลบรายการนี้?')) {
-                courses = courses.filter(c => String(c.id) !== String(id));
-                db.ref(courses_data/${SHOP_ID}/courses).set(courses);
-            }
-        }
-
-        function renderCourses() {
-            document.getElementById('course-count').innerText = courses.length;
-            const el = document.getElementById('courses-list');
-            if (courses.length === 0) {
-                el.innerHTML = <p class="text-slate-400 text-sm col-span-2 text-center py-6">ยังไม่มีวิชาเรียนหรือไฟล์เรียนในระบบ</p>;
-                return;
-            }
-            el.innerHTML = courses.map(c => {
-                const isFile = c.type === 'file';
-                return `
-                <div class="border rounded-2xl overflow-hidden bg-slate-50 flex flex-col justify-between">
-                    <div>
-                        <img src="${c.cover || defaultCover}" class="w-full h-36 object-cover bg-indigo-100">
-                        <div class="p-3.5">
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isFile ? 'bg-amber-100 text-amber-900' : 'bg-indigo-100 text-indigo-800'}">
-                                ${isFile ? '📄 ไฟล์เรียน / ชีท' : '🎬 คอร์สวิดีโอ'}
-                            </span>
-                            <div class="flex justify-between items-start gap-2 mt-1">
-                                <h4 class="font-bold text-slate-800 text-sm">${c.title}</h4>
-                                <span class="font-bold text-indigo-700 text-sm shrink-0">${c.price === 0 ? 'ฟรี' : c.price + ' บ.'}</span>
-                            </div>
-                            <p class="text-xs text-slate-500 mt-1 line-clamp-2">${c.desc || '-'}</p>
-                            <p class="text-[11px] font-semibold text-emerald-700 mt-2">
-                                ${isFile ? (c.previewUrl ? '👁️ มีพรีวิว + 🔒 ไฟล์เต็ม (ตรวจสิทธิ์อัตโนมัติ)' : '🔒 ไฟล์ฉบับเต็ม (ตรวจสิทธิ์อัตโนมัติ)') : `🎬 ${(c.lessons || []).length} ตอนเรียน`}
-                            </p>
-                        </div>
-                    </div>
-                    <div class="px-3.5 pb-3.5 flex gap-2">
-                        <button onclick="editCourse('${c.id}')" class="flex-1 bg-indigo-100 text-indigo-800 py-1.5 rounded-xl text-xs font-bold">แก้ไข</button>
-                        <button onclick="deleteCourse('${c.id}')" class="bg-red-100 text-red-700 px-3 py-1.5 rounded-xl text-xs font-bold">ลบ</button>
-                    </div>
-                </div>
-            `}).join('');
-        }
-
-        function approveOrderAndUnlock(orderKey, username, itemId, approve) {
-            const newStatus = approve ? 'approved' : 'pending';
-            db.ref(courses_data/${SHOP_ID}/orders/${orderKey}/status).set(newStatus);
-            if (username && itemId) {
-                const unlockRef = db.ref(courses_data/${SHOP_ID}/students/${username}/unlockedItems/${itemId});
-                if (approve) unlockRef.set(true);
-                else unlockRef.remove();
-            }
-        }
-
-        function openSlip(imgSrc) {
-            document.getElementById('slip-modal-img').src = imgSrc;
-            document.getElementById('slip-modal').classList.remove('hidden');
-        }
-
-        function renderOrders() {
-            document.getElementById('order-count').innerText = ${orders.length} รายการ;
-            const el = document.getElementById('orders-list');
-            if (orders.length === 0) {
-                el.innerHTML = <p class="text-slate-400 text-sm col-span-2 text-center py-8 bg-white rounded-2xl">ยังไม่มีรายการสั่งซื้อ</p>;
-                return;
-            }
-            el.innerHTML = orders.map(o => {
-                const isApproved = o.status === 'approved';
-                const qrBadge = o.slipTransRef
-                    ? <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono font-bold">🤖 อ่าน QR สลิปผ่าน (${o.slipTransRef.slice(-6)})</span>
-                    : <span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">⚠️ ไม่พบ QR สลิป</span>;
-
-                return `
-                <div class="bg-white p-4 rounded-2xl shadow-sm border space-y-2.5">
-                    <div class="flex justify-between items-start gap-2">
-                        <div>
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                <span class="font-bold text-xs font-mono text-slate-500">${o.orderId || ''}</span>
-                                ${qrBadge}
-                            </div>
-                            <h4 class="font-bold text-slate-800 text-sm mt-1">${o.studentName} (@${o.username})</h4>
-                            <p class="text-xs text-indigo-700 font-semibold">${o.itemType === 'file' ? '📄' : '🎬'} ${o.itemTitle} • ${o.amount} บาท</p>
-                        </div>
-                        <span class="px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${isApproved ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">
-                            ${isApproved ? '🔓 ปลดล็อกแล้ว' : '⏳ รอตรวจสอบ'}
-                        </span>
-                    </div>
-                    <div class="flex gap-2 pt-2 border-t">
-                        ${o.slipImage ? <button onclick="openSlip('${o.slipImage}')" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold">🔍 ดูสลิป</button> : ''}
-                        ${!isApproved
-                            ? <button onclick="approveOrderAndUnlock('${o.key}', '${o.username}', '${o.itemId}', true)" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded-xl text-xs font-bold">✅ ยืนยัน & ปลดล็อกให้ผู้เรียน</button>
-                            : <button onclick="approveOrderAndUnlock('${o.key}', '${o.username}', '${o.itemId}', false)" class="bg-red-100 text-red-700 px-3 py-1.5 rounded-xl text-xs font-bold">ล็อกกลับ</button>
-                        }
-                    </div>
-                </div>
-            `}).join('');
-        }
-
-        function renderStudents() {
-            const stArr = Object.values(students || {});
-            document.getElementById('student-count').innerText = ${stArr.length} บัญชี;
-            const el = document.getElementById('students-list');
-            if (stArr.length === 0) {
-                el.innerHTML = <p class="text-slate-400 text-sm col-span-2 text-center py-8 bg-white rounded-2xl">ยังไม่มีผู้เรียนสมัครไอดี</p>;
-                return;
-            }
-            el.innerHTML = stArr.map(st => {
-                const unlockedIds = Object.keys(st.unlockedItems || {});
-                const unlockedNames = unlockedIds.map(id => {
-                    const found = courses.find(c => String(c.id) === String(id));
-                    return found ? found.title : id;
-                });
-                return `
-                <div class="bg-white p-4 rounded-2xl shadow-sm border space-y-2">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h4 class="font-bold text-slate-800 text-sm">${st.fullName} <span class="font-mono text-xs text-indigo-600">(@${st.username})</span></h4>
-                            <p class="text-xs text-slate-500">โทร: ${st.phone} • รหัสผ่าน: <span class="font-mono font-bold text-slate-700">${st.password}</span></p>
-                        </div>
-                        <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full">ปลดล็อก ${unlockedIds.length} รายการ</span>
-                    </div>
-                    <div class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl">
-                        ${unlockedNames.length > 0 ? '🔓 ' + unlockedNames.join(', ') : 'ยังไม่ได้ปลดล็อกวิชาหรือไฟล์ใดๆ'}
-                    </div>
-                </div>
-            `}).join('');
-        }
-
-        function switchTab(tab) {
-            ['orders', 'courses', 'students', 'settings'].forEach(t => {
-                document.getElementById('view-' + t).classList.add('hidden');
-                document.getElementById('tab-' + t).className = "px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs";
-            });
-            document.getElementById('view-' + tab).classList.remove('hidden');
-            document.getElementById('tab-' + tab).className = "px-3 py-2 bg-amber-400 text-slate-950 font-bold rounded-xl text-xs";
-        }
-    </script>
-</body>
-</html>
-คุณส่ง
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ระบบหลังบ้านร้านค้า - Sapsong HUB (Secure)</title>
+    <title>ระบบหลังบ้านร้านค้า - Sapsong HUB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -739,7 +94,7 @@
                             <p id="admin-expire-badge" class="text-[11px] text-amber-300 font-medium"></p>
                         </div>
                     </div>
-                    
+
                     <div class="flex items-center gap-1.5 shrink-0">
                         <button onclick="toggleStoreStatus()" id="btn-store-status" class="text-xs bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1.5 rounded-lg font-bold transition shadow">
                             🟢 เปิดร้าน
@@ -830,7 +185,7 @@
                 <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                     <h2 id="form-menu-title" class="text-base sm:text-lg font-bold text-slate-800">เพิ่มเมนูสินค้าใหม่</h2>
                     <input type="hidden" id="edit-menu-id" value="">
-                    
+
                     <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
                         <div class="sm:col-span-4 flex items-center gap-3">
                             <div class="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 overflow-hidden shrink-0 flex items-center justify-center">
@@ -1191,9 +546,9 @@
         const urlParams = new URLSearchParams(window.location.search);
         const SHOP_ID = (urlParams.get('shop') || 'pangnawat').toLowerCase();
         const SUPER_ADMIN_EMAIL = 'admingeno@ss.com';
-        const EXPECTED_SHOP_EMAIL = ${SHOP_ID}@ss.com;
+        const EXPECTED_SHOP_EMAIL = `${SHOP_ID}@ss.com`;
 
-        document.getElementById('back-to-store-link').href = index.html?shop=${SHOP_ID};
+        document.getElementById('back-to-store-link').href = `index.html?shop=${SHOP_ID}`;
         document.getElementById('admin-email-input').placeholder = EXPECTED_SHOP_EMAIL;
         document.getElementById('info-shop-id').innerText = SHOP_ID;
 
@@ -1253,7 +608,7 @@
         let currentQRTableName = '';
         let currentReceiptOrderId = '';
 
-        db.ref(shops_data/${SHOP_ID}/paymentConfig/shopLogo).once('value', snap => {
+        db.ref(`shops_data/${SHOP_ID}/paymentConfig/shopLogo`).once('value', snap => {
             const logo = snap.val();
             if (logo) applyLogoToAdminUI(logo);
         });
@@ -1262,7 +617,7 @@
             const loginWrap = document.getElementById('admin-login-logo-wrap');
             const navLogo = document.getElementById('admin-nav-logo');
             if (logoBase64) {
-                loginWrap.innerHTML = <img src="${logoBase64}" class="w-full h-full object-cover">;
+                loginWrap.innerHTML = `<img src="${logoBase64}" class="w-full h-full object-cover">`;
                 navLogo.src = logoBase64;
                 navLogo.classList.remove('hidden');
             } else {
@@ -1272,14 +627,14 @@
         }
 
         function saveShopKey(key, data) {
-            db.ref(shops_data/${SHOP_ID}/${key}).set(data)
+            db.ref(`shops_data/${SHOP_ID}/${key}`).set(data)
                 .catch(err => alert('ไม่มีสิทธิ์บันทึกข้อมูล: ' + err.message));
         }
 
         auth.onAuthStateChanged((user) => {
             const errorMsg = document.getElementById('login-error-msg');
             if (user) {
-                const email = user.email.toLowerCase();
+                const email = user.email ? user.email.toLowerCase() : '';
                 if (email === SUPER_ADMIN_EMAIL || email === EXPECTED_SHOP_EMAIL) {
                     errorMsg.classList.add('hidden');
                     document.getElementById('admin-login-screen').classList.add('hidden');
@@ -1288,7 +643,7 @@
                     startRealtimeListeners();
                 } else {
                     auth.signOut();
-                    errorMsg.innerText = ❌ บัญชี ${user.email} ไม่มีสิทธิ์เข้าถึงร้าน "${SHOP_ID}";
+                    errorMsg.innerText = `❌ บัญชี ${user.email} ไม่มีสิทธิ์เข้าถึงร้าน "${SHOP_ID}"`;
                     errorMsg.classList.remove('hidden');
                     document.getElementById('admin-login-screen').classList.remove('hidden');
                     document.getElementById('admin-main-app').classList.add('hidden');
@@ -1354,31 +709,47 @@
                     return;
                 }
                 if (!shopMeta) {
-                    showLockOverlay('ไม่พบข้อมูลร้านค้าในระบบ', รหัสร้าน "${SHOP_ID}" ยังไม่ได้ลงทะเบียนใน Sapsong HUB);
+                    showLockOverlay('ไม่พบข้อมูลร้านค้าในระบบ', `รหัสร้าน "${SHOP_ID}" ยังไม่ได้ลงทะเบียนใน Sapsong HUB`);
                     return;
                 }
                 if (shopMeta.isSuspended === true) {
-                    showLockOverlay('บัญชีร้านค้าถูกระงับชั่วคราว', ร้าน "${shopMeta.name}" ถูกระงับสิทธิ์การใช้งานชั่วคราว);
+                    showLockOverlay('บัญชีร้านค้าถูกระงับชั่วคราว', `ร้าน "${shopMeta.name}" ถูกระงับสิทธิ์การใช้งานชั่วคราว`);
                     return;
                 }
                 if (shopMeta.planKey !== 'lifetime' && isDateExpired(shopMeta.expireDate)) {
-                    showLockOverlay('แพ็กเกจการใช้งานหมดอายุแล้ว', ร้าน "${shopMeta.name}" หมดอายุเมื่อวันที่ ${shopMeta.expireDate});
+                    showLockOverlay('แพ็กเกจการใช้งานหมดอายุแล้ว', `ร้าน "${shopMeta.name}" หมดอายุเมื่อวันที่ ${shopMeta.expireDate}`);
                     return;
                 }
 
                 hideLockOverlay();
-                const expLabel = shopMeta.planKey === 'lifetime' ? '♾️ แพ็กเกจตลอดชีพ' : หมดอายุ: ${shopMeta.expireDate};
+                const expLabel = shopMeta.planKey === 'lifetime' ? '♾️ แพ็กเกจตลอดชีพ' : `หมดอายุ: ${shopMeta.expireDate}`;
                 updateShopBranding(shopMeta.name, expLabel);
             });
 
-            db.ref(shops_data/${SHOP_ID}).on('value', (snapshot) => {
-                const d = snapshot.val() || {};
-                categories = d.categories || defaultCategories;
-                toppingGroups = d.toppingGroups || defaultToppingGroups;
-                menus = d.menus || (SHOP_ID === 'pangnawat' ? defaultMenus : []);
-                toppings = d.toppings || (SHOP_ID === 'pangnawat' ? defaultToppings : []);
+            const shopRef = db.ref(`shops_data/${SHOP_ID}`);
 
-                const cfg = d.paymentConfig || {};
+            shopRef.child('categories').on('value', snap => {
+                categories = snap.val() || defaultCategories;
+                renderCategoriesAdmin();
+            });
+
+            shopRef.child('toppingGroups').on('value', snap => {
+                toppingGroups = snap.val() || defaultToppingGroups;
+                renderToppingGroupsAdmin();
+            });
+
+            shopRef.child('menus').on('value', snap => {
+                menus = snap.val() || (SHOP_ID === 'pangnawat' ? defaultMenus : []);
+                renderAdminMenu();
+            });
+
+            shopRef.child('toppings').on('value', snap => {
+                toppings = snap.val() || (SHOP_ID === 'pangnawat' ? defaultToppings : []);
+                renderAdminToppings();
+            });
+
+            shopRef.child('paymentConfig').on('value', snap => {
+                const cfg = snap.val() || {};
                 paymentConfig = {
                     promptpayId: cfg.promptpayId || '0855750995',
                     accountName: cfg.accountName || shopDisplayName,
@@ -1392,25 +763,6 @@
                     contactLine: cfg.contactLine || '',
                     receiptFooter: cfg.receiptFooter || ''
                 };
-
-                isStoreOpen = d.isStoreOpen !== undefined ? d.isStoreOpen : true;
-                bannedIPs = d.bannedIPs || [];
-                enableTables = d.enableTables || false;
-                shopTables = d.tables || [];
-
-                const rawOrders = d.orders || {};
-                let parsedOrders = [];
-                if (Array.isArray(rawOrders)) {
-                    parsedOrders = rawOrders.map((o, idx) => ({ ...o, firebaseKey: String(idx) }));
-                } else {
-                    parsedOrders = Object.entries(rawOrders)
-                        .map(([key, val]) => ({ ...val, firebaseKey: key }))
-                        .reverse();
-                }
-
-                if (!isFirstLoad && parsedOrders.length > orders.length) playDingSound();
-                orders = parsedOrders;
-                isFirstLoad = false;
 
                 document.getElementById('setting-promptpay-id').value = paymentConfig.promptpayId;
                 document.getElementById('setting-account-name').value = paymentConfig.accountName;
@@ -1427,24 +779,64 @@
                 showLogoPreview(currentUploadedLogo);
                 applyLogoToAdminUI(currentUploadedLogo);
                 renderThemeColorPicker();
+            });
 
+            shopRef.child('isStoreOpen').on('value', snap => {
+                isStoreOpen = snap.val() !== null ? snap.val() : true;
                 renderStoreStatusBtn();
-                renderTableManagementUI();
-                renderCategoriesAdmin();
-                renderToppingGroupsAdmin();
-                renderOrders();
-                renderAdminMenu();
-                renderAdminToppings();
-                renderAccounting();
+            });
+
+            shopRef.child('bannedIPs').on('value', snap => {
+                bannedIPs = snap.val() || [];
                 renderBanList();
+                renderOrders();
+            });
+
+            shopRef.child('enableTables').on('value', snap => {
+                enableTables = Boolean(snap.val());
+                renderTableManagementUI();
+            });
+
+            shopRef.child('tables').on('value', snap => {
+                shopTables = snap.val() || [];
+                renderTableManagementUI();
+            });
+
+            shopRef.child('orders').on('value', snap => {
+                const rawOrders = snap.val() || {};
+                let parsedOrders = [];
+                if (Array.isArray(rawOrders)) {
+                    parsedOrders = rawOrders.map((o, idx) => o ? ({
+                        ...o,
+                        slipImage: '',
+                        hasSlip: Boolean(o.slipImage),
+                        firebaseKey: String(idx)
+                    }) : null).filter(Boolean);
+                } else {
+                    parsedOrders = Object.entries(rawOrders)
+                        .map(([key, val]) => ({
+                            ...val,
+                            slipImage: '',
+                            hasSlip: Boolean(val && val.slipImage),
+                            firebaseKey: key
+                        }))
+                        .reverse();
+                }
+
+                if (!isFirstLoad && parsedOrders.length > orders.length) playDingSound();
+                orders = parsedOrders;
+                isFirstLoad = false;
+
+                renderOrders();
+                renderAccounting();
             });
         }
 
         function updateShopBranding(name, expLabel) {
             shopDisplayName = name;
-            document.title = หลังบ้าน - ${name};
-            document.getElementById('admin-login-title').innerText = ระบบหลังบ้าน ${name};
-            document.getElementById('admin-nav-title').innerText = ${name} (Admin);
+            document.title = `หลังบ้าน - ${name}`;
+            document.getElementById('admin-login-title').innerText = `ระบบหลังบ้าน ${name}`;
+            document.getElementById('admin-nav-title').innerText = `${name} (Admin)`;
             document.getElementById('admin-expire-badge').innerText = expLabel;
         }
 
@@ -1538,9 +930,9 @@
             if (!o) return;
             currentReceiptOrderId = o.id;
 
-            const typeTxt = o.orderType === 'delivery' ? 'จัดส่งถึงที่' : (o.orderType === 'dinein' ? ${o.tableName || 'ทานที่ร้าน'} : 'รับหน้าร้าน');
-            const logoHTML = paymentConfig.shopLogo ? <img src="${paymentConfig.shopLogo}" class="w-12 h-12 rounded-xl object-cover mx-auto mb-1.5 border"> : '';
-            const footerTxt = paymentConfig.receiptFooter ? <div class="mt-1 font-bold text-slate-700">${paymentConfig.receiptFooter}</div> : '';
+            const typeTxt = o.orderType === 'delivery' ? 'จัดส่งถึงที่' : (o.orderType === 'dinein' ? `${o.tableName || 'ทานที่ร้าน'}` : 'รับหน้าร้าน');
+            const logoHTML = paymentConfig.shopLogo ? `<img src="${paymentConfig.shopLogo}" class="w-12 h-12 rounded-xl object-cover mx-auto mb-1.5 border">` : '';
+            const footerTxt = paymentConfig.receiptFooter ? `<div class="mt-1 font-bold text-slate-700">${paymentConfig.receiptFooter}</div>` : '';
             const content = document.getElementById('receipt-content');
 
             content.innerHTML = `
@@ -1554,7 +946,7 @@
                 <div class="space-y-1 mb-2.5 text-[11px]">
                     <div class="flex justify-between"><span>ลูกค้า:</span><span class="font-bold">${o.customerName}</span></div>
                     <div class="flex justify-between"><span>ประเภท:</span><span class="font-bold">${typeTxt}</span></div>
-                    ${o.address ? <div>ที่อยู่: ${o.address}</div> : ''}
+                    ${o.address ? `<div>ที่อยู่: ${o.address}</div>` : ''}
                 </div>
                 <div class="border-t border-b border-dashed border-slate-400 py-2 my-2 space-y-1.5">
                     ${(o.items || []).map(i => `
@@ -1563,11 +955,11 @@
                                 <span>${i.name} x${i.qty}</span>
                                 <span>${i.price * i.qty} บ.</span>
                             </div>
-                            ${(i.toppings && i.toppings.length > 0) ? <div class="text-[10px] text-slate-600 pl-2">+ ${i.toppings.map(t => t.name).join(', ')}</div> : ''}
-                            ${i.note ? <div class="text-[10px] text-slate-600 pl-2">* ${i.note}</div> : ''}
+                            ${(i.toppings && i.toppings.length > 0) ? `<div class="text-[10px] text-slate-600 pl-2">+ ${i.toppings.map(t => t.name).join(', ')}</div>` : ''}
+                            ${i.note ? `<div class="text-[10px] text-slate-600 pl-2">* ${i.note}</div>` : ''}
                         </div>
                     `).join('')}
-                    ${o.deliveryFee > 0 ? <div class="flex justify-between pt-1"><span>ค่าจัดส่ง</span><span>${o.deliveryFee} บ.</span></div> : ''}
+                    ${o.deliveryFee > 0 ? `<div class="flex justify-between pt-1"><span>ค่าจัดส่ง</span><span>${o.deliveryFee} บ.</span></div>` : ''}
                 </div>
                 <div class="flex justify-between items-center text-sm font-bold pt-1">
                     <span>ยอดสุทธิ</span>
@@ -1590,7 +982,7 @@
             if (!area) return;
             html2canvas(area, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
                 const link = document.createElement('a');
-                link.download = Receipt-${currentReceiptOrderId || 'order'}.png;
+                link.download = `Receipt-${currentReceiptOrderId || 'order'}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             });
@@ -1627,7 +1019,7 @@
 
         function deleteTable(tableId) {
             const t = shopTables.find(x => x.id === tableId);
-            if (t && confirm(ยืนยันการลบ "${t.name}" ออกจากระบบ?)) {
+            if (t && confirm(`ยืนยันการลบ "${t.name}" ออกจากระบบ?`)) {
                 shopTables = shopTables.filter(x => x.id !== tableId);
                 saveShopKey('tables', shopTables);
             }
@@ -1651,7 +1043,7 @@
             const listEl = document.getElementById('admin-table-list');
 
             if (shopTables.length === 0) {
-                listEl.innerHTML = <p class="text-gray-400 col-span-3 text-center py-6 text-sm">ยังไม่มีโต๊ะในระบบ เพิ่มโต๊ะด้านบนได้เลยครับ</p>;
+                listEl.innerHTML = `<p class="text-gray-400 col-span-3 text-center py-6 text-sm">ยังไม่มีโต๊ะในระบบ เพิ่มโต๊ะด้านบนได้เลยครับ</p>`;
                 return;
             }
 
@@ -1683,10 +1075,10 @@
 
             currentQRTableName = t.name;
             const baseDir = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
-            const tableOrderUrl = ${baseDir}/index.html?shop=${SHOP_ID}&table=${encodeURIComponent(t.id)};
+            const tableOrderUrl = `${baseDir}/index.html?shop=${SHOP_ID}&table=${encodeURIComponent(t.id)}`;
 
             document.getElementById('modal-table-qr-title').innerText = t.name;
-            document.getElementById('modal-table-qr-shop').innerText = ร้าน${shopDisplayName};
+            document.getElementById('modal-table-qr-shop').innerText = `ร้าน${shopDisplayName}`;
             document.getElementById('modal-table-qr-url').innerText = tableOrderUrl;
 
             const container = document.getElementById('table-qr-container');
@@ -1707,7 +1099,7 @@
             let dataUrl = canvas ? canvas.toDataURL('image/png') : (img ? img.src : '');
             if (!dataUrl) return alert('ไม่สามารถดาวน์โหลดรูป QR ได้');
             const link = document.createElement('a');
-            link.download = QR-${SHOP_ID}-${currentQRTableName}.png;
+            link.download = `QR-${SHOP_ID}-${currentQRTableName}.png`;
             link.href = dataUrl;
             link.click();
         }
@@ -1724,10 +1116,20 @@
 
         function openSlipModal(firebaseKey) {
             const order = orders.find(o => o.firebaseKey === firebaseKey);
-            if (!order || !order.slipImage) return;
-            document.getElementById('modal-slip-title').innerText = สลิปออเดอร์ ${order.id} (${order.customerName} - ยอด ${order.total} บ.);
-            document.getElementById('modal-slip-img').src = order.slipImage;
+            if (!order) return;
+            document.getElementById('modal-slip-title').innerText = `สลิปออเดอร์ ${order.id} (${order.customerName} - ยอด ${order.total} บ.)`;
+            document.getElementById('modal-slip-img').src = '';
             document.getElementById('slip-modal').classList.remove('hidden');
+
+            db.ref(`shops_data/${SHOP_ID}/orders/${firebaseKey}/slipImage`).once('value', snap => {
+                const imgSrc = snap.val();
+                if (imgSrc) {
+                    document.getElementById('modal-slip-img').src = imgSrc;
+                } else {
+                    alert('ไม่พบไฟล์รูปสลิปในระบบ');
+                    closeSlipModal();
+                }
+            });
         }
         function closeSlipModal() { document.getElementById('slip-modal').classList.add('hidden'); }
 
@@ -1776,17 +1178,17 @@
 
         function switchTab(tab) {
             ['kitchen', 'tables', 'menu', 'toppings', 'payment', 'accounting', 'bans'].forEach(t => {
-                document.getElementById(view-${t}).classList.add('hidden');
-                const btn = document.getElementById(tab-${t});
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`tab-${t}`);
                 if (btn) btn.className = "px-3 py-2 bg-slate-700 text-white rounded-xl text-xs lg:text-sm transition";
-                const mobBtn = document.getElementById(mob-tab-${t});
+                const mobBtn = document.getElementById(`mob-tab-${t}`);
                 if (mobBtn) mobBtn.className = "py-3 text-[9px] font-medium text-slate-300";
             });
 
-            document.getElementById(view-${tab}).classList.remove('hidden');
-            const activeBtn = document.getElementById(tab-${tab});
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tab}`);
             if (activeBtn) activeBtn.className = "px-3 py-2 bg-amber-500 text-slate-900 font-bold rounded-xl text-xs lg:text-sm transition";
-            const activeMobBtn = document.getElementById(mob-tab-${tab});
+            const activeMobBtn = document.getElementById(`mob-tab-${tab}`);
             if (activeMobBtn) activeMobBtn.className = "py-3 text-[9px] font-bold text-amber-400 border-t-2 border-amber-400";
         }
 
@@ -1818,7 +1220,7 @@
             saveShopKey('categories', categories);
         }
         function deleteCategory(catName) {
-            if (categories.length > 1 && confirm(ยืนยันการลบหมวดหมู่ "${catName}"?)) {
+            if (categories.length > 1 && confirm(`ยืนยันการลบหมวดหมู่ "${catName}"?`)) {
                 categories = categories.filter(c => c !== catName);
                 saveShopKey('categories', categories);
             }
@@ -1826,11 +1228,11 @@
         function renderCategoriesAdmin() {
             document.getElementById('admin-category-list').innerHTML = categories.map(c => `
                 <span class="inline-flex items-center gap-1.5 bg-amber-100 text-amber-900 px-3 py-1 rounded-full text-xs font-bold">
-                    ${c} <button onclick="deleteCategory('${c.replace(/'/g, "\'")}')" class="text-red-600 ml-1 font-extrabold">×</button>
+                    ${c} <button onclick="deleteCategory('${c.replace(/'/g, "\\'")}')" class="text-red-600 ml-1 font-extrabold">×</button>
                 </span>
             `).join('');
-            document.getElementById('new-category').innerHTML = categories.map(c => <option value="${c}">${c}</option>).join('');
-            document.getElementById('new-topping-target-category').innerHTML =<option value="ALL">🌟 ใช้ได้ทุกหมวดสินค้า</option>` + categories.map(c => <option value="${c}">เฉพาะ: ${c}</option>).join('');
+            document.getElementById('new-category').innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+            document.getElementById('new-topping-target-category').innerHTML = `<option value="ALL">🌟 ใช้ได้ทุกหมวดสินค้า</option>` + categories.map(c => `<option value="${c}">เฉพาะ: ${c}</option>`).join('');
         }
 
         function addToppingGroup() {
@@ -1840,7 +1242,7 @@
             saveShopKey('toppingGroups', toppingGroups);
         }
         function deleteToppingGroup(g) {
-            if (toppingGroups.length > 1 && confirm(ยืนยันการลบหมวด "${g}"?)) {
+            if (toppingGroups.length > 1 && confirm(`ยืนยันการลบหมวด "${g}"?`)) {
                 toppingGroups = toppingGroups.filter(x => x !== g);
                 saveShopKey('toppingGroups', toppingGroups);
             }
@@ -1848,10 +1250,10 @@
         function renderToppingGroupsAdmin() {
             document.getElementById('admin-topping-group-list').innerHTML = toppingGroups.map(g => `
                 <span class="inline-flex items-center gap-1.5 bg-indigo-100 text-indigo-900 px-3 py-1 rounded-full text-xs font-bold">
-                    ${g} <button onclick="deleteToppingGroup('${g.replace(/'/g, "\'")}')" class="text-red-600 ml-1 font-extrabold">×</button>
+                    ${g} <button onclick="deleteToppingGroup('${g.replace(/'/g, "\\'")}')" class="text-red-600 ml-1 font-extrabold">×</button>
                 </span>
             `).join('');
-            document.getElementById('new-topping-group').innerHTML = toppingGroups.map(g => <option value="${g}">${g}</option>).join('');
+            document.getElementById('new-topping-group').innerHTML = toppingGroups.map(g => `<option value="${g}">${g}</option>`).join('');
         }
         function saveToppingForm() {
             const editId = document.getElementById('edit-topping-id').value;
@@ -1904,14 +1306,14 @@
             const list = document.getElementById('admin-topping-list');
             document.getElementById('topping-count').innerText = toppings.length;
             const filterOptions = [{ key: 'ALL_VIEW', label: 'ดูทั้งหมด' }, ...toppingGroups.map(g => ({ key: g, label: g }))];
-            document.getElementById('topping-filter-tabs').innerHTML = filterOptions.map(opt => <button onclick="filterAdminToppings('${opt.key.replace(/'/g, "\'")}')" class="px-2.5 py-1 rounded-lg text-xs font-bold ${selectedToppingFilter === opt.key ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600'}">${opt.label}</button>).join('');
+            document.getElementById('topping-filter-tabs').innerHTML = filterOptions.map(opt => `<button onclick="filterAdminToppings('${opt.key.replace(/'/g, "\\'")}')" class="px-2.5 py-1 rounded-lg text-xs font-bold ${selectedToppingFilter === opt.key ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600'}">${opt.label}</button>`).join('');
 
             let displayToppings = selectedToppingFilter !== 'ALL_VIEW' ? toppings.filter(t => (t.toppingGroup || 'ทั่วไป') === selectedToppingFilter) : toppings;
-            if (displayToppings.length === 0) { list.innerHTML = <p class="text-gray-400 col-span-3 text-center py-6 text-sm">ไม่มีรายการท็อปปิ้งในหมวดนี้</p>; return; }
+            if (displayToppings.length === 0) { list.innerHTML = `<p class="text-gray-400 col-span-3 text-center py-6 text-sm">ไม่มีรายการท็อปปิ้งในหมวดนี้</p>`; return; }
 
             list.innerHTML = displayToppings.map(t => {
                 const targetCat = t.targetCategory || t.category || 'ALL';
-                const targetLabel = targetCat === 'ALL' ? '🌟 ทุกหมวดสินค้า' : เฉพาะ: ${targetCat};
+                const targetLabel = targetCat === 'ALL' ? '🌟 ทุกหมวดสินค้า' : `เฉพาะ: ${targetCat}`;
                 return `
                 <div class="p-3.5 border rounded-xl flex justify-between items-center bg-slate-50 hover:bg-white transition gap-2">
                     <div class="truncate">
@@ -1930,7 +1332,7 @@
 
         function banCustomerIP(ip, customerName) {
             if (!ip || ip === 'กำลังตรวจสอบ...' || bannedIPs.some(b => b.ip === ip)) return;
-            const reason = prompt(ยืนยันการแบน IP: ${ip} (${customerName})\nระบุสาเหตุ:, 'สั่งเล่น');
+            const reason = prompt(`ยืนยันการแบน IP: ${ip} (${customerName})\nระบุสาเหตุ:`, 'สั่งเล่น');
             if (reason === null) return;
             bannedIPs.unshift({ ip, customerName: customerName || '-', reason: reason.trim() || 'สั่งเล่น', bannedAt: new Date().toLocaleString('th-TH') });
             saveShopKey('bannedIPs', bannedIPs);
@@ -1943,11 +1345,11 @@
             document.getElementById('manual-ban-ip').value = ''; document.getElementById('manual-ban-reason').value = '';
             saveShopKey('bannedIPs', bannedIPs);
         }
-        function unbanIP(ip) { if (confirm(ปลดแบน IP: ${ip}?)) { bannedIPs = bannedIPs.filter(b => b.ip !== ip); saveShopKey('bannedIPs', bannedIPs); } }
+        function unbanIP(ip) { if (confirm(`ปลดแบน IP: ${ip}?`)) { bannedIPs = bannedIPs.filter(b => b.ip !== ip); saveShopKey('bannedIPs', bannedIPs); } }
         function renderBanList() {
             const list = document.getElementById('banned-list');
             document.getElementById('ban-count').innerText = bannedIPs.length;
-            if (bannedIPs.length === 0) { list.innerHTML = <p class="text-gray-400 text-center py-6 text-sm">ยังไม่มีรายการ IP ที่ถูกแบน</p>; return; }
+            if (bannedIPs.length === 0) { list.innerHTML = `<p class="text-gray-400 text-center py-6 text-sm">ยังไม่มีรายการ IP ที่ถูกแบน</p>`; return; }
             list.innerHTML = bannedIPs.map(b => `
                 <div class="py-3 flex justify-between items-center gap-3">
                     <div><p class="font-mono font-bold text-red-600 text-sm">${b.ip} <span class="font-sans text-xs font-normal text-gray-500">(${b.customerName})</span></p><p class="text-xs text-gray-600">สาเหตุ: ${b.reason} • ${b.bannedAt}</p></div>
@@ -2061,12 +1463,12 @@
         function renderAdminMenu() {
             const list = document.getElementById('admin-menu-list');
             document.getElementById('menu-count').innerText = menus.length;
-            if (menus.length === 0) { list.innerHTML = <p class="text-gray-400 col-span-3 text-center py-6 text-sm">ยังไม่มีสินค้าในระบบ</p>; return; }
+            if (menus.length === 0) { list.innerHTML = `<p class="text-gray-400 col-span-3 text-center py-6 text-sm">ยังไม่มีสินค้าในระบบ</p>`; return; }
             list.innerHTML = menus.map(m => {
                 const hasSizes = Array.isArray(m.sizes) && m.sizes.length > 0;
                 const priceInfo = hasSizes
-                    ? m.sizes.map(s => ${s.name} ${s.price}บ.).join(' / ')
-                    : ${m.price} บ.;
+                    ? m.sizes.map(s => `${s.name} ${s.price}บ.`).join(' / ')
+                    : `${m.price} บ.`;
                 return `
                 <div class="p-3 border rounded-xl flex justify-between items-center bg-slate-50 hover:bg-white transition gap-2">
                     <div class="flex items-center gap-3 overflow-hidden">
@@ -2074,7 +1476,7 @@
                         <div class="truncate">
                             <div class="flex items-center gap-1">
                                 <span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-semibold">${m.category || 'ทั่วไป'}</span>
-                                ${hasSizes ? <span class="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">${m.sizes.length} ไซส์</span> : ''}
+                                ${hasSizes ? `<span class="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">${m.sizes.length} ไซส์</span>` : ''}
                             </div>
                             <p class="font-bold text-slate-800 text-sm truncate mt-0.5">${m.name}</p>
                             <p class="text-[11px] text-slate-500 truncate" title="${priceInfo}">${priceInfo} • ${m.available ? '<span class="text-emerald-600 font-bold">พร้อมขาย</span>' : '<span class="text-red-500 font-bold">หมด</span>'}</p>
@@ -2090,7 +1492,7 @@
         }
 
         function updateOrderStatus(firebaseKey, status) {
-            db.ref(shops_data/${SHOP_ID}/orders/${firebaseKey}/status).set(status)
+            db.ref(`shops_data/${SHOP_ID}/orders/${firebaseKey}/status`).set(status)
                 .catch(err => alert('อัปเดตสถานะไม่สำเร็จ: ' + err.message));
         }
 
@@ -2099,30 +1501,30 @@
             const selectedDate = document.getElementById('order-date-filter').value;
             const filteredOrders = selectedDate ? orders.filter(o => o.date === selectedDate) : orders;
 
-            document.getElementById('daily-order-count').innerText = ${filteredOrders.length} ออเดอร์;
+            document.getElementById('daily-order-count').innerText = `${filteredOrders.length} ออเดอร์`;
             if (filteredOrders.length === 0) {
-                grid.innerHTML = <p class="text-gray-400 col-span-3 text-center py-12">📭 ไม่มีออเดอร์ในวันที่เลือก (${selectedDate || 'ทั้งหมด'})</p>;
+                grid.innerHTML = `<p class="text-gray-400 col-span-3 text-center py-12">📭 ไม่มีออเดอร์ในวันที่เลือก (${selectedDate || 'ทั้งหมด'})</p>`;
                 return;
             }
 
             grid.innerHTML = filteredOrders.map(o => {
                 const isDelivery = o.orderType === 'delivery';
                 const isDineIn = o.orderType === 'dinein';
-                let typeBadge = <span class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">รับหน้าร้าน</span>;
-                if (isDelivery) typeBadge = <span class="px-2.5 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">ขับรถส่ง</span>;
-                else if (isDineIn) typeBadge = <span class="px-2.5 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-bold">🍽️ ${o.tableName || 'ทานที่ร้าน'}</span>;
+                let typeBadge = `<span class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">รับหน้าร้าน</span>`;
+                if (isDelivery) typeBadge = `<span class="px-2.5 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">ขับรถส่ง</span>`;
+                else if (isDineIn) typeBadge = `<span class="px-2.5 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-bold">🍽️ ${o.tableName || 'ทานที่ร้าน'}</span>`;
 
                 const isBanned = o.customerIP && bannedIPs.some(b => b.ip === o.customerIP);
                 let btnHTML = '', borderColor = 'border-yellow-400';
 
                 if (o.status === 'pending') {
-                    btnHTML = <button onclick="updateOrderStatus('${o.firebaseKey}', 'cooking')" class="w-full bg-amber-500 text-slate-900 font-bold py-2.5 rounded-xl text-sm hover:bg-amber-600 transition">รับออเดอร์ / เริ่มทำ</button>;
+                    btnHTML = `<button onclick="updateOrderStatus('${o.firebaseKey}', 'cooking')" class="w-full bg-amber-500 text-slate-900 font-bold py-2.5 rounded-xl text-sm hover:bg-amber-600 transition">รับออเดอร์ / เริ่มทำ</button>`;
                 } else if (o.status === 'cooking') {
                     borderColor = 'border-blue-500';
-                    btnHTML = <button onclick="updateOrderStatus('${o.firebaseKey}', 'done')" class="w-full bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-emerald-700 transition">ทำเสร็จ / เสิร์ฟแล้ว</button>;
+                    btnHTML = `<button onclick="updateOrderStatus('${o.firebaseKey}', 'done')" class="w-full bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-emerald-700 transition">ทำเสร็จ / เสิร์ฟแล้ว</button>`;
                 } else {
                     borderColor = 'border-emerald-500 opacity-85';
-                    btnHTML = <div class="text-center text-xs font-bold text-emerald-600 bg-emerald-50 py-2 rounded-xl">ออเดอร์เสร็จสมบูรณ์</div>;
+                    btnHTML = `<div class="text-center text-xs font-bold text-emerald-600 bg-emerald-50 py-2 rounded-xl">ออเดอร์เสร็จสมบูรณ์</div>`;
                 }
 
                 return `
@@ -2134,7 +1536,7 @@
                                     <p class="text-sm font-semibold text-amber-700">${o.customerName}</p>
                                     <div class="flex items-center gap-1.5 mt-0.5">
                                         <span class="text-[11px] font-mono text-gray-400">IP: ${o.customerIP || '-'}</span>
-                                        ${o.customerIP ? (isBanned ? <span class="text-[10px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold">แบนแล้ว</span> : <button onclick="banCustomerIP('${o.customerIP}', '${(o.customerName || '').replace(/'/g, "\'")}')" class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-semibold">แบน IP</button>) : ''}
+                                        ${o.customerIP ? (isBanned ? `<span class="text-[10px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold">แบนแล้ว</span>` : `<button onclick="banCustomerIP('${o.customerIP}', '${(o.customerName || '').replace(/'/g, "\\'")}')" class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-semibold">แบน IP</button>`) : ''}
                                     </div>
                                 </div>
                                 <div class="text-right">
@@ -2142,8 +1544,8 @@
                                     <p class="text-xs text-gray-400 mt-1">${o.date} ${o.time}</p>
                                 </div>
                             </div>
-                            ${isDelivery ? <div class="bg-purple-50 text-purple-900 text-xs p-2.5 rounded-xl mb-2 font-medium">ส่งที่: ${o.address}</div> : ''}
-                            ${o.slipImage ? `
+                            ${isDelivery ? `<div class="bg-purple-50 text-purple-900 text-xs p-2.5 rounded-xl mb-2 font-medium">ส่งที่: ${o.address}</div>` : ''}
+                            ${o.hasSlip ? `
                                 <div class="bg-emerald-50 border border-emerald-200 p-2 rounded-xl mb-2 flex justify-between items-center">
                                     <span class="text-xs font-bold text-emerald-700">✅ แนบสลิปโอนแล้ว</span>
                                     <button onclick="openSlipModal('${o.firebaseKey}')" class="bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg">🔍 ดูรูปสลิป</button>
@@ -2157,11 +1559,11 @@
                                             <span class="font-bold text-slate-800">• ${i.name} x${i.qty}</span>
                                             <span class="font-semibold">${i.price * i.qty} บ.</span>
                                         </div>
-                                        ${(i.toppings && i.toppings.length > 0) ? <div class="flex flex-wrap gap-1 mt-1">${i.toppings.map(t => `<span class="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">+ ${t.name} (+${t.price}บ.)</span>).join('')}</div>` : ''}
-                                        ${i.note ? <p class="text-xs bg-amber-100 text-amber-900 font-bold px-2 py-1 rounded-md mt-1">หมายเหตุ: ${i.note}</p> : ''}
+                                        ${(i.toppings && i.toppings.length > 0) ? `<div class="flex flex-wrap gap-1 mt-1">${i.toppings.map(t => `<span class="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">+ ${t.name} (+${t.price}บ.)</span>`).join('')}</div>` : ''}
+                                        ${i.note ? `<p class="text-xs bg-amber-100 text-amber-900 font-bold px-2 py-1 rounded-md mt-1">หมายเหตุ: ${i.note}</p>` : ''}
                                     </div>
                                 `).join('')}
-                                ${o.deliveryFee > 0 ? <div class="flex justify-between text-xs text-slate-600 pt-1"><span>ค่าจัดส่ง</span><span class="font-bold">+${o.deliveryFee} บ.</span></div> : ''}
+                                ${o.deliveryFee > 0 ? `<div class="flex justify-between text-xs text-slate-600 pt-1"><span>ค่าจัดส่ง</span><span class="font-bold">+${o.deliveryFee} บ.</span></div>` : ''}
                             </div>
                         </div>
                         <div class="space-y-2 mt-2">
@@ -2185,7 +1587,7 @@
             const tbody = document.getElementById('acc-table');
 
             if (orders.length === 0) {
-                tbody.innerHTML = <tr><td colspan="7" class="text-center py-6 text-gray-400">ยังไม่มีข้อมูลบิล</td></tr>;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-400">ยังไม่มีข้อมูลบิล</td></tr>`;
             } else {
                 tbody.innerHTML = orders.map(o => {
                     if (o.status === 'done') {
@@ -2195,7 +1597,7 @@
                         if (o.date && o.date.startsWith(yearStr)) sumYear += o.total;
                     }
                     const statusBadge = o.status === 'done' ? '<span class="text-emerald-600 font-bold">สำเร็จ</span>' : '<span class="text-amber-600">กำลังดำเนินการ</span>';
-                    const payBadge = o.slipImage ? <button onclick="openSlipModal('${o.firebaseKey}')" class="text-blue-600 underline font-semibold text-xs">โอน (ดูสลิป)</button> : <span class="text-gray-500 text-xs">เงินสด/หน้าร้าน</span>;
+                    const payBadge = o.hasSlip ? `<button onclick="openSlipModal('${o.firebaseKey}')" class="text-blue-600 underline font-semibold text-xs">โอน (ดูสลิป)</button>` : `<span class="text-gray-500 text-xs">เงินสด/หน้าร้าน</span>`;
                     const typeTxt = o.orderType === 'delivery' ? 'ส่ง' : (o.orderType === 'dinein' ? (o.tableName || 'ทานที่ร้าน') : 'หน้าร้าน');
 
                     return `
@@ -2203,7 +1605,7 @@
                             <td class="p-3 font-bold">${o.id}</td>
                             <td class="p-3 text-xs text-gray-500">${o.date} ${o.time}</td>
                             <td class="p-3">${o.customerName} (${typeTxt})</td>
-                            <td class="p-3 text-xs">${(o.items || []).map(i => ${i.name} x${i.qty}).join(', ')}</td>
+                            <td class="p-3 text-xs">${(o.items || []).map(i => `${i.name} x${i.qty}`).join(', ')}</td>
                             <td class="p-3">${payBadge}</td>
                             <td class="p-3 text-xs">${statusBadge}</td>
                             <td class="p-3 text-right font-bold">${o.total} บ.</td>
@@ -2212,15 +1614,15 @@
                 }).join('');
             }
 
-            document.getElementById('rev-today').innerText = ${sumToday.toLocaleString()} บ.;
-            document.getElementById('rev-month').innerText = ${sumMonth.toLocaleString()} บ.;
-            document.getElementById('rev-year').innerText = ${sumYear.toLocaleString()} บ.;
-            document.getElementById('rev-count').innerText = ${countDone} บิล;
+            document.getElementById('rev-today').innerText = `${sumToday.toLocaleString()} บ.`;
+            document.getElementById('rev-month').innerText = `${sumMonth.toLocaleString()} บ.`;
+            document.getElementById('rev-year').innerText = `${sumYear.toLocaleString()} บ.`;
+            document.getElementById('rev-count').innerText = `${countDone} บิล`;
         }
 
         function clearOrders() {
             if (confirm('ต้องการล้างประวัติออเดอร์ทั้งหมดใช่หรือไม่?')) {
-                db.ref(shops_data/${SHOP_ID}/orders).remove();
+                db.ref(`shops_data/${SHOP_ID}/orders`).remove();
             }
         }
     </script>
