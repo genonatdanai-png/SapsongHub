@@ -96,6 +96,7 @@
     .badge-expired { background: #fee2e2; color: #991b1b; }
     .badge-suspended { background: #e2e8f0; color: #475569; }
     .badge-lifetime { background: #ede9fe; color: #5b21b6; }
+    .badge-free90 { background: #dbeafe; color: #1e40af; font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; display: inline-block; margin-top: 3px; }
     .biz-food { background: #ffedd5; color: #9a3412; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-top: 3px; }
     .biz-course { background: #e0e7ff; color: #3730a3; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-top: 3px; }
 
@@ -292,12 +293,18 @@
       <label>รูปแบบแพ็กเกจ</label>
       <select id="inp-plan" onchange="toggleAddCustomFields()">
         <option value="custom">กำหนดวันและราคาเอง (Custom)</option>
-        <option value="trial90d">ทดลอง 3 เดือน (90 วัน) — 0 บาท</option>
+        <option value="trial90d">ฟรี 3 เดือน (90 วัน) — 0 บาท</option>
         <option value="30d">1 เดือน (30 วัน) — 299 บาท</option>
         <option value="180d">6 เดือน (180 วัน) — 1,649 บาท</option>
         <option value="365d">1 ปี (365 วัน) — 2,990 บาท</option>
         <option value="lifetime">♾️ ฟรีตลอดชีพ (VIP) — 0 บาท</option>
       </select>
+    </div>
+    <div class="form-group">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; color:var(--primary);">
+        <input type="checkbox" id="inp-allow-free90" style="width:auto;">
+        อนุญาตให้รายนี้ใช้สิทธิ์ "ฟรี 3 เดือน (90 วัน)" ในหน้าต่ออายุเอง
+      </label>
     </div>
     <div id="add-custom-box" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
       <div class="form-group">
@@ -338,6 +345,12 @@
     <div class="form-group">
       <label>เบอร์โทร / LINE</label>
       <input type="text" id="edit-contact">
+    </div>
+    <div class="form-group">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; color:var(--primary);">
+        <input type="checkbox" id="edit-allow-free90" style="width:auto;">
+        อนุญาตให้รายนี้ใช้สิทธิ์ "ฟรี 3 เดือน (90 วัน)" ในหน้าต่ออายุเอง
+      </label>
     </div>
     <div class="form-group">
       <label>โหมดอายุ</label>
@@ -385,7 +398,7 @@
       </div>
     </div>
     <div class="preset-row">
-      <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(90, 0)">ทดลอง 3 เดือน / 0 ฿</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(90, 0)">ฟรี 3 เดือน / 0 ฿</button>
       <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(30, 299)">1 เดือน / 299 ฿</button>
       <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(180, 1649)">6 เดือน / 1,649 ฿</button>
       <button type="button" class="btn btn-sm btn-outline" onclick="presetRenew(365, 2990)">1 ปี / 2,990 ฿</button>
@@ -488,11 +501,11 @@
     db.ref('sapsong_hub_shops').on('value', (snap) => {
       const val = snap.val();
       if (val) {
-        shops = Object.values(val).map(s => ({ bizType: 'food', days: 30, price: 0, ...s }));
+        shops = Object.values(val).map(s => ({ bizType: 'food', days: 30, price: 0, allowFree90d: false, ...s }));
       } else {
         shops = [{
           id: 'pangnawat', bizType: 'food', name: 'ปังหน้าวัด', contact: '085-5750995',
-          planKey: 'lifetime', days: 0, price: 0, expireDate: '9999-12-31', isSuspended: false
+          planKey: 'lifetime', days: 0, price: 0, expireDate: '9999-12-31', isSuspended: false, allowFree90d: false
         }];
         saveShops();
       }
@@ -546,6 +559,14 @@
     renderTable();
   }
 
+  function toggleFree90Permission(index) {
+    const shop = shops[index];
+    if (!shop) return;
+    shop.allowFree90d = !Boolean(shop.allowFree90d);
+    saveShops();
+    showToast(shop.allowFree90d ? `เปิดสิทธิ์ฟรี 3 เดือนให้ "${shop.name}" แล้ว` : `ปิดสิทธิ์ฟรี 3 เดือนของ "${shop.name}" แล้ว`);
+  }
+
   function copyHandoverText(index) {
     const shop = shops[index];
     if (!shop) return;
@@ -580,6 +601,7 @@
     shops.forEach((shop, index) => {
       const bizType = shop.bizType || 'food';
       const isLifetime = shop.planKey === 'lifetime';
+      const allowFree90 = Boolean(shop.allowFree90d);
       const daysLeft = isLifetime ? 99999 : getDaysRemaining(shop.expireDate);
       let statusBadge = '';
 
@@ -608,6 +630,7 @@
       const frontLabel = bizType === 'course' ? '🎓 หน้าเรียน' : '🛒 หน้าร้าน';
       const backLabel = bizType === 'course' ? '🎬 ผู้สอน' : '⚙️ หลังบ้าน';
       const bizBadge = bizType === 'course' ? `<span class="biz-course">🎓 คอร์สเรียนออนไลน์</span>` : `<span class="biz-food">🍜 ร้านอาหาร</span>`;
+      const free90Badge = allowFree90 ? `<span class="badge-free90">🎁 สิทธิ์ฟรี 3 เดือน</span>` : '';
       const pkgText = isLifetime ? 'ฟรีตลอดชีพ (VIP)' : `${shop.days || 30} วัน — ${Number(shop.price || 0).toLocaleString()} ฿`;
 
       const tr = document.createElement('tr');
@@ -619,7 +642,7 @@
             <div>
               <div style="font-weight:600;">${shop.name}</div>
               <div style="font-size:0.8rem; color:var(--muted);">${shop.contact}</div>
-              ${bizBadge}
+              ${bizBadge} ${free90Badge}
             </div>
           </div>
         </td>
@@ -636,6 +659,9 @@
         <td>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
             <button class="btn btn-sm btn-success" onclick="openRenewModal(${index})">🔄 ต่ออายุ</button>
+            <button class="btn btn-sm ${allowFree90 ? 'btn-primary' : 'btn-outline'}" onclick="toggleFree90Permission(${index})">
+              ${allowFree90 ? '🎁 ปิดฟรี 3 ด.' : '🎁 ให้ฟรี 3 ด.'}
+            </button>
             <button class="btn btn-sm btn-info" onclick="openEditModal(${index})">✏️ แก้ไข</button>
             <button class="btn btn-sm ${shop.isSuspended ? 'btn-primary' : 'btn-warning'}" onclick="toggleSuspend(${index})">
               ${shop.isSuspended ? 'เปิดใช้งาน' : 'ระงับ'}
@@ -673,6 +699,7 @@
     const name = document.getElementById('inp-name').value.trim();
     const contact = document.getElementById('inp-contact').value.trim();
     const planSel = document.getElementById('inp-plan').value;
+    const allowFree90 = document.getElementById('inp-allow-free90').checked || planSel === 'trial90d';
     const days = Number(document.getElementById('inp-custom-days').value) || 30;
     const price = Number(document.getElementById('inp-custom-price').value) || 0;
 
@@ -686,7 +713,8 @@
       days: isLifetime ? 0 : days,
       price: isLifetime ? 0 : price,
       expireDate: isLifetime ? '9999-12-31' : addDaysToDate(new Date(), days),
-      isSuspended: false
+      isSuspended: false,
+      allowFree90d: allowFree90
     });
 
     if (!isLifetime && price > 0) {
@@ -703,6 +731,7 @@
     document.getElementById('inp-id').value = '';
     document.getElementById('inp-name').value = '';
     document.getElementById('inp-contact').value = '';
+    document.getElementById('inp-allow-free90').checked = false;
     showToast(`เพิ่ม "${name}" เรียบร้อย!`);
   }
 
@@ -713,6 +742,7 @@
     document.getElementById('edit-biztype').value = shop.bizType || 'food';
     document.getElementById('edit-name').value = shop.name;
     document.getElementById('edit-contact').value = shop.contact;
+    document.getElementById('edit-allow-free90').checked = Boolean(shop.allowFree90d);
     document.getElementById('edit-plan').value = shop.planKey === 'lifetime' ? 'lifetime' : 'custom';
     document.getElementById('edit-price').value = Number(shop.price || 0);
     const dateInput = document.getElementById('edit-expire');
@@ -742,6 +772,7 @@
     shop.bizType = document.getElementById('edit-biztype').value;
     shop.name = name;
     shop.contact = document.getElementById('edit-contact').value.trim() || '-';
+    shop.allowFree90d = document.getElementById('edit-allow-free90').checked;
     shop.planKey = isLifetime ? 'lifetime' : 'custom';
     shop.price = isLifetime ? 0 : (Number(document.getElementById('edit-price').value) || 0);
     shop.expireDate = isLifetime ? '9999-12-31' : document.getElementById('edit-expire').value;
