@@ -212,17 +212,17 @@
 
             <div class="grid grid-cols-2 gap-2.5 text-xs">
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">จำนวนวันต่ออายุ</label>
+                    <label class="block font-bold text-slate-700 mb-1">แพ็กเกจต่ออายุ</label>
                     <select id="crn-preset" onchange="onCourseRenewPresetChange()" class="w-full px-3 py-2 border rounded-xl font-bold bg-slate-50 outline-none">
-                        <option value="30|500">30 วัน (500 บ.)</option>
-                        <option value="90|1400">90 วัน (1,400 บ.)</option>
-                        <option value="180|2700">180 วัน (2,700 บ.)</option>
-                        <option value="365|5000">365 วัน (5,000 บ.)</option>
+                        <option value="90|0">ทดลอง 3 เดือน (0 บ.)</option>
+                        <option value="30|299">1 เดือน (299 บ.)</option>
+                        <option value="180|1649">6 เดือน (1,649 บ.)</option>
+                        <option value="365|2990">1 ปี (2,990 บ.)</option>
                     </select>
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">ยอดชำระ (บาท)</label>
-                    <input type="number" id="crn-amount" oninput="renderCourseRenewQR()" value="500" class="w-full px-3 py-2 border rounded-xl font-bold text-indigo-700 outline-none">
+                    <input type="number" id="crn-amount" oninput="renderCourseRenewQR()" value="0" class="w-full px-3 py-2 border rounded-xl font-bold text-indigo-700 outline-none">
                 </div>
             </div>
 
@@ -231,7 +231,7 @@
                 <div id="rn-qr-box" class="bg-white p-2 rounded-xl border inline-block"></div>
 
                 <div class="text-left bg-white p-3 rounded-xl border space-y-2">
-                    <label class="block text-xs font-bold text-slate-700">📎 แนบสลิปโอนเงิน (อ่าน QR สลิปอัตโนมัติ) *</label>
+                    <label class="block text-xs font-bold text-slate-700">📎 แนบสลิปโอนเงิน (อ่าน QR สลิปอัตโนมัติ)</label>
                     <input type="file" id="crn-slip-input" accept="image/*" onchange="processCourseRenewSlip(event)" class="block w-full text-xs text-slate-500">
                     <div id="crn-slip-status" class="hidden p-2 rounded-lg text-xs font-semibold"></div>
                     <img id="crn-slip-prev" src="" class="hidden w-full max-h-32 object-contain rounded-lg border">
@@ -535,7 +535,11 @@
         function renderCourseRenewQR() {
             const amt = Number(document.getElementById('crn-amount').value) || 0;
             const box = document.getElementById('rn-qr-box'); box.innerHTML = '';
-            new QRCode(box, { text: buildPromptPayQR(HUB_PROMPTPAY_ID, amt), width: 150, height: 150 });
+            if (amt > 0) {
+                new QRCode(box, { text: buildPromptPayQR(HUB_PROMPTPAY_ID, amt), width: 150, height: 150 });
+            } else {
+                box.innerHTML = `<p class="text-xs font-bold text-emerald-700 py-4 px-2">ทดลอง 3 เดือน ฟรี 0 บาท (ไม่ต้องโอนเงิน)</p>`;
+            }
         }
 
         function processCourseRenewSlip(e) {
@@ -577,10 +581,10 @@
         }
 
         function submitCourseRenewRequest() {
-            if (!crnSlipBase64) return alert('กรุณาแนบสลิปโอนเงินก่อนครับ');
             const [daysStr] = document.getElementById('crn-preset').value.split('|');
             const days = Number(daysStr) || 30;
             const amount = Number(document.getElementById('crn-amount').value) || 0;
+            if (amount > 0 && !crnSlipBase64) return alert('กรุณาแนบสลิปโอนเงินก่อนครับ');
 
             db.ref('sapsong_hub_renewals').push({
                 shopId: SHOP_ID,
