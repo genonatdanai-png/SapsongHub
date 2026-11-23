@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ระบบไรเดอร์จัดส่งสินค้า - Sapsong HUB</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -12,6 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
         body { font-family: 'Prompt', sans-serif; }
+        #rider-qr-box img, #rider-qr-box canvas { margin: 0 auto; border-radius: 0.75rem; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen pb-20">
@@ -90,6 +92,35 @@
         </main>
     </div>
 
+    <!-- Modal สร้าง QR พร้อมเพย์ให้ลูกค้าโอนหน้างาน -->
+    <div id="rider-qr-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-sm w-full p-5 text-center space-y-3.5 shadow-2xl">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-bold text-slate-800 text-base">📱 QR พร้อมเพย์โอนหน้างาน</h3>
+                <button onclick="document.getElementById('rider-qr-modal').classList.add('hidden')" class="text-xl font-bold text-gray-400 px-2">&times;</button>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-2xl p-3 space-y-1">
+                <p id="rqr-order-label" class="text-xs font-bold text-blue-950">-</p>
+                <p class="text-xs text-slate-600">บัญชี: <strong id="rqr-acc-name">-</strong> (<span id="rqr-pp-id" class="font-mono">-</span>)</p>
+                <p id="rqr-amount-text" class="text-xl font-bold text-blue-700 pt-0.5">0 บาท</p>
+            </div>
+
+            <div class="bg-white p-3 rounded-2xl border-2 border-dashed border-blue-200 inline-block">
+                <div id="rider-qr-box"></div>
+            </div>
+
+            <p class="text-[11px] text-slate-500">ให้ลูกค้าสแกน QR นี้เพื่อโอนเงินเข้าบัญชีร้านได้เลยครับ</p>
+
+            <div class="flex gap-2 pt-1">
+                <button type="button" onclick="markTransferPendingFromRider()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-xl text-xs font-bold">
+                    📩 แจ้งร้านว่าโอนแล้ว (รอตรวจ)
+                </button>
+                <button type="button" onclick="document.getElementById('rider-qr-modal').classList.add('hidden')" class="bg-slate-200 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold">ปิด</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal ยืนยันส่งสินค้าสำเร็จ + แนบรูปหลักฐาน (ไม่บังคับ) -->
     <div id="complete-modal" onclick="closeCompleteModal()" class="hidden fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
         <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
@@ -144,12 +175,14 @@
         let riderName = localStorage.getItem(`sapsong_rider_name_${SHOP_ID}`) || '';
         if (riderName) document.getElementById('inp-rider-name').value = riderName;
 
+        let paymentConfig = { promptpayId: '0855750995', accountName: SHOP_ID, shopName: SHOP_ID };
         let allOrders = [];
         let currentFilter = 'waiting';
         let listenersStarted = false;
         let soundEnabled = true;
         let knownWaitingCount = null;
 
+        let activeQrOrderKey = '';
         let targetCompleteKey = '';
         let proofBase64 = '';
 
@@ -257,6 +290,11 @@
                 document.getElementById('nav-shop-name').innerText = `ไรเดอร์ - ${m.name}`;
             });
 
+            db.ref(`shops_data/${SHOP_ID}/paymentConfig`).on('value', snap => {
+                const cfg = snap.val() || {};
+                paymentConfig = { ...paymentConfig, ...cfg };
+            });
+
             db.ref(`shops_data/${SHOP_ID}/orders`).on('value', snap => {
                 const raw = snap.val() || {};
                 allOrders = Object.entries(raw)
@@ -272,6 +310,54 @@
 
                 renderOrders();
             });
+        }
+
+        // ================= PromptPay QR สำหรับลูกค้าเปลี่ยนใจโอนหน้างาน =================
+        function crc16(data) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < data.length; i++) { crc ^= data.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) crc = ((crc & 0x8000) !== 0) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF; }
+            return crc.toString(16).toUpperCase().padStart(4, '0');
+        }
+        function tlv(t, v) { return `${t}${v.length.toString().padStart(2,'0')}${v}`; }
+        function buildPromptPayQR(id, amt) {
+            const clean = String(id || '').replace(/[^0-9]/g, '');
+            const target = (clean.length === 10 && clean.startsWith('0')) ? tlv('01', '0066' + clean.substring(1)) : tlv('02', clean);
+            const m = tlv('00', 'A000000677010111') + target;
+            let p = tlv('00','01') + tlv('01', amt>0?'12':'11') + tlv('29', m) + tlv('53','764');
+            if (amt > 0) p += tlv('54', Number(amt).toFixed(2));
+            p += tlv('58','TH') + '6304';
+            return p + crc16(p);
+        }
+
+        function openRiderPromptPayQR(orderKey) {
+            const o = allOrders.find(x => x.key === orderKey);
+            if (!o) return;
+            const ppId = paymentConfig.promptpayId || '';
+            if (!ppId) return alert('ร้านค้ายังไม่ได้ตั้งค่าเบอร์พร้อมเพย์รับเงินครับ');
+
+            const amt = Number(o.total || 0);
+            activeQrOrderKey = orderKey;
+            document.getElementById('rqr-order-label').innerText = `ออเดอร์ #${o.orderId || o.key.slice(-6)} • ${o.customerName || 'ลูกค้า'}`;
+            document.getElementById('rqr-acc-name').innerText = paymentConfig.accountName || paymentConfig.shopName || SHOP_ID;
+            document.getElementById('rqr-pp-id').innerText = ppId;
+            document.getElementById('rqr-amount-text').innerText = `${amt.toLocaleString()} บาท`;
+
+            const box = document.getElementById('rider-qr-box');
+            box.innerHTML = '';
+            new QRCode(box, { text: buildPromptPayQR(ppId, amt), width: 185, height: 185 });
+            document.getElementById('rider-qr-modal').classList.remove('hidden');
+        }
+
+        function markTransferPendingFromRider() {
+            if (!activeQrOrderKey) return;
+            db.ref(`shops_data/${SHOP_ID}/orders/${activeQrOrderKey}`).update({
+                payMethod: 'promptpay',
+                paymentStatus: 'pending_review',
+                riderTransferNote: `โอนหน้างานผ่าน QR โดยไรเดอร์ ${riderName}`
+            }).then(() => {
+                document.getElementById('rider-qr-modal').classList.add('hidden');
+                alert('อัปเดตสถานะเป็น "รอตรวจสลิป/ยอดโอนหน้างาน" ให้ร้านค้าแล้วครับ');
+            }).catch(err => alert('อัปเดตไม่สำเร็จ: ' + err.message));
         }
 
         function setFilter(f) {
@@ -308,6 +394,7 @@
             if (!confirm('ยืนยันรับงานจัดส่งออเดอร์นี้?')) return;
             db.ref(`shops_data/${SHOP_ID}/orders/${orderKey}`).update({
                 deliveryStatus: 'delivering',
+                status: 'delivering',
                 riderName: riderName,
                 pickedUpAt: Date.now()
             }).catch(err => alert('อัปเดตสถานะไม่สำเร็จ: ' + err.message));
@@ -317,6 +404,7 @@
             if (!confirm('คืนงานนี้กลับไปที่ช่อง "รอรับงาน"?')) return;
             db.ref(`shops_data/${SHOP_ID}/orders/${orderKey}`).update({
                 deliveryStatus: 'waiting',
+                status: 'cooking',
                 riderName: '',
                 pickedUpAt: null
             }).catch(err => alert('คืนงานไม่สำเร็จ: ' + err.message));
@@ -418,10 +506,12 @@
                     ? o.items.map(it => `<div class="flex justify-between"><span>• ${it.name} x${it.qty || 1}</span><span>${Number(it.total || it.price || 0).toLocaleString()} บ.</span></div>`).join('')
                     : `<div class="text-slate-500">${o.summary || '-'}</div>`;
 
-                const isPaid = o.paymentStatus === 'paid' || o.status === 'paid' || o.status === 'approved';
+                const isPaid = o.paymentStatus === 'paid';
                 const payBadge = isPaid
                     ? `<span class="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full text-[11px] font-bold">✅ โอนแล้ว (ไม่ต้องเก็บเงิน)</span>`
-                    : `<span class="bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full text-[11px] font-bold">💵 เก็บเงิน/รอตรวจ ${Number(o.total || 0).toLocaleString()} บ.</span>`;
+                    : (o.paymentStatus === 'pending_review'
+                        ? `<span class="bg-blue-100 text-blue-900 px-2.5 py-0.5 rounded-full text-[11px] font-bold">🔍 แจ้งโอนแล้ว/รอร้านตรวจ</span>`
+                        : `<span class="bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full text-[11px] font-bold">💵 เก็บเงินปลายทาง ${Number(o.total || 0).toLocaleString()} บ.</span>`);
 
                 const timeTxt = o.createdAt ? new Date(Number(o.createdAt)).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '';
                 const deliveredTimeTxt = o.deliveredAt ? new Date(Number(o.deliveredAt)).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '';
@@ -451,6 +541,7 @@
                         <div class="bg-slate-50 p-3 rounded-2xl text-xs space-y-1 text-slate-700">
                             <p class="font-bold text-slate-800 mb-1">🛍️ รายการสินค้า:</p>
                             ${itemsHtml}
+                            ${Number(o.deliveryFee || 0) > 0 ? `<div class="flex justify-between text-orange-700"><span>• ค่าส่งไรเดอร์</span><span>${Number(o.deliveryFee).toLocaleString()} บ.</span></div>` : ''}
                             <div class="flex justify-between font-bold text-sm text-slate-900 pt-1.5 border-t">
                                 <span>ยอดรวม:</span>
                                 <span>${Number(o.total || 0).toLocaleString()} บาท</span>
@@ -460,6 +551,7 @@
                         <div class="flex flex-wrap gap-2 pt-1">
                             ${o.customerPhone ? `<a href="tel:${String(o.customerPhone).replace(/[^0-9+]/g, '')}" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3.5 py-2.5 rounded-xl text-xs font-bold">📞 โทรหาผู้รับ</a>` : ''}
                             ${mapUrl ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold">🗺️ นำทาง</a>` : ''}
+                            ${!isPaid ? `<button onclick="openRiderPromptPayQR('${o.key}')" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-900 px-3.5 py-2.5 rounded-xl text-xs font-bold">📱 QR โอนจ่าย</button>` : ''}
                             ${state === 'waiting' ? `<button onclick="acceptDelivery('${o.key}')" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">🛵 รับงานจัดส่ง</button>` : ''}
                             ${state === 'delivering' ? `
                                 <button onclick="returnToWaiting('${o.key}')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2.5 rounded-xl text-xs font-bold">คืนงาน</button>
