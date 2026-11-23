@@ -68,6 +68,8 @@
                 </div>
                 <div class="flex flex-wrap items-center gap-1.5">
                     <button onclick="toggleStoreOpen()" id="btn-store-status" class="px-3 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs">🟢 ร้านเปิดอยู่</button>
+                    <button onclick="toggleDeliveryOpen()" id="btn-delivery-status" class="px-3 py-2 bg-orange-600 text-white font-bold rounded-xl text-xs">🛵 จัดส่งเปิด</button>
+                    <button onclick="toggleOrderSound()" id="btn-order-sound" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs">🔔 เสียงเข้า</button>
                     <button onclick="switchTab('orders')" id="tab-orders" class="px-3 py-2 bg-amber-400 text-slate-950 font-bold rounded-xl text-xs">🧾 ออเดอร์ (<span id="badge-pending-orders">0</span>)</button>
                     <button onclick="switchTab('menus')" id="tab-menus" class="px-3 py-2 bg-slate-800 text-white rounded-xl text-xs">🍽️ เมนู</button>
                     <button onclick="switchTab('toppings')" id="tab-toppings" class="px-3 py-2 bg-slate-800 text-white rounded-xl text-xs">✨ ท็อปปิ้ง</button>
@@ -84,13 +86,24 @@
 
             <!-- 1. แท็บออเดอร์ & ตรวจสลิป -->
             <div id="view-orders" class="space-y-4">
-                <div class="bg-white p-3.5 rounded-2xl shadow-sm border flex flex-wrap justify-between items-center gap-2">
+                <div class="bg-white p-3.5 rounded-2xl shadow-sm border flex flex-wrap justify-between items-center gap-3">
                     <div class="flex flex-wrap gap-1.5">
                         <button onclick="setOrderFilter('active')" id="ofilter-active" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-orange-600 text-white">🔥 กำลังดำเนินการ</button>
                         <button onclick="setOrderFilter('completed')" id="ofilter-completed" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700">✅ เสร็จสิ้นแล้ว</button>
                         <button onclick="setOrderFilter('all')" id="ofilter-all" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700">📋 ทั้งหมด</button>
                     </div>
-                    <span class="text-xs text-slate-500 font-medium">🛡️ ตรวจสลิปและกดยืนยันรับเงินด้วยตัวเองทุกออเดอร์</span>
+                    <!-- เลือกเสียงแจ้งเตือน 5 เสียง + ปุ่มทดสอบ -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <label class="text-xs font-bold text-slate-600">🔊 เสียงเตือน:</label>
+                        <select id="sel-order-sound" onchange="changeOrderSoundType(this.value)" class="px-2.5 py-1.5 border rounded-xl text-xs font-bold bg-slate-50 text-slate-800 outline-none">
+                            <option value="dingdong">1. 🔔 ติ๊งต่อง (มาตรฐาน)</option>
+                            <option value="cash">2. 💰 แคชเชียร์ (เงินเข้า)</option>
+                            <option value="chime">3. 🎵 เมโลดี้สดใส</option>
+                            <option value="bell">4. 🛎️ กระดิ่งร้านอาหาร</option>
+                            <option value="alert">5. 🚨 แจ้งเตือนด่วน (ครัวดัง)</option>
+                        </select>
+                        <button type="button" onclick="playOrderSound(true)" class="bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded-xl text-xs font-bold">▶ ทดสอบ</button>
+                    </div>
                 </div>
                 <div id="orders-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
@@ -427,6 +440,7 @@
         let paymentConfig = { shopLogo: '', shopName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, contacts: [] };
         let draftContacts = [];
         let isStoreOpen = true;
+        let isDeliveryOpen = true;
         let enableTables = false;
         let categories = [];
         let menus = [];
@@ -441,6 +455,80 @@
         let currentTableShareUrl = '';
         let rnSlipBase64 = '';
         let rnSlipRef = '';
+
+        // ================= ระบบเสียงแจ้งเตือนออเดอร์เข้า 5 เสียง =================
+        let orderSoundEnabled = true;
+        let selectedSoundType = localStorage.getItem(`sapsong_sound_${SHOP_ID}`) || 'dingdong';
+        let knownOrderCount = null;
+        let sharedAudioCtx = null;
+
+        document.getElementById('sel-order-sound').value = selectedSoundType;
+
+        function getAudioCtx() {
+            if (!sharedAudioCtx) {
+                sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (sharedAudioCtx.state === 'suspended') {
+                sharedAudioCtx.resume();
+            }
+            return sharedAudioCtx;
+        }
+
+        function playTone(ctx, freq, startOffset, duration, type = 'sine', volume = 0.25) {
+            const now = ctx.currentTime + startOffset;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            gain.gain.setValueAtTime(volume, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + duration);
+        }
+
+        function playOrderSound(forcePlay = false) {
+            if (!orderSoundEnabled && !forcePlay) return;
+            try {
+                const ctx = getAudioCtx();
+                if (selectedSoundType === 'dingdong') {
+                    playTone(ctx, 880, 0, 0.28, 'sine', 0.28);
+                    playTone(ctx, 659.25, 0.22, 0.45, 'sine', 0.28);
+                } else if (selectedSoundType === 'cash') {
+                    playTone(ctx, 1318.5, 0, 0.12, 'triangle', 0.3);
+                    playTone(ctx, 2637, 0.1, 0.45, 'sine', 0.28);
+                } else if (selectedSoundType === 'chime') {
+                    playTone(ctx, 523.25, 0, 0.18, 'sine', 0.25);
+                    playTone(ctx, 659.25, 0.14, 0.18, 'sine', 0.25);
+                    playTone(ctx, 783.99, 0.28, 0.35, 'sine', 0.28);
+                    playTone(ctx, 1046.5, 0.42, 0.45, 'sine', 0.28);
+                } else if (selectedSoundType === 'bell') {
+                    playTone(ctx, 1567.98, 0, 0.75, 'sine', 0.32);
+                    playTone(ctx, 3135.96, 0, 0.35, 'sine', 0.15);
+                } else if (selectedSoundType === 'alert') {
+                    playTone(ctx, 1100, 0, 0.14, 'square', 0.18);
+                    playTone(ctx, 1100, 0.18, 0.14, 'square', 0.18);
+                    playTone(ctx, 1400, 0.36, 0.28, 'square', 0.2);
+                }
+            } catch (e) {}
+        }
+
+        function changeOrderSoundType(val) {
+            selectedSoundType = val;
+            localStorage.setItem(`sapsong_sound_${SHOP_ID}`, val);
+            playOrderSound(true);
+        }
+
+        function toggleOrderSound() {
+            orderSoundEnabled = !orderSoundEnabled;
+            const btn = document.getElementById('btn-order-sound');
+            btn.innerText = orderSoundEnabled ? '🔔 เสียงเข้า' : '🔕 ปิดเสียง';
+            btn.className = orderSoundEnabled
+                ? 'px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs'
+                : 'px-3 py-2 bg-slate-800 text-slate-400 font-bold rounded-xl text-xs';
+            if (orderSoundEnabled) playOrderSound(true);
+        }
 
         auth.onAuthStateChanged(user => {
             const email = user && user.email ? user.email.toLowerCase() : '';
@@ -526,6 +614,15 @@
                     : 'px-3 py-2 bg-red-600 text-white font-bold rounded-xl text-xs';
             });
 
+            shopRef.child('isDeliveryOpen').on('value', snap => {
+                isDeliveryOpen = snap.val() !== false;
+                const btn = document.getElementById('btn-delivery-status');
+                btn.innerText = isDeliveryOpen ? '🛵 จัดส่งเปิด' : '🚫 งดจัดส่ง';
+                btn.className = isDeliveryOpen
+                    ? 'px-3 py-2 bg-orange-600 text-white font-bold rounded-xl text-xs'
+                    : 'px-3 py-2 bg-slate-700 text-slate-300 font-bold rounded-xl text-xs';
+            });
+
             shopRef.child('enableTables').on('value', snap => {
                 enableTables = Boolean(snap.val());
                 document.getElementById('chk-enable-tables').checked = enableTables;
@@ -570,6 +667,12 @@
             shopRef.child('orders').on('value', snap => {
                 const raw = snap.val() || {};
                 orders = Object.entries(raw).map(([k, v]) => ({ ...v, key: k })).reverse();
+
+                if (knownOrderCount !== null && orders.length > knownOrderCount) {
+                    playOrderSound();
+                }
+                knownOrderCount = orders.length;
+
                 renderOrders();
                 renderRevenue();
             });
@@ -588,7 +691,11 @@
             shopRef.child('isStoreOpen').set(!isStoreOpen);
         }
 
-        // ================= ออเดอร์ & ตรวจสลิป & หมุดจัดส่ง =================
+        function toggleDeliveryOpen() {
+            shopRef.child('isDeliveryOpen').set(!isDeliveryOpen);
+        }
+
+        // ================= ออเดอร์ & สเต็ปสถานะ & ตรวจสลิป & หมุดจัดส่ง =================
         function setOrderFilter(f) {
             orderFilter = f;
             ['active', 'completed', 'all'].forEach(k => {
@@ -611,8 +718,16 @@
             shopRef.child(`orders/${key}/paymentStatus`).set('paid');
         }
 
-        function setOrderStatus(key, status) {
-            shopRef.child(`orders/${key}/status`).set(status);
+        function setOrderStatus(key, status, isDelivery = false) {
+            const upd = { status };
+            if (isDelivery) {
+                if (status === 'delivering') upd.deliveryStatus = 'delivering';
+                if (status === 'completed') {
+                    upd.deliveryStatus = 'delivered';
+                    upd.deliveredAt = Date.now();
+                }
+            }
+            shopRef.child(`orders/${key}`).update(upd);
         }
 
         function deleteOrder(key) {
@@ -659,11 +774,32 @@
                         ? `<span class="bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full text-[11px] font-bold">🔍 รอตรวจสลิป</span>`
                         : `<span class="bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded-full text-[11px] font-bold">💵 เงินสด</span>`);
 
+                const st = o.status || 'pending';
+                const stepBadgeMap = {
+                    pending: `<span class="bg-yellow-100 text-yellow-900 px-2.5 py-0.5 rounded-full text-[11px] font-bold">⏳ รอรับออเดอร์</span>`,
+                    cooking: `<span class="bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-full text-[11px] font-bold">👨‍🍳 กำลังทำ</span>`,
+                    delivering: `<span class="bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full text-[11px] font-bold">🛵 กำลังจัดส่ง</span>`,
+                    completed: `<span class="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full text-[11px] font-bold">✅ สำเร็จ</span>`
+                };
+                const stepBadge = stepBadgeMap[st] || '';
+
                 const typeBadge = o.orderType === 'delivery'
                     ? `<span class="bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-full text-[11px] font-bold">🛵 จัดส่ง</span>`
                     : (o.orderType === 'dinein'
                         ? `<span class="bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full text-[11px] font-bold">🍽️ โต๊ะ ${o.tableNo || '-'}</span>`
                         : `<span class="bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full text-[11px] font-bold">🛍️ รับเอง</span>`);
+
+                const isDel = o.orderType === 'delivery';
+                let nextStepBtn = '';
+                if (st === 'pending') {
+                    nextStepBtn = `<button onclick="setOrderStatus('${o.key}', 'cooking', ${isDel})" class="bg-orange-500 hover:bg-orange-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold">👨‍🍳 รับออเดอร์</button>`;
+                } else if (st === 'cooking') {
+                    nextStepBtn = isDel
+                        ? `<button onclick="setOrderStatus('${o.key}', 'delivering', true)" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold">🛵 กำลังจัดส่ง</button>`
+                        : `<button onclick="setOrderStatus('${o.key}', 'completed', false)" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold">🏁 สำเร็จ</button>`;
+                } else if (st === 'delivering') {
+                    nextStepBtn = `<button onclick="setOrderStatus('${o.key}', 'completed', true)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold">🏁 ส่งสำเร็จ</button>`;
+                }
 
                 const mapUrl = getMapLink(o);
                 const deliveryStateText = o.deliveryStatus === 'delivered'
@@ -680,7 +816,7 @@
                             <div>
                                 <div class="flex items-center gap-1.5 flex-wrap">
                                     <span class="font-mono text-xs font-bold text-slate-500">#${o.orderId || o.key.slice(-6)}</span>
-                                    ${typeBadge} ${payBadge}
+                                    ${typeBadge} ${stepBadge} ${payBadge}
                                 </div>
                                 <h4 class="font-bold text-slate-800 text-base mt-1">👤 ${o.customerName || 'ลูกค้า'} <span class="text-xs font-normal text-slate-500">${o.customerPhone || ''}</span></h4>
                                 <p class="text-[11px] text-slate-400">${o.createdAt ? new Date(o.createdAt).toLocaleString('th-TH') : ''}</p>
@@ -707,7 +843,7 @@
                         <div class="flex flex-wrap gap-1.5 pt-1">
                             ${o.slipImage ? `<button onclick="openImageModal('สลิปโอนเงิน #${o.orderId || ''}', '${o.slipImage}')" class="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-xl text-xs font-bold">🔍 ดูสลิป</button>` : ''}
                             ${!isPaid ? `<button onclick="approveOrderPayment('${o.key}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold">✅ ยืนยันรับเงิน</button>` : ''}
-                            ${o.status !== 'completed' ? `<button onclick="setOrderStatus('${o.key}', 'completed')" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-xl text-xs font-bold">🏁 เสร็จสิ้น</button>` : ''}
+                            ${nextStepBtn}
                             ${o.clientIP ? `<button onclick="banOrderIP('${o.clientIP}')" class="bg-red-50 text-red-700 px-2.5 py-1.5 rounded-xl text-xs font-bold">🚫 แบน IP</button>` : ''}
                             <button onclick="deleteOrder('${o.key}')" class="bg-red-100 text-red-700 px-2.5 py-1.5 rounded-xl text-xs font-bold ml-auto">ลบ</button>
                         </div>
