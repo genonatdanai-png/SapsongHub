@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบไรเดอร์จัดส่งสินค้า - Sapsong HUB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen pb-20">
+
+    <!-- Lock Gate (Sapsong HUB) -->
+    <div id="sapsong-lock-overlay" class="hidden fixed inset-0 bg-slate-950 text-white z-[99999] flex flex-col justify-center items-center text-center p-6">
+        <div class="bg-slate-900 border border-slate-700 max-w-md w-full p-8 rounded-3xl shadow-2xl space-y-3">
+            <div class="text-5xl">🔒</div>
+            <h2 id="sapsong-lock-title" class="text-xl font-bold">ปิดให้บริการชั่วคราว</h2>
+            <p id="sapsong-lock-msg" class="text-sm text-slate-400">บัญชีร้านค้าหมดอายุหรือถูกระงับชั่วคราว</p>
+        </div>
+    </div>
+
+    <!-- หน้าล็อกอินไรเดอร์ -->
+    <div id="login-screen" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-7 shadow-2xl space-y-5 text-center">
+            <div class="w-16 h-16 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-3xl mx-auto">🛵</div>
+            <div>
+                <h1 class="text-xl font-bold text-slate-800">เข้าสู่ระบบไรเดอร์</h1>
+                <p class="text-xs text-slate-500 mt-1">ใช้อีเมลและรหัสผ่านของร้านค้าเพื่อรับงานจัดส่ง</p>
+            </div>
+            <form onsubmit="handleRiderLogin(event)" class="space-y-3 text-left">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อไรเดอร์ (แสดงให้ร้านค้าเห็น)</label>
+                    <input type="text" id="inp-rider-name" required placeholder="เช่น พี่บอย, ไรเดอร์ 1" class="w-full px-3.5 py-2.5 border-2 rounded-xl text-sm font-semibold outline-none focus:border-orange-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">อีเมลร้านค้า</label>
+                    <input type="email" id="login-email" required class="w-full px-3.5 py-2.5 border-2 rounded-xl text-sm font-semibold outline-none focus:border-orange-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสผ่าน</label>
+                    <input type="password" id="login-pass" required placeholder="••••••••" class="w-full px-3.5 py-2.5 border-2 rounded-xl text-sm font-semibold outline-none focus:border-orange-500">
+                </div>
+                <p id="login-err" class="hidden text-xs text-red-600 font-semibold text-center"></p>
+                <button type="submit" id="btn-login" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl text-sm shadow-md">🛵 เข้าสู่ระบบรับงาน</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- หน้าจอหลักไรเดอร์ -->
+    <div id="main-app" class="hidden">
+        <nav class="bg-slate-900 text-white shadow-md p-3.5 sticky top-0 z-40">
+            <div class="max-w-3xl mx-auto flex justify-between items-center gap-2">
+                <div class="flex items-center gap-2.5 overflow-hidden">
+                    <div class="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-xl shrink-0">🛵</div>
+                    <div class="truncate">
+                        <h1 id="nav-shop-name" class="font-bold text-base truncate">ระบบไรเดอร์</h1>
+                        <p id="nav-rider-name" class="text-[11px] text-orange-300 truncate">ไรเดอร์: -</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button onclick="toggleSound()" id="btn-sound" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-semibold" title="เปิด/ปิดเสียงแจ้งเตือนงานใหม่">🔔 เสียง</button>
+                    <button onclick="changeRiderName()" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-semibold">✏️ ชื่อ</button>
+                    <button onclick="logout()" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-xl text-xs font-bold">ออก</button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-3xl mx-auto p-3 sm:p-4 space-y-4">
+            <!-- แถบแท็บสถานะงาน -->
+            <div class="grid grid-cols-3 gap-2 bg-white p-1.5 rounded-2xl shadow-sm border">
+                <button onclick="setFilter('waiting')" id="tab-waiting" class="py-2.5 rounded-xl text-xs font-bold bg-orange-500 text-white transition shadow-sm">
+                    📦 รอรับงาน (<span id="cnt-waiting">0</span>)
+                </button>
+                <button onclick="setFilter('delivering')" id="tab-delivering" class="py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                    🛵 กำลังส่ง (<span id="cnt-delivering">0</span>)
+                </button>
+                <button onclick="setFilter('delivered')" id="tab-delivered" class="py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                    ✅ ส่งแล้ว (<span id="cnt-delivered">0</span>)
+                </button>
+            </div>
+
+            <!-- รายการงานจัดส่ง -->
+            <div id="orders-container" class="space-y-3.5"></div>
+        </main>
+    </div>
+
+    <!-- Modal ยืนยันส่งสินค้าสำเร็จ + แนบรูปหลักฐาน (ไม่บังคับ) -->
+    <div id="complete-modal" onclick="closeCompleteModal()" class="hidden fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b pb-2.5">
+                <h3 class="font-bold text-slate-800 text-base">✅ ยืนยันส่งสินค้าสำเร็จ</h3>
+                <button onclick="closeCompleteModal()" class="text-xl font-bold text-gray-400 px-2">&times;</button>
+            </div>
+            <p id="comp-order-info" class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl font-medium">-</p>
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-slate-700">📸 ถ่ายรูป/แนบหลักฐานส่งของ (ไม่บังคับ)</label>
+                <input type="file" id="proof-input" accept="image/*" capture="environment" onchange="processProofImage(event)" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-orange-100 file:text-orange-800 file:font-bold cursor-pointer">
+                <img id="proof-preview" src="" class="hidden w-full max-h-44 object-contain rounded-xl border bg-slate-50">
+            </div>
+            <div class="flex gap-2 pt-1">
+                <button onclick="closeCompleteModal()" class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold">ยกเลิก</button>
+                <button id="btn-confirm-complete" onclick="confirmCompleteDelivery()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">✅ ยืนยันส่งแล้ว</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal ดูรูปหลักฐานการส่ง -->
+    <div id="view-proof-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-2xl max-w-md w-full p-4 space-y-3">
+            <h3 class="font-bold text-sm text-slate-800">📸 รูปหลักฐานการจัดส่ง</h3>
+            <img id="view-proof-img" src="" class="w-full max-h-[70vh] object-contain rounded-xl bg-slate-100">
+            <button onclick="document.getElementById('view-proof-modal').classList.add('hidden')" class="w-full bg-slate-800 text-white py-2 rounded-xl text-xs font-bold">ปิด</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhtvwqgAP-5-ITl1TIopqIWEFrZ2deQtg",
+            authDomain: "sapsonghub.firebaseapp.com",
+            databaseURL: "https://sapsonghub-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "sapsonghub",
+            storageBucket: "sapsonghub.firebasestorage.app",
+            messagingSenderId: "448301529212",
+            appId: "1:448301529212:web:7366898a663dcbd556f1f9",
+            measurementId: "G-0SPWW0K3WD"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const SHOP_ID = (urlParams.get('shop') || 'pangnawat').toLowerCase();
+        const SUPER_ADMIN_EMAIL = 'admingeno@ss.com';
+        const EXPECTED_EMAIL = `${SHOP_ID}@ss.com`;
+
+        document.getElementById('login-email').placeholder = EXPECTED_EMAIL;
+        let riderName = localStorage.getItem(`sapsong_rider_name_${SHOP_ID}`) || '';
+        if (riderName) document.getElementById('inp-rider-name').value = riderName;
+
+        let allOrders = [];
+        let currentFilter = 'waiting';
+        let listenersStarted = false;
+        let soundEnabled = true;
+        let knownWaitingCount = null;
+
+        let targetCompleteKey = '';
+        let proofBase64 = '';
+
+        function playBeep() {
+            if (!soundEnabled) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.25);
+            } catch (e) {}
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('btn-sound');
+            btn.innerText = soundEnabled ? '🔔 เสียง' : '🔕 ปิดเสียง';
+            btn.className = soundEnabled
+                ? 'px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-semibold'
+                : 'px-2.5 py-1.5 bg-slate-800 text-slate-400 rounded-xl text-xs font-semibold';
+            if (soundEnabled) playBeep();
+        }
+
+        auth.onAuthStateChanged(user => {
+            const email = user && user.email ? user.email.toLowerCase() : '';
+            if (user && (email === SUPER_ADMIN_EMAIL || email === EXPECTED_EMAIL)) {
+                if (!riderName) riderName = 'ไรเดอร์';
+                document.getElementById('nav-rider-name').innerText = `ไรเดอร์: ${riderName}`;
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                startListeners();
+            } else {
+                if (user) auth.signOut();
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('main-app').classList.add('hidden');
+            }
+        });
+
+        function handleRiderLogin(e) {
+            e.preventDefault();
+            const rName = document.getElementById('inp-rider-name').value.trim();
+            const email = document.getElementById('login-email').value.trim();
+            const pass = document.getElementById('login-pass').value;
+            const err = document.getElementById('login-err');
+            const btn = document.getElementById('btn-login');
+            err.classList.add('hidden');
+            if (!rName) return;
+
+            riderName = rName;
+            localStorage.setItem(`sapsong_rider_name_${SHOP_ID}`, riderName);
+            btn.disabled = true;
+            btn.innerText = 'กำลังเข้าสู่ระบบ...';
+
+            auth.signInWithEmailAndPassword(email, pass)
+                .catch(() => {
+                    err.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+                    err.classList.remove('hidden');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerText = '🛵 เข้าสู่ระบบรับงาน';
+                });
+        }
+
+        function changeRiderName() {
+            const next = prompt('กรอกชื่อไรเดอร์ใหม่:', riderName);
+            if (next && next.trim()) {
+                riderName = next.trim();
+                localStorage.setItem(`sapsong_rider_name_${SHOP_ID}`, riderName);
+                document.getElementById('nav-rider-name').innerText = `ไรเดอร์: ${riderName}`;
+            }
+        }
+
+        function logout() { auth.signOut(); }
+
+        function isExpired(d) {
+            if (!d || d === '9999-12-31') return false;
+            const t = new Date(); t.setHours(0, 0, 0, 0);
+            const e = new Date(d); e.setHours(0, 0, 0, 0);
+            return t > e;
+        }
+
+        function showLock(title, msg) {
+            document.getElementById('sapsong-lock-title').innerText = title;
+            document.getElementById('sapsong-lock-msg').innerText = msg;
+            document.getElementById('sapsong-lock-overlay').classList.remove('hidden');
+        }
+
+        function startListeners() {
+            if (listenersStarted) return;
+            listenersStarted = true;
+
+            db.ref('sapsong_hub_shops/' + SHOP_ID).on('value', snap => {
+                const m = snap.val();
+                if (!m) return showLock('ไม่พบร้านค้าในระบบ', `รหัส "${SHOP_ID}" ยังไม่ได้ลงทะเบียนใน Sapsong HUB`);
+                if (m.isSuspended) return showLock('ร้านค้าถูกระงับชั่วคราว', `ระบบของ "${m.name}" ถูกระงับการใช้งาน`);
+                if (m.planKey !== 'lifetime' && isExpired(m.expireDate)) return showLock('แพ็กเกจหมดอายุแล้ว', `หมดอายุเมื่อวันที่ ${m.expireDate}`);
+                document.getElementById('sapsong-lock-overlay').classList.add('hidden');
+                document.getElementById('nav-shop-name').innerText = `ไรเดอร์ - ${m.name}`;
+            });
+
+            db.ref(`shops_data/${SHOP_ID}/orders`).on('value', snap => {
+                const raw = snap.val() || {};
+                allOrders = Object.entries(raw)
+                    .map(([k, v]) => ({ ...v, key: k }))
+                    .filter(o => o.orderType === 'delivery' || o.deliveryAddress || o.deliveryLat || o.deliveryMapUrl)
+                    .reverse();
+
+                const newWaiting = allOrders.filter(o => getDeliveryState(o) === 'waiting' && o.status !== 'cancelled').length;
+                if (knownWaitingCount !== null && newWaiting > knownWaitingCount) {
+                    playBeep();
+                }
+                knownWaitingCount = newWaiting;
+
+                renderOrders();
+            });
+        }
+
+        function setFilter(f) {
+            currentFilter = f;
+            ['waiting', 'delivering', 'delivered'].forEach(k => {
+                const btn = document.getElementById('tab-' + k);
+                if (k === f) {
+                    btn.className = 'py-2.5 rounded-xl text-xs font-bold bg-orange-500 text-white transition shadow-sm';
+                } else {
+                    btn.className = 'py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition';
+                }
+            });
+            renderOrders();
+        }
+
+        function getDeliveryState(o) {
+            if (o.deliveryStatus === 'delivered' || o.status === 'completed') return 'delivered';
+            if (o.deliveryStatus === 'delivering') return 'delivering';
+            return 'waiting';
+        }
+
+        function getMapLink(o) {
+            if (o.deliveryLat && o.deliveryLng) {
+                return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(o.deliveryLat + ',' + o.deliveryLng)}`;
+            }
+            if (o.deliveryMapUrl) return o.deliveryMapUrl;
+            if (o.deliveryAddress) {
+                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.deliveryAddress)}`;
+            }
+            return '';
+        }
+
+        function acceptDelivery(orderKey) {
+            if (!confirm('ยืนยันรับงานจัดส่งออเดอร์นี้?')) return;
+            db.ref(`shops_data/${SHOP_ID}/orders/${orderKey}`).update({
+                deliveryStatus: 'delivering',
+                riderName: riderName,
+                pickedUpAt: Date.now()
+            }).catch(err => alert('อัปเดตสถานะไม่สำเร็จ: ' + err.message));
+        }
+
+        function returnToWaiting(orderKey) {
+            if (!confirm('คืนงานนี้กลับไปที่ช่อง "รอรับงาน"?')) return;
+            db.ref(`shops_data/${SHOP_ID}/orders/${orderKey}`).update({
+                deliveryStatus: 'waiting',
+                riderName: '',
+                pickedUpAt: null
+            }).catch(err => alert('คืนงานไม่สำเร็จ: ' + err.message));
+        }
+
+        function openCompleteModal(orderKey) {
+            const o = allOrders.find(x => x.key === orderKey);
+            if (!o) return;
+            targetCompleteKey = orderKey;
+            proofBase64 = '';
+            document.getElementById('proof-input').value = '';
+            document.getElementById('proof-preview').classList.add('hidden');
+            document.getElementById('comp-order-info').innerText = `ออเดอร์ #${o.orderId || o.key.slice(-6)} • ผู้รับ: ${o.customerName || 'ลูกค้า'} • ยอด ${Number(o.total || 0).toLocaleString()} บาท`;
+            document.getElementById('complete-modal').classList.remove('hidden');
+        }
+
+        function closeCompleteModal() {
+            document.getElementById('complete-modal').classList.add('hidden');
+            targetCompleteKey = '';
+            proofBase64 = '';
+        }
+
+        function processProofImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const r = new FileReader();
+            r.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    const c = document.createElement('canvas');
+                    const maxW = 500;
+                    const w = img.width > maxW ? maxW : img.width;
+                    const h = Math.round((img.height / img.width) * w) || 500;
+                    c.width = w; c.height = h;
+                    c.getContext('2d').drawImage(img, 0, 0, w, h);
+                    proofBase64 = c.toDataURL('image/jpeg', 0.7);
+                    const prev = document.getElementById('proof-preview');
+                    prev.src = proofBase64;
+                    prev.classList.remove('hidden');
+                };
+                img.src = ev.target.result;
+            };
+            r.readAsDataURL(file);
+        }
+
+        function confirmCompleteDelivery() {
+            if (!targetCompleteKey) return;
+            const btn = document.getElementById('btn-confirm-complete');
+            btn.disabled = true;
+            btn.innerText = 'กำลังบันทึก...';
+
+            const payload = {
+                deliveryStatus: 'delivered',
+                deliveredBy: riderName,
+                deliveredAt: Date.now()
+            };
+            if (proofBase64) payload.deliveryProofImage = proofBase64;
+
+            db.ref(`shops_data/${SHOP_ID}/orders/${targetCompleteKey}`).update(payload)
+                .then(() => {
+                    closeCompleteModal();
+                })
+                .catch(err => alert('อัปเดตสถานะไม่สำเร็จ: ' + err.message))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerText = '✅ ยืนยันส่งแล้ว';
+                });
+        }
+
+        function viewProofImage(orderKey) {
+            const o = allOrders.find(x => x.key === orderKey);
+            if (!o || !o.deliveryProofImage) return;
+            document.getElementById('view-proof-img').src = o.deliveryProofImage;
+            document.getElementById('view-proof-modal').classList.remove('hidden');
+        }
+
+        function renderOrders() {
+            const waiting = allOrders.filter(o => getDeliveryState(o) === 'waiting' && o.status !== 'cancelled');
+            const delivering = allOrders.filter(o => getDeliveryState(o) === 'delivering' && o.status !== 'cancelled');
+            const delivered = allOrders.filter(o => getDeliveryState(o) === 'delivered' && o.status !== 'cancelled');
+
+            document.getElementById('cnt-waiting').innerText = waiting.length;
+            document.getElementById('cnt-delivering').innerText = delivering.length;
+            document.getElementById('cnt-delivered').innerText = delivered.length;
+
+            const list = currentFilter === 'waiting' ? waiting : (currentFilter === 'delivering' ? delivering : delivered);
+            const box = document.getElementById('orders-container');
+
+            if (list.length === 0) {
+                box.innerHTML = `<div class="bg-white p-8 rounded-3xl border text-center text-slate-400 text-sm">ไม่มีรายการจัดส่งในสถานะนี้</div>`;
+                return;
+            }
+
+            box.innerHTML = list.map(o => {
+                const state = getDeliveryState(o);
+                const mapUrl = getMapLink(o);
+                const itemsHtml = Array.isArray(o.items)
+                    ? o.items.map(it => `<div class="flex justify-between"><span>• ${it.name} x${it.qty || 1}</span><span>${Number(it.total || it.price || 0).toLocaleString()} บ.</span></div>`).join('')
+                    : `<div class="text-slate-500">${o.summary || '-'}</div>`;
+
+                const isPaid = o.paymentStatus === 'paid' || o.status === 'paid' || o.status === 'approved';
+                const payBadge = isPaid
+                    ? `<span class="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full text-[11px] font-bold">✅ โอนแล้ว (ไม่ต้องเก็บเงิน)</span>`
+                    : `<span class="bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full text-[11px] font-bold">💵 เก็บเงิน/รอตรวจ ${Number(o.total || 0).toLocaleString()} บ.</span>`;
+
+                const timeTxt = o.createdAt ? new Date(Number(o.createdAt)).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '';
+                const deliveredTimeTxt = o.deliveredAt ? new Date(Number(o.deliveredAt)).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '';
+
+                return `
+                    <div class="bg-white p-4 rounded-3xl shadow-sm border space-y-3">
+                        <div class="flex justify-between items-start gap-2">
+                            <div>
+                                <span class="font-mono text-xs text-slate-400">#${o.orderId || o.key.slice(-6)} ${timeTxt ? '• ' + timeTxt + ' น.' : ''}</span>
+                                <h3 class="font-bold text-slate-800 text-base mt-0.5">👤 ${o.customerName || 'ลูกค้า'}</h3>
+                                ${o.customerPhone ? `<p class="text-xs text-slate-600">📞 ${o.customerPhone}</p>` : ''}
+                            </div>
+                            <div class="text-right space-y-1">
+                                ${payBadge}
+                                ${o.riderName ? `<div class="text-[11px] text-orange-700 font-semibold">🛵 ${o.riderName}</div>` : ''}
+                                ${state === 'delivered' && deliveredTimeTxt ? `<div class="text-[11px] text-emerald-700 font-semibold">ส่งเมื่อ ${deliveredTimeTxt} น.</div>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="bg-orange-50/70 border border-orange-200 p-3 rounded-2xl text-xs space-y-1">
+                            <p class="font-bold text-orange-950">📍 ที่อยู่จัดส่งผู้รับ:</p>
+                            <p class="text-slate-800">${o.deliveryAddress || 'ตามหมุดพิกัดแผนที่'}</p>
+                            ${o.deliveryLat && o.deliveryLng ? `<p class="font-mono text-[11px] text-slate-500">พิกัด: ${Number(o.deliveryLat).toFixed(5)}, ${Number(o.deliveryLng).toFixed(5)}</p>` : ''}
+                            ${o.note ? `<p class="text-amber-900 font-medium pt-1">📝 หมายเหตุ: ${o.note}</p>` : ''}
+                        </div>
+
+                        <div class="bg-slate-50 p-3 rounded-2xl text-xs space-y-1 text-slate-700">
+                            <p class="font-bold text-slate-800 mb-1">🛍️ รายการสินค้า:</p>
+                            ${itemsHtml}
+                            <div class="flex justify-between font-bold text-sm text-slate-900 pt-1.5 border-t">
+                                <span>ยอดรวม:</span>
+                                <span>${Number(o.total || 0).toLocaleString()} บาท</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 pt-1">
+                            ${o.customerPhone ? `<a href="tel:${String(o.customerPhone).replace(/[^0-9+]/g, '')}" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3.5 py-2.5 rounded-xl text-xs font-bold">📞 โทรหาผู้รับ</a>` : ''}
+                            ${mapUrl ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold">🗺️ นำทาง</a>` : ''}
+                            ${state === 'waiting' ? `<button onclick="acceptDelivery('${o.key}')" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">🛵 รับงานจัดส่ง</button>` : ''}
+                            ${state === 'delivering' ? `
+                                <button onclick="returnToWaiting('${o.key}')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2.5 rounded-xl text-xs font-bold">คืนงาน</button>
+                                <button onclick="openCompleteModal('${o.key}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">✅ ส่งสินค้าสำเร็จ</button>
+                            ` : ''}
+                            ${state === 'delivered' && o.deliveryProofImage ? `<button onclick="viewProofImage('${o.key}')" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-3.5 py-2.5 rounded-xl text-xs font-bold">📸 ดูรูปส่งของ</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
