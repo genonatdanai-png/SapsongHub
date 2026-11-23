@@ -96,11 +96,11 @@
                 <button onclick="document.getElementById('item-modal').classList.add('hidden')" class="text-2xl font-bold text-slate-400 px-2">&times;</button>
             </div>
 
-            <!-- ขนาดที่ร้านตั้งไว้ (แสดงเมื่อเมนูนั้นมีการเพิ่มขนาด) -->
+            <!-- ขนาดที่ร้านตั้งไว้ (คิดราคาตามขนาดที่เลือกตรงๆ) -->
             <div id="im-size-wrap" class="hidden space-y-1.5 bg-orange-50/70 p-3 rounded-2xl border border-orange-200">
                 <div class="flex justify-between items-center">
                     <p class="text-xs font-bold text-orange-950">📏 เลือกขนาด</p>
-                    <span class="text-[10px] text-orange-700">เลือกได้ 1 ขนาด</span>
+                    <span class="text-[10px] text-orange-700">คิดราคาตามขนาดที่เลือก</span>
                 </div>
                 <div id="im-size-buttons" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs"></div>
             </div>
@@ -514,22 +514,29 @@
                 return;
             }
 
-            grid.innerHTML = list.map(m => `
-                <div onclick="openItemModal(${menus.indexOf(m)})" class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3.5 cursor-pointer hover:border-orange-300 transition active:scale-[0.99]">
-                    ${m.image ? `<img src="${m.image}" class="w-20 h-20 rounded-xl object-cover bg-slate-100 shrink-0">` : `<div class="w-20 h-20 rounded-xl bg-orange-50 text-orange-400 flex items-center justify-center text-2xl shrink-0">🍽️</div>`}
-                    <div class="flex-1 min-w-0">
-                        <h3 class="font-bold text-slate-800 text-sm truncate">${m.name}</h3>
-                        ${m.description ? `<p class="text-[11px] text-slate-400 line-clamp-2 mt-0.5">${m.description}</p>` : ''}
-                        <div class="flex justify-between items-center mt-2">
-                            <span class="font-bold text-orange-600 text-sm">${Number(m.price || 0).toLocaleString()} บาท</span>
-                            <span class="bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-1 rounded-lg">+ เพิ่ม</span>
+            grid.innerHTML = list.map(m => {
+                const sizes = getMenuSizes(m);
+                const priceLabel = sizes.length > 0
+                    ? `${Math.min(...sizes.map(s => Number(s.price || 0))).toLocaleString()} - ${Math.max(...sizes.map(s => Number(s.price || 0))).toLocaleString()} บาท`
+                    : `${Number(m.price || 0).toLocaleString()} บาท`;
+
+                return `
+                    <div onclick="openItemModal(${menus.indexOf(m)})" class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3.5 cursor-pointer hover:border-orange-300 transition active:scale-[0.99]">
+                        ${m.image ? `<img src="${m.image}" class="w-20 h-20 rounded-xl object-cover bg-slate-100 shrink-0">` : `<div class="w-20 h-20 rounded-xl bg-orange-50 text-orange-400 flex items-center justify-center text-2xl shrink-0">🍽️</div>`}
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-bold text-slate-800 text-sm truncate">${m.name}</h3>
+                            ${m.description ? `<p class="text-[11px] text-slate-400 line-clamp-2 mt-0.5">${m.description}</p>` : ''}
+                            <div class="flex justify-between items-center mt-2">
+                                <span class="font-bold text-orange-600 text-sm">${priceLabel}</span>
+                                <span class="bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-1 rounded-lg">+ เพิ่ม</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        // ================= ขนาด (ที่ร้านเพิ่มเอง) & กลุ่มท็อปปิ้ง =================
+        // ================= ขนาด (คิดราคาตามขนาดตรงๆ) & กลุ่มท็อปปิ้ง =================
         function getMenuSizes(m) {
             if (!m) return [];
             if (Array.isArray(m.sizes) && m.sizes.length > 0) {
@@ -555,6 +562,22 @@
             updateItemModalSubtotal();
         }
 
+        function getUnitItemPrice() {
+            if (!activeMenu) return 0;
+            const sizes = getMenuSizes(activeMenu);
+            // ถ้าเมนูมีขนาดให้เลือก ให้คิดราคาของขนาดที่เลือกตรงๆ ไม่บวกซ้ำกับราคาหลัก
+            const baseOrSizePrice = (sizes.length > 0 && activeSize)
+                ? (Number(activeSize.price || 0) || 0)
+                : (Number(activeMenu.price || 0) || 0);
+
+            let toppingExtra = 0;
+            document.querySelectorAll('.im-top-inp:checked').forEach(el => {
+                toppingExtra += Number(el.dataset.price || 0);
+            });
+
+            return baseOrSizePrice + toppingExtra;
+        }
+
         function openItemModal(menuIdx) {
             if (!isStoreOpen) return alert('ขณะนี้ร้านปิดรับออเดอร์ชั่วคราวครับ');
             activeMenu = menus[menuIdx];
@@ -562,18 +585,20 @@
             activeQty = 1;
             activeSize = null;
 
+            const sizes = getMenuSizes(activeMenu);
             document.getElementById('im-name').innerText = activeMenu.name;
-            document.getElementById('im-price').innerText = `${Number(activeMenu.price || 0).toLocaleString()} บาท`;
+            document.getElementById('im-price').innerText = sizes.length > 0
+                ? 'เลือกขนาดเพื่อดูราคา'
+                : `${Number(activeMenu.price || 0).toLocaleString()} บาท`;
             document.getElementById('im-note').value = '';
             document.getElementById('im-qty').innerText = '1';
 
-            const sizes = getMenuSizes(activeMenu);
             const szWrap = document.getElementById('im-size-wrap');
             const szBtns = document.getElementById('im-size-buttons');
             if (sizes.length > 0) {
                 szBtns.innerHTML = sizes.map((s, i) => `
                     <button type="button" onclick="selectItemSizeObj(${i})" class="im-sz-btn py-2 px-2.5 rounded-xl font-bold border border-slate-200 bg-white text-slate-600 text-center">
-                        ${s.name} <span class="block text-[10px] font-normal ${s.price > 0 ? 'text-orange-600' : 'text-slate-400'}">${s.price > 0 ? `+${s.price} บ.` : 'ปกติ'}</span>
+                        ${s.name} <span class="block text-[11px] font-bold text-orange-600">${Number(s.price || 0).toLocaleString()} บ.</span>
                     </button>
                 `).join('');
                 szWrap.classList.remove('hidden');
@@ -655,9 +680,11 @@
 
         function updateItemModalSubtotal() {
             if (!activeMenu) return;
-            let extra = activeSize ? Number(activeSize.price || 0) : 0;
-            document.querySelectorAll('.im-top-inp:checked').forEach(el => extra += Number(el.dataset.price || 0));
-            const sub = (Number(activeMenu.price || 0) + extra) * activeQty;
+            const unitPrice = getUnitItemPrice();
+            if (getMenuSizes(activeMenu).length > 0) {
+                document.getElementById('im-price').innerText = `${unitPrice.toLocaleString()} บาท`;
+            }
+            const sub = unitPrice * activeQty;
             document.getElementById('im-subtotal').innerText = sub.toLocaleString();
         }
 
@@ -672,14 +699,11 @@
             }
 
             const chosenTops = [];
-            let extra = 0;
             document.querySelectorAll('.im-top-inp:checked').forEach(el => {
                 chosenTops.push(el.dataset.name);
-                extra += Number(el.dataset.price || 0);
             });
             const note = document.getElementById('im-note').value.trim();
-            const sizeExtra = activeSize ? Number(activeSize.price || 0) : 0;
-            const unitPrice = Number(activeMenu.price || 0) + sizeExtra + extra;
+            const unitPrice = getUnitItemPrice();
             const sizeTag = activeSize ? `[${activeSize.name}]` : '';
             const topTag = chosenTops.length ? ` (+${chosenTops.join(', ')})` : '';
 
