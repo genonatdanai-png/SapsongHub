@@ -140,7 +140,7 @@
                             <input type="text" id="inp-menu-name" placeholder="เช่น ข้าวกะเพราหมูกรอบ" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">ราคา (บาท) *</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">ราคาหลัก (บาท) *</label>
                             <input type="number" id="inp-menu-price" placeholder="60" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
                         <div>
@@ -152,6 +152,21 @@
                             <input type="file" accept="image/*" onchange="handleMenuImgUpload(event)" class="w-full text-xs text-slate-500">
                         </div>
                     </div>
+
+                    <!-- เพิ่ม/ลบขนาดได้เองตามต้องการ -->
+                    <div class="bg-orange-50/60 border border-orange-200 p-3.5 rounded-2xl space-y-2.5">
+                        <div class="flex justify-between items-center">
+                            <label class="text-xs font-bold text-orange-950">📏 ตัวเลือกขนาด (เพิ่ม/ลบได้เองตามต้องการ)</label>
+                            <span class="text-[10px] text-orange-700">เช่น เล็ก, กลาง, ใหญ่, พิเศษ, จัมโบ้</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                            <input type="text" id="inp-new-size-name" placeholder="ชื่อขนาด (เช่น เล็ก, กลาง, ใหญ่, พิเศษ)" class="sm:col-span-6 px-3 py-2 border rounded-xl text-xs font-semibold bg-white outline-none">
+                            <input type="number" id="inp-new-size-price" placeholder="ราคาบวกเพิ่ม (บาท)" min="0" value="0" onkeyup="if(event.key==='Enter') addDraftSize()" class="sm:col-span-4 px-3 py-2 border rounded-xl text-xs font-bold bg-white outline-none">
+                            <button type="button" onclick="addDraftSize()" class="sm:col-span-2 bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-xl text-xs font-bold">+ เพิ่ม</button>
+                        </div>
+                        <div id="admin-draft-sizes-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">รายละเอียดสั้นๆ</label>
@@ -248,7 +263,7 @@
 
             <!-- 5. แท็บสรุปยอดขาย -->
             <div id="view-revenue" class="hidden space-y-5">
-                <h2 class="text-lg font-bold text-slate-800">💰 สรุปยอดขาย (นับเฉพาะออเดอร์ที่ยืนยันรับเงินแล้ว / เสร็จสิ้น)</h2>
+                <h2 class="text-lg font-bold text-slate-800">💰 สรุปยอดขาย (นับเฉพาะออเดอร์ที่ยืนยันรับเงินแล้ว / เสร็จสิ้น รวมค่าส่งถ้ามี)</h2>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
                     <div class="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-emerald-500">
                         <p class="text-slate-500 text-xs">ยอดขายวันนี้</p>
@@ -502,6 +517,7 @@
         let shopMeta = { id: SHOP_ID, name: SHOP_ID, allowFree30d: false };
         let paymentConfig = { shopLogo: '', shopName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, deliveryFee: 0, contacts: [] };
         let draftContacts = [];
+        let draftMenuSizes = [];
         let isStoreOpen = true;
         let isDeliveryOpen = true;
         let enableTables = false;
@@ -1042,7 +1058,7 @@
             }).join('');
         }
 
-        // ================= เมนู & หมวดหมู่ =================
+        // ================= เมนู & หมวดหมู่ & เพิ่มขนาดได้เอง =================
         function addCategory() {
             const val = document.getElementById('inp-new-cat').value.trim();
             if (!val) return;
@@ -1071,6 +1087,37 @@
             }).join('');
         }
 
+        function renderDraftSizes() {
+            const box = document.getElementById('admin-draft-sizes-list');
+            if (!draftMenuSizes.length) {
+                box.innerHTML = `<span class="text-[11px] text-slate-400">ยังไม่ได้เพิ่มขนาด (ใช้ราคาหลักของเมนูได้เลย)</span>`;
+                return;
+            }
+            box.innerHTML = draftMenuSizes.map((s, idx) => `
+                <span class="bg-white border border-orange-300 px-3 py-1 rounded-xl text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    ${s.name} <span class="text-orange-600">${Number(s.price || 0) > 0 ? `+${Number(s.price)} บ.` : 'ปกติ'}</span>
+                    <button type="button" onclick="removeDraftSize(${idx})" class="text-red-500 font-bold ml-1">✕</button>
+                </span>
+            `).join('');
+        }
+
+        function addDraftSize() {
+            const nameInp = document.getElementById('inp-new-size-name');
+            const priceInp = document.getElementById('inp-new-size-price');
+            const name = nameInp.value.trim();
+            const price = Math.max(0, Number(priceInp.value) || 0);
+            if (!name) return alert('กรุณากรอกชื่อขนาดก่อนครับ');
+            draftMenuSizes.push({ name, price });
+            nameInp.value = '';
+            priceInp.value = '0';
+            renderDraftSizes();
+        }
+
+        function removeDraftSize(idx) {
+            draftMenuSizes.splice(idx, 1);
+            renderDraftSizes();
+        }
+
         function handleMenuImgUpload(e) {
             const f = e.target.files[0]; if (!f) return;
             const r = new FileReader();
@@ -1096,7 +1143,11 @@
             const available = document.getElementById('inp-menu-avail').checked;
             if (!name) return alert('กรุณากรอกชื่อเมนูครับ');
 
-            const item = { name, price, category, description, available, image: draftMenuImg || (idx !== '' ? (menus[idx].image || '') : '') };
+            const item = {
+                name, price, sizes: draftMenuSizes.map(s => ({ ...s })),
+                category, description, available,
+                image: draftMenuImg || (idx !== '' ? (menus[idx].image || '') : '')
+            };
             if (idx !== '') menus[Number(idx)] = { ...menus[Number(idx)], ...item };
             else menus.push(item);
 
@@ -1108,6 +1159,8 @@
             document.getElementById('edit-menu-idx').value = idx;
             document.getElementById('inp-menu-name').value = m.name || '';
             document.getElementById('inp-menu-price').value = m.price || 0;
+            draftMenuSizes = Array.isArray(m.sizes) ? m.sizes.map(s => ({ ...s })) : [];
+            renderDraftSizes();
             document.getElementById('inp-menu-cat').value = m.category || '';
             document.getElementById('inp-menu-desc').value = m.description || '';
             document.getElementById('inp-menu-avail').checked = m.available !== false;
@@ -1122,6 +1175,8 @@
             document.getElementById('edit-menu-idx').value = '';
             document.getElementById('inp-menu-name').value = '';
             document.getElementById('inp-menu-price').value = '';
+            draftMenuSizes = [];
+            renderDraftSizes();
             document.getElementById('inp-menu-desc').value = '';
             document.getElementById('inp-menu-avail').checked = true;
             draftMenuImg = '';
@@ -1136,19 +1191,26 @@
 
         function renderMenus() {
             document.getElementById('menu-count').innerText = menus.length;
-            document.getElementById('menus-list').innerHTML = menus.map((m, i) => `
-                <div class="p-3 rounded-2xl border flex items-center gap-3 ${m.available === false ? 'bg-slate-50 opacity-60' : 'bg-white'}">
-                    ${m.image ? `<img src="${m.image}" class="w-14 h-14 rounded-xl object-cover shrink-0">` : `<div class="w-14 h-14 rounded-xl bg-orange-50 flex items-center justify-center text-xl shrink-0">🍽️</div>`}
-                    <div class="flex-1 min-w-0">
-                        <h4 class="font-bold text-slate-800 text-sm truncate">${m.name}</h4>
-                        <p class="text-xs text-orange-600 font-bold">${Number(m.price || 0).toLocaleString()} บ. <span class="text-slate-400 font-normal">${m.category || ''}</span></p>
-                        <div class="flex gap-1.5 mt-1.5">
-                            <button onclick="editMenu(${i})" class="bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg text-[11px] font-bold">แก้ไข</button>
-                            <button onclick="deleteMenu(${i})" class="bg-red-100 text-red-700 px-2.5 py-1 rounded-lg text-[11px] font-bold">ลบ</button>
+            document.getElementById('menus-list').innerHTML = menus.map((m, i) => {
+                const szList = Array.isArray(m.sizes) ? m.sizes : [];
+                const szText = szList.length
+                    ? `ขนาด: ${szList.map(s => `${s.name}${Number(s.price || 0) > 0 ? ` +${Number(s.price)}บ.` : ''}`).join(', ')}`
+                    : '';
+                return `
+                    <div class="p-3 rounded-2xl border flex items-center gap-3 ${m.available === false ? 'bg-slate-50 opacity-60' : 'bg-white'}">
+                        ${m.image ? `<img src="${m.image}" class="w-14 h-14 rounded-xl object-cover shrink-0">` : `<div class="w-14 h-14 rounded-xl bg-orange-50 flex items-center justify-center text-xl shrink-0">🍽️</div>`}
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-bold text-slate-800 text-sm truncate">${m.name}</h4>
+                            <p class="text-xs text-orange-600 font-bold">${Number(m.price || 0).toLocaleString()} บ. <span class="text-slate-400 font-normal">${m.category || ''}</span></p>
+                            ${szText ? `<p class="text-[10px] text-slate-500 truncate">${szText}</p>` : ''}
+                            <div class="flex gap-1.5 mt-1.5">
+                                <button onclick="editMenu(${i})" class="bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg text-[11px] font-bold">แก้ไข</button>
+                                <button onclick="deleteMenu(${i})" class="bg-red-100 text-red-700 px-2.5 py-1 rounded-lg text-[11px] font-bold">ลบ</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // ================= ท็อปปิ้ง =================
@@ -1489,6 +1551,7 @@
         }
 
         loadPrinterConfig();
+        renderDraftSizes();
         renderAdminContacts();
     </script>
 </body>
