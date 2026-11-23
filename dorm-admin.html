@@ -89,7 +89,7 @@
                         <button onclick="document.getElementById('filter-bill-month').value=''; renderBills();" class="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold">ดูทุกเดือน</button>
                     </div>
                     <div class="flex items-center gap-2 text-xs font-bold">
-                        <span id="bill-stat-unpaid" class="bg-amber-100 text-amber-900 px-3 py-1 rounded-full">ค้างชำระ 0</span>
+                        <span id="bill-stat-unpaid" class="bg-amber-100 text-amber-900 px-3 py-1 rounded-full">ค้างชำระ/รอตรวจ 0</span>
                         <span id="bill-stat-paid" class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">จ่ายแล้ว 0</span>
                     </div>
                 </div>
@@ -144,7 +144,7 @@
                             <input type="tel" id="inp-tenant-phone" placeholder="08x-xxx-xxxx" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">รหัส PIN ดูบิล (เช่น บัตร 4–6 ตัวท้าย)</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">รหัส PIN ดูบิล</label>
                             <input type="text" id="inp-room-pin" placeholder="เช่น 4589" class="w-full px-3 py-2 border rounded-xl text-sm font-mono font-bold text-teal-800 outline-none">
                         </div>
                         <div>
@@ -182,7 +182,7 @@
 
             <!-- 4. แท็บสรุปรายรับหอพัก -->
             <div id="view-revenue" class="hidden space-y-5">
-                <h2 class="text-lg font-bold text-slate-800">💰 สรุปรายรับค่าเช่า & ค่าน้ำ-ไฟ (นับเฉพาะบิลที่ชำระแล้ว)</h2>
+                <h2 class="text-lg font-bold text-slate-800">💰 สรุปรายรับค่าเช่า & ค่าน้ำ-ไฟ (นับเฉพาะบิลที่ยืนยันรับเงินแล้ว)</h2>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                     <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-emerald-500">
                         <p class="text-gray-500 text-xs">รายรับเดือนนี้</p>
@@ -193,11 +193,11 @@
                         <h3 id="drev-year" class="text-xl sm:text-2xl font-bold text-blue-600 mt-1">0 บ.</h3>
                     </div>
                     <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-amber-500">
-                        <p class="text-gray-500 text-xs">ยอดค้างชำระทั้งหมด</p>
+                        <p class="text-gray-500 text-xs">ยอดค้างชำระ/รอตรวจ</p>
                         <h3 id="drev-unpaid" class="text-xl sm:text-2xl font-bold text-amber-600 mt-1">0 บ.</h3>
                     </div>
                     <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-purple-500">
-                        <p class="text-gray-500 text-xs">บิลที่ชำระแล้ว</p>
+                        <p class="text-gray-500 text-xs">บิลที่ยืนยันแล้ว</p>
                         <h3 id="drev-count" class="text-xl sm:text-2xl font-bold text-purple-600 mt-1">0 บิล</h3>
                     </div>
                 </div>
@@ -222,7 +222,7 @@
                 </div>
             </div>
 
-            <!-- 5. แท็บตั้งค่าหอพัก, ค่าน้ำ-ไฟ, ช่องทางติดต่อ & พร้อมเพย์ -->
+            <!-- 5. แท็บตั้งค่าหอพัก -->
             <div id="view-settings" class="hidden">
                 <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border max-w-2xl space-y-4">
                     <h2 class="text-base font-bold text-slate-800">⚙️ ตั้งค่าหอพัก, อัตราค่าน้ำ-ไฟ, PDPA & พร้อมเพย์</h2>
@@ -268,7 +268,6 @@
                         <input type="text" id="set-announcement" placeholder="เช่น กรุณาชำระค่าเช่าภายในวันที่ 5 ของทุกเดือน" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
                     </div>
 
-                    <!-- ตั้งค่าความปลอดภัยข้อมูลผู้เช่า (PDPA) -->
                     <div class="bg-blue-50/80 border border-blue-200 p-3.5 rounded-2xl space-y-2.5">
                         <p class="text-xs font-bold text-blue-950">🛡️ การคุ้มครองข้อมูลส่วนบุคคลผู้เช่า (PDPA)</p>
                         <label class="flex items-start gap-2.5 cursor-pointer">
@@ -277,11 +276,10 @@
                         </label>
                         <label class="flex items-start gap-2.5 cursor-pointer">
                             <input type="checkbox" id="set-mask-tenant-name" class="w-4 h-4 mt-0.5 accent-teal-600">
-                            <span class="text-xs font-semibold text-slate-800">ย่อชื่อผู้เช่าในใบแจ้งหนี้ฝั่งผู้เช่า (เช่น สมชาย ส.) เพื่อลดการเปิดเผยชื่อเต็ม</span>
+                            <span class="text-xs font-semibold text-slate-800">ย่อชื่อผู้เช่าในใบแจ้งหนี้ฝั่งผู้เช่า (เช่น สมชาย ส.)</span>
                         </label>
                     </div>
 
-                    <!-- ช่องทางการติดต่อหอพัก -->
                     <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-3">
                         <div class="flex justify-between items-center">
                             <label class="text-xs font-bold text-slate-800">📞 ช่องทางการติดต่อหอพัก (เพิ่มเองได้หลายช่องทาง)</label>
@@ -302,13 +300,8 @@
                         <div id="admin-contacts-list" class="space-y-2"></div>
                     </div>
 
-                    <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl">
-                        <label class="flex items-start gap-2.5 cursor-pointer">
-                            <input type="checkbox" id="set-auto-approve-slip" class="w-4 h-4 mt-0.5 accent-emerald-600">
-                            <div>
-                                <span class="text-sm font-bold text-emerald-950">🤖 เปิดระบบอ่าน QR สลิปและปรับสถานะบิลเป็น "ชำระแล้ว" อัตโนมัติ</span>
-                            </div>
-                        </label>
+                    <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-xs text-amber-950 font-semibold">
+                        🛡️ ระบบตรวจสลิปทำงานแบบ <strong>เจ้าของหอยืนยันรับเงินเอง</strong> เพื่อป้องกันยอดโอนไม่ตรงหรือสลิปปลอม
                     </div>
 
                     <button type="button" onclick="saveDormSettings()" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold">💾 บันทึกการตั้งค่าหอพัก</button>
@@ -367,7 +360,7 @@
                 <div id="drn-qr-box" class="bg-white p-2 rounded-xl border inline-block"></div>
 
                 <div id="drn-slip-wrap" class="text-left bg-white p-3 rounded-xl border space-y-2">
-                    <label class="block text-xs font-bold text-slate-700">📎 แนบสลิปโอนเงิน (อ่าน QR สลิปอัตโนมัติ) *</label>
+                    <label class="block text-xs font-bold text-slate-700">📎 แนบสลิปโอนเงิน (เช็ก QR สลิปซ้ำ & ส่งให้ HUB ตรวจ) *</label>
                     <input type="file" id="drn-slip-input" accept="image/*" onchange="processDormRenewSlip(event)" class="block w-full text-xs text-slate-500">
                     <div id="drn-slip-status" class="hidden p-2 rounded-lg text-xs font-semibold"></div>
                     <img id="drn-slip-prev" src="" class="hidden w-full max-h-32 object-contain rounded-lg border">
@@ -439,10 +432,10 @@
             other: { icon: '🔗', label: 'ลิงก์/อื่นๆ' }
         };
 
-        let dormMeta = { id: SHOP_ID, name: SHOP_ID, allowFree90d: false };
+        let dormMeta = { id: SHOP_ID, name: SHOP_ID, allowFree30d: false };
         let configData = {
             shopLogo: '', dormName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID,
-            waterRate: 18, elecRate: 8, announcement: '', contacts: [], autoApproveSlip: true,
+            waterRate: 18, elecRate: 8, announcement: '', contacts: [], autoApproveSlip: false,
             requireRoomPin: true, maskTenantName: true
         };
         let draftContacts = [];
@@ -522,7 +515,7 @@
                     elecRate: Number(cfg.elecRate) || 8,
                     announcement: cfg.announcement || '',
                     contacts: loadedContacts,
-                    autoApproveSlip: cfg.autoApproveSlip !== undefined ? cfg.autoApproveSlip : true,
+                    autoApproveSlip: false,
                     requireRoomPin: cfg.requireRoomPin !== undefined ? cfg.requireRoomPin : true,
                     maskTenantName: cfg.maskTenantName !== undefined ? cfg.maskTenantName : true
                 };
@@ -535,7 +528,6 @@
                 document.getElementById('set-water-rate').value = configData.waterRate;
                 document.getElementById('set-elec-rate').value = configData.elecRate;
                 document.getElementById('set-announcement').value = configData.announcement;
-                document.getElementById('set-auto-approve-slip').checked = configData.autoApproveSlip;
                 document.getElementById('set-require-room-pin').checked = configData.requireRoomPin;
                 document.getElementById('set-mask-tenant-name').checked = configData.maskTenantName;
                 document.getElementById('disp-water-rate').innerText = configData.waterRate;
@@ -607,7 +599,7 @@
             configData.elecRate = Math.max(0, Number(document.getElementById('set-elec-rate').value) || 0);
             configData.announcement = document.getElementById('set-announcement').value.trim();
             configData.contacts = draftContacts.map(c => ({ ...c }));
-            configData.autoApproveSlip = document.getElementById('set-auto-approve-slip').checked;
+            configData.autoApproveSlip = false;
             configData.requireRoomPin = document.getElementById('set-require-room-pin').checked;
             configData.maskTenantName = document.getElementById('set-mask-tenant-name').checked;
             db.ref(`dorms_data/${SHOP_ID}/config`).set(configData)
@@ -615,7 +607,6 @@
                 .catch(err => alert('บันทึกไม่สำเร็จ: ' + err.message));
         }
 
-        // ================= จัดการห้องพัก =================
         function saveRoomForm() {
             const editId = document.getElementById('edit-room-id').value;
             const roomNo = document.getElementById('inp-room-no').value.trim();
@@ -632,15 +623,10 @@
 
             if (editId) {
                 const idx = rooms.findIndex(r => String(r.id) === String(editId));
-                if (idx !== -1) {
-                    rooms[idx] = { ...rooms[idx], roomNo, rent, tenantName, tenantPhone, roomPin, lastWater, lastElec, extraFee, note };
-                }
+                if (idx !== -1) rooms[idx] = { ...rooms[idx], roomNo, rent, tenantName, tenantPhone, roomPin, lastWater, lastElec, extraFee, note };
             } else {
                 if (rooms.some(r => String(r.roomNo).toLowerCase() === roomNo.toLowerCase())) return alert('มีเลขห้องนี้อยู่ในระบบแล้วครับ');
-                rooms.push({
-                    id: 'rm-' + Date.now(),
-                    roomNo, rent, tenantName, tenantPhone, roomPin, lastWater, lastElec, extraFee, note
-                });
+                rooms.push({ id: 'rm-' + Date.now(), roomNo, rent, tenantName, tenantPhone, roomPin, lastWater, lastElec, extraFee, note });
             }
 
             db.ref(`dorms_data/${SHOP_ID}/rooms`).set(rooms).then(() => {
@@ -739,7 +725,6 @@
             }).join('');
         }
 
-        // ================= จดมิเตอร์ & สร้างบิล =================
         function renderMeterTable() {
             const month = document.getElementById('meter-billing-month').value;
             const list = document.getElementById('meter-cards-list');
@@ -793,13 +778,11 @@
             const prevE = Number(r.lastElec || 0);
             const currW = Number(document.getElementById(`mw-${r.id}`).value);
             const currE = Number(document.getElementById(`me-${r.id}`).value);
-
             const unitW = (!isNaN(currW) && currW >= prevW) ? (currW - prevW) : 0;
             const unitE = (!isNaN(currE) && currE >= prevE) ? (currE - prevE) : 0;
             const costW = unitW * configData.waterRate;
             const costE = unitE * configData.elecRate;
             const total = Number(r.rent || 0) + Number(r.extraFee || 0) + costW + costE;
-
             document.getElementById(`mw-calc-${r.id}`).innerText = `${unitW} หน่วย = ${costW.toLocaleString()} บ.`;
             document.getElementById(`me-calc-${r.id}`).innerText = `${unitE} หน่วย = ${costE.toLocaleString()} บ.`;
             document.getElementById(`mtot-${r.id}`).innerText = total.toLocaleString();
@@ -811,49 +794,25 @@
             const rIdx = rooms.findIndex(x => String(x.id) === String(roomId));
             if (rIdx === -1) return;
             const r = rooms[rIdx];
-
             const prevW = Number(r.lastWater || 0);
             const prevE = Number(r.lastElec || 0);
             const rawW = document.getElementById(`mw-${r.id}`).value;
             const rawE = document.getElementById(`me-${r.id}`).value;
             if (rawW === '' || rawE === '') return alert('กรุณากรอกเลขมิเตอร์น้ำและไฟล่าสุดให้ครบครับ');
-
-            const currW = Number(rawW);
-            const currE = Number(rawE);
+            const currW = Number(rawW), currE = Number(rawE);
             if (currW < prevW || currE < prevE) return alert('เลขมิเตอร์ใหม่ต้องไม่น้อยกว่าเลขมิเตอร์เดิมครับ');
-
-            const unitW = currW - prevW;
-            const unitE = currE - prevE;
-            const costW = unitW * configData.waterRate;
-            const costE = unitE * configData.elecRate;
-            const rent = Number(r.rent || 0);
-            const extraFee = Number(r.extraFee || 0);
+            const unitW = currW - prevW, unitE = currE - prevE;
+            const costW = unitW * configData.waterRate, costE = unitE * configData.elecRate;
+            const rent = Number(r.rent || 0), extraFee = Number(r.extraFee || 0);
             const total = rent + extraFee + costW + costE;
 
             const newBill = {
                 billId: 'INV-' + month.replace('-', '') + '-' + r.roomNo,
-                billingMonth: month,
-                roomId: r.id,
-                roomNo: r.roomNo,
-                tenantName: r.tenantName,
-                tenantPhone: r.tenantPhone || '',
-                rent,
-                extraFee,
-                prevWater: prevW,
-                currWater: currW,
-                waterUnits: unitW,
-                waterRate: configData.waterRate,
-                waterCost: costW,
-                prevElec: prevE,
-                currElec: currE,
-                elecUnits: unitE,
-                elecRate: configData.elecRate,
-                elecCost: costE,
-                total,
-                status: 'unpaid',
-                slipImage: '',
-                slipTransRef: '',
-                createdAt: Date.now()
+                billingMonth: month, roomId: r.id, roomNo: r.roomNo,
+                tenantName: r.tenantName, tenantPhone: r.tenantPhone || '',
+                rent, extraFee, prevWater: prevW, currWater: currW, waterUnits: unitW, waterRate: configData.waterRate, waterCost: costW,
+                prevElec: prevE, currElec: currE, elecUnits: unitE, elecRate: configData.elecRate, elecCost: costE,
+                total, status: 'unpaid', slipImage: '', slipTransRef: '', createdAt: Date.now()
             };
 
             db.ref(`dorms_data/${SHOP_ID}/bills`).push(newBill).then(() => {
@@ -869,9 +828,7 @@
         }
 
         function deleteBill(billKey) {
-            if (confirm('ยืนยันการลบบิลนี้?')) {
-                db.ref(`dorms_data/${SHOP_ID}/bills/${billKey}`).remove();
-            }
+            if (confirm('ยืนยันการลบบิลนี้?')) db.ref(`dorms_data/${SHOP_ID}/bills/${billKey}`).remove();
         }
 
         function openSlip(src) {
@@ -882,11 +839,10 @@
         function renderBills() {
             const filterMonth = document.getElementById('filter-bill-month').value;
             const filtered = filterMonth ? bills.filter(b => b.billingMonth === filterMonth) : bills;
-
             const unpaidCnt = filtered.filter(b => b.status !== 'paid').length;
             const paidCnt = filtered.filter(b => b.status === 'paid').length;
             document.getElementById('bill-stat-unpaid').innerText = `ค้างชำระ/รอตรวจ ${unpaidCnt}`;
-            document.getElementById('bill-stat-paid').innerText = `ชำระแล้ว ${paidCnt}`;
+            document.getElementById('bill-stat-paid').innerText = `จ่ายแล้ว ${paidCnt}`;
 
             const grid = document.getElementById('bills-grid');
             if (filtered.length === 0) {
@@ -896,7 +852,7 @@
 
             grid.innerHTML = filtered.map(b => {
                 let badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">⏳ ค้างชำระ</span>`;
-                if (b.status === 'pending_review') badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">🔍 แนบสลิปแล้ว (รอตรวจ)</span>`;
+                if (b.status === 'pending_review') badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">🔍 แนบสลิปแล้ว (รอเจ้าของหอยืนยัน)</span>`;
                 else if (b.status === 'paid') badge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">✅ ชำระแล้ว</span>`;
 
                 return `
@@ -908,18 +864,15 @@
                             </div>
                             ${badge}
                         </div>
-
                         <div class="bg-slate-50 p-3 rounded-xl text-xs space-y-1 text-slate-700">
                             <div class="flex justify-between"><span>ค่าเช่าห้อง:</span><span>${Number(b.rent || 0).toLocaleString()} บ.</span></div>
                             <div class="flex justify-between"><span>💧 ค่าน้ำ (${b.prevWater} → ${b.currWater} = ${b.waterUnits} หน่วย):</span><span>${Number(b.waterCost || 0).toLocaleString()} บ.</span></div>
                             <div class="flex justify-between"><span>⚡ ค่าไฟ (${b.prevElec} → ${b.currElec} = ${b.elecUnits} หน่วย):</span><span>${Number(b.elecCost || 0).toLocaleString()} บ.</span></div>
                             ${b.extraFee > 0 ? `<div class="flex justify-between"><span>ค่าส่วนกลาง/อื่นๆ:</span><span>${Number(b.extraFee).toLocaleString()} บ.</span></div>` : ''}
                             <div class="flex justify-between font-bold text-sm text-teal-800 pt-1.5 border-t">
-                                <span>ยอดสุทธิ:</span>
-                                <span>${Number(b.total || 0).toLocaleString()} บาท</span>
+                                <span>ยอดสุทธิ:</span><span>${Number(b.total || 0).toLocaleString()} บาท</span>
                             </div>
                         </div>
-
                         <div class="flex flex-wrap gap-2 pt-1">
                             ${b.slipImage ? `<button onclick="openSlip('${b.slipImage}')" class="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-xl text-xs font-bold">🔍 ดูสลิป</button>` : ''}
                             ${b.status !== 'paid'
@@ -960,7 +913,6 @@
                 tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-gray-400">ยังไม่มีประวัติบิล</td></tr>`;
                 return;
             }
-
             tbody.innerHTML = bills.map(b => `
                 <tr>
                     <td class="p-3 font-mono font-bold">${b.billingMonth}</td>
@@ -969,11 +921,7 @@
                     <td class="p-3">${Number(b.waterCost || 0).toLocaleString()}</td>
                     <td class="p-3">${Number(b.elecCost || 0).toLocaleString()}</td>
                     <td class="p-3">${Number(b.extraFee || 0).toLocaleString()}</td>
-                    <td class="p-3">
-                        <span class="px-2 py-0.5 rounded-full text-xs font-bold ${b.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">
-                            ${b.status === 'paid' ? 'ชำระแล้ว' : 'ค้างชำระ'}
-                        </span>
-                    </td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${b.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${b.status === 'paid' ? 'ชำระแล้ว' : 'ค้างชำระ/รอตรวจ'}</span></td>
                     <td class="p-3 text-right font-bold">${Number(b.total || 0).toLocaleString()} บ.</td>
                 </tr>
             `).join('');
@@ -1007,8 +955,8 @@
         function buildDormRenewOptions() {
             const sel = document.getElementById('drn-preset');
             let opts = '';
-            if (dormMeta && dormMeta.allowFree90d === true) {
-                opts += `<option value="90|0">🎁 ฟรี 3 เดือน (90 วัน — 0 บ.)</option>`;
+            if (dormMeta && (dormMeta.allowFree30d === true || dormMeta.allowFree90d === true)) {
+                opts += `<option value="30|0">🎁 ทดลองฟรี 1 เดือน (30 วัน — 0 บ.)</option>`;
             }
             opts += `
                 <option value="30|299">1 เดือน (299 บ.)</option>
@@ -1047,7 +995,7 @@
                 new QRCode(box, { text: buildPromptPayQR(hubPaymentConfig.promptpayId, amt), width: 150, height: 150 });
             } else {
                 slipWrap.classList.add('hidden');
-                box.innerHTML = `<p class="text-xs font-bold text-emerald-700 py-4 px-2">🎁 สิทธิ์พิเศษจาก Super Admin: ฟรี 3 เดือน (0 บาท — ไม่ต้องโอนเงิน)</p>`;
+                box.innerHTML = `<p class="text-xs font-bold text-emerald-700 py-4 px-2">🎁 สิทธิ์ทดลองฟรี 1 เดือน (30 วัน — 0 บาท)</p>`;
             }
         }
 
@@ -1061,7 +1009,7 @@
             r.onload = ev => {
                 const img = new Image();
                 img.onload = () => {
-                    const sc = document.createElement('canvas'); const max = 1000;
+                    const sc = document.createElement('canvas'); const max = 800;
                     let sw = img.width, sh = img.height;
                     if (sw > max || sh > max) { if (sw > sh) { sh = Math.round(sh*max/sw); sw = max; } else { sw = Math.round(sw*max/sh); sh = max; } }
                     sc.width = sw; sc.height = sh;
@@ -1070,18 +1018,18 @@
 
                     const vc = document.createElement('canvas'); const w = 500, h = Math.round((img.height/img.width)*500) || 500;
                     vc.width = w; vc.height = h; vc.getContext('2d').drawImage(img, 0, 0, w, h);
-                    drnSlipBase64 = vc.toDataURL('image/jpeg', 0.75);
+                    drnSlipBase64 = vc.toDataURL('image/jpeg', 0.72);
                     const prev = document.getElementById('drn-slip-prev'); prev.src = drnSlipBase64; prev.classList.remove('hidden');
 
                     if (qr && qr.data) {
                         const m = qr.data.match(/02\d{2}([A-Za-z0-9]{10,})/);
                         drnSlipRef = m ? m[1] : qr.data.slice(-16);
-                        stBox.className = 'p-2 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800';
-                        stBox.innerText = `✅ อ่าน QR สลิปได้ (Ref: ${drnSlipRef.slice(-8)})`;
+                        stBox.className = 'p-2 rounded-lg text-xs font-bold bg-blue-100 text-blue-900';
+                        stBox.innerText = `✅ พบ QR สลิป (Ref: ${drnSlipRef.slice(-8)}) • ส่งแล้วรอ HUB ยืนยัน`;
                     } else {
                         drnSlipRef = '';
                         stBox.className = 'p-2 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800';
-                        stBox.innerText = '⚠️ แนบสลิปแล้ว (HUB จะตรวจสลิปให้)';
+                        stBox.innerText = '⚠️ แนบสลิปแล้ว รอ HUB ตรวจสอบ';
                     }
                 };
                 img.src = ev.target.result;
@@ -1093,8 +1041,9 @@
             const [daysStr] = document.getElementById('drn-preset').value.split('|');
             const days = Number(daysStr) || 30;
             const amount = Number(document.getElementById('drn-amount').value) || 0;
-            if (amount === 0 && (!dormMeta || dormMeta.allowFree90d !== true)) {
-                return alert('บัญชีนี้ยังไม่ได้รับสิทธิ์ต่ออายุฟรี 3 เดือนจาก Super Admin ครับ');
+            const hasTrial = dormMeta && (dormMeta.allowFree30d === true || dormMeta.allowFree90d === true);
+            if (amount === 0 && !hasTrial) {
+                return alert('บัญชีนี้ยังไม่ได้รับสิทธิ์ทดลองฟรี 1 เดือนครับ');
             }
             if (amount > 0 && !drnSlipBase64) return alert('กรุณาแนบสลิปโอนเงินก่อนครับ');
 
