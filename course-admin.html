@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>หลังบ้านผู้สอน - Sapsong HUB</title>
+    <title>ระบบหลังบ้านผู้สอน & คอร์สเรียน - Sapsong HUB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -14,12 +14,12 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
         body { font-family: 'Prompt', sans-serif; }
-        #rn-qr-box img, #rn-qr-box canvas { margin: 0 auto; border-radius: 0.75rem; }
+        #crn-qr-box img, #crn-qr-box canvas { margin: 0 auto; border-radius: 0.75rem; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen pb-16">
 
-    <!-- Lock Gate -->
+    <!-- Lock Gate (Sapsong HUB) -->
     <div id="sapsong-lock-overlay" class="hidden fixed inset-0 bg-slate-950 text-white z-[99999] flex flex-col justify-center items-center text-center p-6">
         <div class="bg-slate-900 border border-slate-700 max-w-md w-full p-8 rounded-3xl shadow-2xl space-y-4">
             <div class="text-5xl">🔒</div>
@@ -34,24 +34,24 @@
     <!-- หน้าล็อกอินผู้สอน -->
     <div id="login-screen" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl max-w-sm w-full p-7 shadow-2xl space-y-5 text-center">
-            <div id="login-logo-box" class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-3xl mx-auto overflow-hidden">🎓</div>
+            <div id="login-logo-box" class="w-16 h-16 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-3xl mx-auto overflow-hidden">🎓</div>
             <div>
-                <h1 id="login-title" class="text-xl font-bold text-slate-800">หลังบ้านผู้สอน</h1>
-                <p class="text-xs text-slate-500 mt-1">เข้าสู่ระบบด้วยบัญชีผู้สอนที่ลงทะเบียนไว้</p>
+                <h1 class="text-xl font-bold text-slate-800">ระบบหลังบ้านผู้สอน</h1>
+                <p class="text-xs text-slate-500 mt-1">เข้าสู่ระบบด้วยบัญชีที่ลงทะเบียนกับ Sapsong HUB</p>
             </div>
             <form onsubmit="handleLogin(event)" class="space-y-3 text-left">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">อีเมลผู้สอน</label>
-                    <input type="email" id="login-email" required class="w-full px-3.5 py-2.5 border-2 rounded-xl text-sm font-semibold outline-none focus:border-indigo-500">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">อีเมลผู้สอน / สถาบัน</label>
+                    <input type="email" id="login-email" required class="w-full px-3.5 py-2.5 border-2 rounded-xl text-sm font-semibold outline-none focus:border-indigo-600">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสผ่าน</label>
-                    <input type="password" id="login-pass" required placeholder="••••••••" class="w-full px-3.5 py-2.5 border-2 rounded-xl text-sm font-semibold outline-none focus:border-indigo-500">
+                    <input type="password" id="login-pass" required placeholder="••••••••" class="w-full px-3.5 py-2.5 border-2 rounded-xl text-sm font-semibold outline-none focus:border-indigo-600">
                 </div>
                 <p id="login-err" class="hidden text-xs text-red-600 font-semibold text-center"></p>
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm shadow-md">เข้าสู่ระบบผู้สอน</button>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm shadow-md">เข้าสู่ระบบหลังบ้านผู้สอน</button>
             </form>
-            <a id="link-student" href="course.html" class="inline-block text-xs text-slate-400 hover:text-slate-600 underline">← ไปยังหน้าเรียนสำหรับนักเรียน</a>
+            <a id="link-student" href="course.html" class="inline-block text-xs text-slate-400 hover:text-slate-600 underline">← ไปยังหน้าเรียนสำหรับผู้เรียน</a>
         </div>
     </div>
 
@@ -62,16 +62,15 @@
                 <div class="flex items-center gap-2.5">
                     <img id="nav-logo" src="" class="hidden w-10 h-10 rounded-xl object-cover bg-white border">
                     <div>
-                        <h1 id="nav-title" class="font-bold text-base sm:text-lg">หลังบ้านคอร์สเรียน</h1>
+                        <h1 id="nav-title" class="font-bold text-base sm:text-lg">หลังบ้านผู้สอน</h1>
                         <p id="nav-expire" class="text-[11px] text-indigo-300"></p>
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-1.5">
-                    <button onclick="switchTab('orders')" id="tab-orders" class="px-3 py-2 bg-amber-400 text-slate-950 font-bold rounded-xl text-xs">รายการซื้อ & สลิป</button>
-                    <button onclick="switchTab('courses')" id="tab-courses" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">วิชาเรียน & ไฟล์ขาย</button>
-                    <button onclick="switchTab('students')" id="tab-students" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">ไอดีผู้เรียน</button>
-                    <button onclick="switchTab('revenue')" id="tab-revenue" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">รายรับ</button>
-                    <button onclick="switchTab('settings')" id="tab-settings" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">ตั้งค่าสถาบัน</button>
+                    <button onclick="switchTab('orders')" id="tab-orders" class="px-3 py-2 bg-amber-400 text-slate-950 font-bold rounded-xl text-xs">🧾 ตรวจสลิป & ปลดล็อก (<span id="badge-pending">0</span>)</button>
+                    <button onclick="switchTab('courses')" id="tab-courses" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">🎬 คอร์ส & ไฟล์ชีท</button>
+                    <button onclick="switchTab('revenue')" id="tab-revenue" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">💰 สรุปรายรับ</button>
+                    <button onclick="switchTab('settings')" id="tab-settings" class="px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs">⚙️ ตั้งค่าสถาบัน</button>
                     <button onclick="openCourseRenewModal()" class="px-3 py-2 bg-emerald-400 hover:bg-emerald-500 text-slate-950 font-bold rounded-xl text-xs">🔄 ต่ออายุ</button>
                     <button onclick="logout()" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold">ออก</button>
                 </div>
@@ -79,193 +78,114 @@
         </nav>
 
         <main class="max-w-6xl mx-auto p-3 sm:p-5 space-y-5">
+
+            <!-- 1. แท็บตรวจสลิป & ปลดล็อกคอร์ส -->
             <div id="view-orders" class="space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-slate-800">💳 ประวัติการชำระเงิน & ปลดล็อกวิชา/ไฟล์</h2>
-                    <span id="order-count" class="text-xs font-bold bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">0 รายการ</span>
+                <div class="bg-white p-3.5 rounded-2xl shadow-sm border flex flex-wrap justify-between items-center gap-2">
+                    <div class="flex flex-wrap gap-1.5">
+                        <button onclick="setOrderFilter('pending')" id="of-pending" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white">🔍 รอตรวจสอบ</button>
+                        <button onclick="setOrderFilter('approved')" id="of-approved" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700">✅ ปลดล็อกแล้ว</button>
+                        <button onclick="setOrderFilter('all')" id="of-all" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700">📋 ทั้งหมด</button>
+                    </div>
+                    <span class="text-xs text-slate-500 font-medium">🛡️ ผู้สอนตรวจสลิปและกดปลดล็อกให้ผู้เรียนเองทุกคำสั่งซื้อ</span>
                 </div>
-                <div id="orders-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                <div id="orders-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
 
+            <!-- 2. แท็บจัดการคอร์สเรียน & ไฟล์ชีท -->
             <div id="view-courses" class="hidden space-y-5">
                 <div class="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
-                    <h2 id="course-form-title" class="text-base font-bold text-slate-800">➕ เพิ่มวิชาเรียน หรือ ไฟล์เรียนสำหรับขาย</h2>
+                    <h2 id="course-form-title" class="text-base font-bold text-slate-800">➕ เพิ่มคอร์สเรียน / ไฟล์ชีทใหม่</h2>
                     <input type="hidden" id="edit-course-id" value="">
-                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อคอร์สเรียน / ชื่อไฟล์ชีท *</label>
+                            <input type="text" id="inp-c-title" placeholder="เช่น ติวเข้มสอบ ก.พ. ภาค ก. / ชีทสรุปกฎหมาย" class="w-full px-3 py-2 border rounded-xl text-sm font-bold outline-none">
+                        </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">ประเภทสินค้า</label>
-                            <select id="inp-item-type" onchange="toggleItemTypeFields()" class="w-full px-3 py-2 border rounded-xl text-sm font-bold bg-indigo-50 text-indigo-950 outline-none">
-                                <option value="video">🎬 คอร์สวิดีโอออนไลน์</option>
-                                <option value="file">📄 ไฟล์เรียน / ชีทสรุป (อัปโหลด PDF ในเว็บ)</option>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">ประเภท</label>
+                            <select id="inp-c-type" class="w-full px-3 py-2 border rounded-xl text-sm bg-white outline-none">
+                                <option value="video">🎬 คอร์สวิดีโอ</option>
+                                <option value="file">📄 ไฟล์ชีท / PDF</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อวิชา / ชื่อไฟล์ *</label>
-                            <input type="text" id="inp-course-title" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">ราคาขาย (บาท)</label>
-                            <input type="number" id="inp-course-price" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">รูปปก</label>
-                            <input type="file" id="inp-course-cover" accept="image/*" onchange="handleCoverUpload(event)" class="block w-full text-xs text-slate-500">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">ราคา (บาท, 0=ฟรี) *</label>
+                            <input type="number" id="inp-c-price" value="299" min="0" class="w-full px-3 py-2 border rounded-xl text-sm font-bold text-indigo-700 outline-none">
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">รายละเอียด</label>
-                        <textarea id="inp-course-desc" rows="2" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none"></textarea>
-                    </div>
 
-                    <!-- โหมดคอร์สวิดีโอ -->
-                    <div id="video-fields-box" class="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-4 space-y-3">
-                        <div class="flex justify-between items-center flex-wrap gap-2">
-                            <div>
-                                <h3 class="text-sm font-bold text-indigo-950">🎬 รายการตอนเรียน</h3>
-                                <p class="text-[11px] text-indigo-700">วางลิงก์ YouTube (Unlisted) / Google Drive / วิดีโอของแต่ละตอน</p>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button type="button" onclick="toggleVideoGuide()" class="bg-white hover:bg-indigo-100 text-indigo-800 border border-indigo-300 px-3 py-1.5 rounded-xl text-xs font-bold">📖 วิธีตั้งค่าลิงก์วิดีโอทุกแบบ</button>
-                                <button type="button" onclick="addLessonRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold">+ เพิ่มตอนเรียน</button>
-                            </div>
-                        </div>
-
-                        <!-- กล่องคู่มือวิธีตั้งค่าลิงก์วิดีโอทุกแบบสำหรับผู้สอน -->
-                        <div id="video-guide-box" class="hidden bg-white border border-indigo-200 rounded-2xl p-4 space-y-3 text-xs text-slate-700 shadow-xs">
-                            <div class="flex justify-between items-center border-b pb-2">
-                                <h4 class="font-bold text-indigo-950 text-sm">📖 คู่มือวิธีตั้งค่าและคัดลอกลิงก์วิดีโอมาวาง (รองรับ 3 แบบ)</h4>
-                                <button type="button" onclick="toggleVideoGuide()" class="text-slate-400 hover:text-slate-700 font-bold px-2">✕ ปิด</button>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div class="bg-red-50/70 border border-red-200 rounded-xl p-3 space-y-1.5">
-                                    <p class="font-bold text-red-900">1. YouTube (แนะนำ — ไม่เป็นสาธารณะ)</p>
-                                    <ol class="list-decimal pl-4 space-y-1 text-[11px] text-slate-700">
-                                        <li>อัปโหลดคลิปลง <strong>YouTube Studio</strong></li>
-                                        <li>ตั้งค่าการมองเห็นเป็น <strong>Unlisted (ไม่เป็นสาธารณะ)</strong> เพื่อให้คนอื่นค้นหาไม่เจอ</li>
-                                        <li>กด <strong>แชร์ (Share)</strong> แล้วคัดลอกลิงก์ เช่น <code class="bg-white px-1 rounded border">https://youtu.be/xxxx</code> มาวางในช่องลิงก์วิดีโอ</li>
-                                    </ol>
-                                </div>
-
-                                <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-3 space-y-1.5">
-                                    <p class="font-bold text-blue-900">2. Google Drive (คลิปที่อัปขึ้น Drive)</p>
-                                    <ol class="list-decimal pl-4 space-y-1 text-[11px] text-slate-700">
-                                        <li>คลิกขวาที่ไฟล์วิดีโอใน Google Drive เลือก <strong>แชร์ (Share)</strong></li>
-                                        <li>เปลี่ยนสิทธิ์เป็น <strong>ทุกคนที่มีลิงก์ (Anyone with the link)</strong> → <strong>ผู้มีสิทธิ์อ่าน (Viewer)</strong></li>
-                                        <li>กด <strong>คัดลอกลิงก์</strong> เช่น <code class="bg-white px-1 rounded border">https://drive.google.com/file/d/xxxx/view</code> มาวางได้เลย</li>
-                                    </ol>
-                                </div>
-
-                                <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 space-y-1.5">
-                                    <p class="font-bold text-emerald-900">3. ลิงก์ไฟล์วิดีโอตรง (.mp4 / โฮสต์อื่น)</p>
-                                    <ol class="list-decimal pl-4 space-y-1 text-[11px] text-slate-700">
-                                        <li>ใช้ลิงก์ที่ขึ้นต้นด้วย <code class="bg-white px-1 rounded border">https://</code> และลงท้ายด้วย <code class="bg-white px-1 rounded border">.mp4</code></li>
-                                        <li>โฮสต์ต้นทางต้องเปิดให้ฝังเล่นในเว็บภายนอกได้</li>
-                                        <li>วางลิงก์แล้วกด <strong>บันทึกข้อมูล</strong> จากนั้นลองเปิดดูในหน้าเรียนจริงเพื่อเช็กภาพและเสียง</li>
-                                    </ol>
-                                </div>
-                            </div>
-
-                            <p class="text-[11px] text-indigo-800 bg-indigo-50 px-3 py-2 rounded-xl font-medium">
-                                💡 <strong>เคล็ดลับ:</strong> หากต้องการให้ผู้เรียนที่ยังไม่ซื้อกดทดลองดูบางตอนก่อนได้ ให้ติ๊กช่อง <strong>"ฟรี"</strong> ด้านขวาของตอนนั้นครับ
-                            </p>
-                        </div>
-
-                        <div id="lessons-container" class="space-y-2.5"></div>
-                    </div>
-
-                    <!-- โหมดไฟล์เรียน / ชีทสรุป (อัปโหลดไฟล์ใน HTML เลย) -->
-                    <div id="file-fields-box" class="hidden bg-amber-50/80 border border-amber-200 rounded-2xl p-4 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <h3 class="text-sm font-bold text-amber-950">📄 อัปโหลดไฟล์เอกสาร / ชีทสรุปในหน้าเว็บ</h3>
-                            <p class="text-[11px] text-amber-800 mt-0.5">แนะนำไฟล์ PDF ขนาดไม่เกิน ~1.5 MB ต่อไฟล์ เพื่อให้บันทึกลงฐานข้อมูลและเปิดอ่านได้ลื่นไหล</p>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">🎬 ลิงก์วิดีโอคอร์สเรียน (YouTube Unlisted / Google Drive / กลุ่มลับ)</label>
+                            <input type="url" id="inp-c-video" placeholder="https://..." class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">📄 ลิงก์ดาวน์โหลดไฟล์ชีท / PDF (Google Drive / Dropbox)</label>
+                            <input type="url" id="inp-c-file" placeholder="https://..." class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
+                        </div>
+                    </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div class="bg-white p-3 rounded-xl border border-amber-200 space-y-2">
-                                <label class="block text-xs font-bold text-slate-700">👁️ อัปโหลดไฟล์ตัวอย่าง (Preview — ไม่บังคับ)</label>
-                                <input type="file" id="inp-preview-file" accept=".pdf,image/*,application/pdf" onchange="handleDocFileUpload(event, 'preview')" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-amber-100 file:text-amber-900 file:font-bold cursor-pointer">
-                                <div id="preview-file-badge" class="text-[11px] text-slate-500">ยังไม่ได้เลือกไฟล์ตัวอย่าง</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">รายละเอียดคอร์ส / สารบัญบทเรียน</label>
+                            <textarea id="inp-c-desc" rows="2" placeholder="ระบุรายละเอียดเนื้อหา จำนวนชั่วโมง หรือไฟล์ที่จะได้รับ..." class="w-full px-3 py-2 border rounded-xl text-sm outline-none"></textarea>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-semibold text-slate-600">รูปหน้าปกคอร์ส</label>
+                            <div class="flex items-center gap-3">
+                                <img id="c-cover-preview" src="" class="hidden w-16 h-12 rounded-xl object-cover border">
+                                <input type="file" accept="image/*" onchange="handleCoverUpload(event)" class="text-xs text-slate-500">
                             </div>
-
-                            <div class="bg-white p-3 rounded-xl border border-amber-300 space-y-2">
-                                <label class="block text-xs font-bold text-slate-700">🔒 อัปโหลดไฟล์ฉบับเต็ม (PDF / เอกสาร) *</label>
-                                <input type="file" id="inp-full-file" accept=".pdf,image/*,application/pdf" onchange="handleDocFileUpload(event, 'full')" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-100 file:text-emerald-900 file:font-bold cursor-pointer">
-                                <div id="full-file-badge" class="text-[11px] text-slate-500">ยังไม่ได้เลือกไฟล์ฉบับเต็ม</div>
-                            </div>
+                            <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer pt-1">
+                                <input type="checkbox" id="inp-c-active" checked class="w-4 h-4 accent-indigo-600"> เปิดขาย / แสดงในหน้าเรียน
+                            </label>
                         </div>
                     </div>
 
                     <div class="flex gap-2">
-                        <button onclick="saveCourseForm()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold">💾 บันทึกข้อมูล</button>
-                        <button onclick="resetCourseForm()" id="btn-cancel-course" class="hidden bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold">ยกเลิกแก้ไข</button>
+                        <button type="button" onclick="saveCourseForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold">💾 บันทึกคอร์สเรียน</button>
+                        <button type="button" onclick="resetCourseForm()" id="btn-cancel-course" class="hidden bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold">ยกเลิก</button>
                     </div>
                 </div>
 
                 <div class="bg-white p-5 rounded-2xl shadow-sm border space-y-3">
-                    <h3 class="text-base font-bold text-slate-800">📚 รายการวิชา & ไฟล์ทั้งหมด (<span id="course-count">0</span> รายการ)</h3>
-                    <div id="courses-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    <h3 class="text-base font-bold text-slate-800">📚 คอร์สเรียนและไฟล์ชีททั้งหมด (<span id="course-count">0</span>)</h3>
+                    <div id="courses-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
                 </div>
             </div>
 
-            <div id="view-students" class="hidden space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-slate-800">👥 รายชื่อไอดีผู้เรียน</h2>
-                    <span id="student-count" class="text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">0 บัญชี</span>
-                </div>
-                <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-            </div>
-
-            <!-- 4. หน้าสรุปรายรับ -->
+            <!-- 3. แท็บสรุปรายรับ -->
             <div id="view-revenue" class="hidden space-y-5">
-                <div class="flex justify-between items-center flex-wrap gap-2">
-                    <h2 class="text-lg font-bold text-slate-800">💰 สรุปรายรับคอร์สเรียน & ไฟล์ (นับเฉพาะรายการที่ปลดล็อกแล้ว)</h2>
-                    <span class="text-xs font-semibold text-slate-500">อัปเดตแบบเรียลไทม์</span>
-                </div>
-
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-emerald-500">
-                        <p class="text-gray-500 text-xs">รายรับวันนี้</p>
-                        <h3 id="crev-today" class="text-xl sm:text-2xl font-bold text-emerald-600 mt-1">0 บ.</h3>
+                <h2 class="text-lg font-bold text-slate-800">💰 สรุปรายรับคอร์สเรียน & ไฟล์ชีท (นับเฉพาะรายการที่ยืนยันปลดล็อกแล้ว)</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-emerald-500">
+                        <p class="text-slate-500 text-xs">รายรับเดือนนี้</p>
+                        <h3 id="crev-month" class="text-xl font-bold text-emerald-600 mt-1">0 บ.</h3>
                     </div>
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-blue-500">
-                        <p class="text-gray-500 text-xs">รายรับเดือนนี้</p>
-                        <h3 id="crev-month" class="text-xl sm:text-2xl font-bold text-blue-600 mt-1">0 บ.</h3>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-blue-500">
+                        <p class="text-slate-500 text-xs">รายรับปีนี้</p>
+                        <h3 id="crev-year" class="text-xl font-bold text-blue-600 mt-1">0 บ.</h3>
                     </div>
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-purple-500">
-                        <p class="text-gray-500 text-xs">รายรับปีนี้</p>
-                        <h3 id="crev-year" class="text-xl sm:text-2xl font-bold text-purple-600 mt-1">0 บ.</h3>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-indigo-500">
+                        <p class="text-slate-500 text-xs">รายรับสะสมทั้งหมด</p>
+                        <h3 id="crev-total" class="text-xl font-bold text-indigo-600 mt-1">0 บ.</h3>
                     </div>
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-amber-500">
-                        <p class="text-gray-500 text-xs">รายการที่ปลดล็อกแล้ว</p>
-                        <h3 id="crev-count" class="text-xl sm:text-2xl font-bold text-amber-600 mt-1">0 รายการ</h3>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-purple-500">
+                        <p class="text-slate-500 text-xs">ยอดปลดล็อกสำเร็จ</p>
+                        <h3 id="crev-count" class="text-xl font-bold text-purple-600 mt-1">0 รายการ</h3>
                     </div>
                 </div>
 
                 <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border overflow-x-auto">
-                    <h3 class="text-base font-bold text-slate-800 mb-3">📚 สรุปรายรับแยกตามรายวิชา / ไฟล์</h3>
-                    <table class="w-full text-left text-xs sm:text-sm min-w-[540px]">
-                        <thead>
-                            <tr class="border-b bg-slate-50 text-slate-600">
-                                <th class="p-3">ประเภท</th>
-                                <th class="p-3">ชื่อวิชา / ชื่อไฟล์</th>
-                                <th class="p-3 text-center">จำนวนครั้งที่ปลดล็อก</th>
-                                <th class="p-3 text-right">รายรับรวม</th>
-                            </tr>
-                        </thead>
-                        <tbody id="crev-by-item-table" class="divide-y"></tbody>
-                    </table>
-                </div>
-
-                <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border overflow-x-auto">
-                    <h3 class="text-base font-bold text-slate-800 mb-3">🧾 ประวัติการชำระเงินทั้งหมด</h3>
+                    <h3 class="text-base font-bold text-slate-800 mb-3">🧾 ประวัติการสั่งซื้อทั้งหมด</h3>
                     <table class="w-full text-left text-xs sm:text-sm min-w-[640px]">
                         <thead>
                             <tr class="border-b bg-slate-50 text-slate-600">
-                                <th class="p-3">เลขที่บิล</th>
                                 <th class="p-3">วัน-เวลา</th>
-                                <th class="p-3">ผู้เรียน</th>
-                                <th class="p-3">วิชา / ไฟล์</th>
+                                <th class="p-3">ผู้เรียน / เบอร์โทร</th>
+                                <th class="p-3">คอร์สเรียน / ไฟล์</th>
                                 <th class="p-3">สถานะ</th>
                                 <th class="p-3 text-right">ยอดเงิน</th>
                             </tr>
@@ -275,9 +195,10 @@
                 </div>
             </div>
 
+            <!-- 4. แท็บตั้งค่าสถาบัน & ช่องทางติดต่อ -->
             <div id="view-settings" class="hidden">
                 <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border max-w-2xl space-y-4">
-                    <h2 class="text-base font-bold text-slate-800">⚙️ ตั้งค่าสถาบัน, โลโก้, ช่องทางติดต่อ & พร้อมเพย์</h2>
+                    <h2 class="text-base font-bold text-slate-800">⚙️ ตั้งค่าสถาบัน, ช่องทางติดต่อ & พร้อมเพย์รับเงิน</h2>
                     <div class="flex items-center gap-4 bg-slate-50 p-3.5 rounded-2xl border">
                         <div class="w-16 h-16 rounded-2xl bg-white border flex items-center justify-center overflow-hidden shrink-0">
                             <img id="set-logo-preview" src="" class="hidden w-full h-full object-cover">
@@ -288,63 +209,76 @@
                             <input type="file" accept="image/*" onchange="handleLogoUpload(event)" class="text-xs text-slate-500">
                         </div>
                     </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อสถาบัน / ชื่อผู้สอน</label>
-                            <input type="text" id="set-inst-name" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
+                            <input type="text" id="set-academy-name" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์พร้อมเพย์ / เลขบัตร</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์พร้อมเพย์รับเงิน</label>
                             <input type="text" id="set-promptpay" class="w-full px-3.5 py-2 border rounded-xl text-sm font-mono font-bold outline-none">
                         </div>
                     </div>
+
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบัญชีรับเงิน</label>
                         <input type="text" id="set-acc-name" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
                     </div>
 
-                    <!-- ช่องทางการติดต่อผู้สอน/สถาบัน (เพิ่มเองได้หลายช่องทาง) -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">📢 ประกาศหน้าเว็บผู้เรียน</label>
+                        <input type="text" id="set-announcement" placeholder="เช่น โปรโมชันสมัคร 2 คอร์สลดเพิ่ม ทักไลน์ได้เลย!" class="w-full px-3.5 py-2 border rounded-xl text-sm outline-none">
+                    </div>
+
+                    <!-- ช่องทางการติดต่อผู้สอน -->
                     <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-3">
                         <div class="flex justify-between items-center">
-                            <label class="text-xs font-bold text-slate-800">📞 ช่องทางการติดต่อ (เพิ่มเองได้หลายช่องทาง)</label>
-                            <span class="text-[11px] text-slate-500">Facebook / LINE / IG / เบอร์</span>
+                            <label class="text-xs font-bold text-slate-800">📞 ช่องทางการติดต่อผู้สอน (เพิ่มเองได้หลายช่องทาง)</label>
+                            <span class="text-[11px] text-slate-500">เบอร์ / LINE / Facebook / IG</span>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
-                            <select id="new-contact-channel" class="sm:col-span-3 px-2.5 py-2 border rounded-xl text-xs font-bold bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+                            <select id="new-contact-channel" class="sm:col-span-3 px-2.5 py-2 border rounded-xl text-xs font-bold bg-white outline-none">
                                 <option value="phone">📞 เบอร์โทร</option>
-                                <option value="facebook">📘 Facebook</option>
                                 <option value="line">💬 LINE</option>
+                                <option value="facebook">📘 Facebook</option>
                                 <option value="ig">📸 IG</option>
                                 <option value="other">🔗 อื่นๆ</option>
                             </select>
-                            <input type="text" id="new-contact-label" placeholder="ป้ายปุ่ม (เช่น โทรปรึกษา, เพจ)" class="sm:col-span-4 px-3 py-2 border rounded-xl text-xs bg-white outline-none focus:ring-2 focus:ring-indigo-500">
-                            <input type="text" id="new-contact-value" placeholder="เบอร์โทร / @ไอดี / ลิงก์" onkeyup="if(event.key==='Enter') addContactItem()" class="sm:col-span-3 px-3 py-2 border rounded-xl text-xs bg-white outline-none focus:ring-2 focus:ring-indigo-500">
-                            <button type="button" onclick="addContactItem()" class="sm:col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition">+ เพิ่ม</button>
+                            <input type="text" id="new-contact-label" placeholder="ป้ายปุ่ม (เช่น ทักไลน์ผู้สอน)" class="sm:col-span-4 px-3 py-2 border rounded-xl text-xs bg-white outline-none">
+                            <input type="text" id="new-contact-value" placeholder="เบอร์โทร / @ไอดี / ลิงก์" onkeyup="if(event.key==='Enter') addContactItem()" class="sm:col-span-3 px-3 py-2 border rounded-xl text-xs bg-white outline-none">
+                            <button type="button" onclick="addContactItem()" class="sm:col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs font-bold">+ เพิ่ม</button>
                         </div>
                         <div id="admin-contacts-list" class="space-y-2"></div>
                     </div>
 
-                    <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl">
-                        <label class="flex items-start gap-2.5 cursor-pointer">
-                            <input type="checkbox" id="set-auto-unlock" class="w-4 h-4 mt-0.5 accent-emerald-600">
-                            <div>
-                                <span class="text-sm font-bold text-emerald-950">🤖 เปิดระบบอ่าน QR สลิปและปลดล็อกวิชา/ไฟล์อัตโนมัติ</span>
-                            </div>
-                        </label>
+                    <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-xs text-amber-950 font-semibold">
+                        🛡️ ระบบตรวจสลิปทำงานแบบ <strong>ผู้สอนกดยืนยัน & ปลดล็อกเอง</strong> เพื่อป้องกันยอดโอนไม่ตรงหรือสลิปปลอม
                     </div>
-                    <button onclick="saveCourseSettings()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold">💾 บันทึกการตั้งค่า</button>
+
+                    <button type="button" onclick="saveCourseSettings()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold">💾 บันทึกการตั้งค่าสถาบัน</button>
                 </div>
             </div>
+
         </main>
     </div>
 
-    <!-- Modal ผู้สอนต่ออายุแพ็กเกจกับ Sapsong HUB -->
+    <!-- Modal ดูสลิปผู้เรียน -->
+    <div id="slip-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-2xl max-w-md w-full p-4 space-y-3">
+            <h3 class="font-bold text-sm text-slate-800">หลักฐานสลิปโอนเงินสมัครเรียน</h3>
+            <img id="slip-modal-img" src="" class="w-full max-h-[70vh] object-contain rounded-xl bg-slate-100">
+            <button onclick="document.getElementById('slip-modal').classList.add('hidden')" class="w-full bg-slate-800 text-white py-2 rounded-xl text-xs font-bold">ปิด</button>
+        </div>
+    </div>
+
+    <!-- Modal ต่ออายุแพ็กเกจกับ Sapsong HUB -->
     <div id="course-renew-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/75 z-[100000] flex items-center justify-center p-4">
         <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b pb-2.5">
                 <div>
                     <h3 class="font-bold text-slate-900 text-base">🔄 ต่ออายุแพ็กเกจระบบคอร์สเรียน</h3>
-                    <p id="crn-inst-info" class="text-xs text-slate-500">-</p>
+                    <p id="crn-info" class="text-xs text-slate-500">-</p>
                 </div>
                 <button onclick="document.getElementById('course-renew-modal').classList.add('hidden')" class="text-2xl font-bold text-gray-400 px-2">&times;</button>
             </div>
@@ -360,7 +294,7 @@
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">ยอดชำระ (บาท)</label>
-                    <input type="number" id="crn-amount" readonly value="299" class="w-full px-3 py-2 border rounded-xl font-bold text-indigo-700 bg-slate-100 outline-none">
+                    <input type="number" id="crn-amount" readonly value="299" class="w-full px-3 py-2 border rounded-xl font-bold text-indigo-800 bg-slate-100 outline-none">
                 </div>
             </div>
 
@@ -369,10 +303,10 @@
                     <p class="text-xs font-bold text-indigo-950">สแกนจ่ายพร้อมเพย์ (<span id="crn-pp-display" class="font-mono">-</span>)</p>
                     <p class="text-[11px] text-indigo-900">ชื่อบัญชี: <strong id="crn-acc-display">Sapsong HUB</strong></p>
                 </div>
-                <div id="rn-qr-box" class="bg-white p-2 rounded-xl border inline-block"></div>
+                <div id="crn-qr-box" class="bg-white p-2 rounded-xl border inline-block"></div>
 
                 <div id="crn-slip-wrap" class="text-left bg-white p-3 rounded-xl border space-y-2">
-                    <label class="block text-xs font-bold text-slate-700">📎 แนบสลิปโอนเงิน (อ่าน QR สลิปอัตโนมัติ) *</label>
+                    <label class="block text-xs font-bold text-slate-700">📎 แนบสลิปโอนเงิน (ส่งให้ HUB ตรวจ) *</label>
                     <input type="file" id="crn-slip-input" accept="image/*" onchange="processCourseRenewSlip(event)" class="block w-full text-xs text-slate-500">
                     <div id="crn-slip-status" class="hidden p-2 rounded-lg text-xs font-semibold"></div>
                     <img id="crn-slip-prev" src="" class="hidden w-full max-h-32 object-contain rounded-lg border">
@@ -382,14 +316,6 @@
             <button onclick="submitCourseRenewRequest()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-sm shadow-md">
                 📤 ส่งคำขอต่ออายุให้ HUB ตรวจสอบ
             </button>
-        </div>
-    </div>
-
-    <div id="slip-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div onclick="event.stopPropagation()" class="bg-white rounded-2xl max-w-md w-full p-4 space-y-3">
-            <h3 class="font-bold text-sm text-slate-800">หลักฐานสลิปโอนเงิน</h3>
-            <img id="slip-modal-img" src="" class="w-full max-h-[70vh] object-contain rounded-xl bg-slate-100">
-            <button onclick="document.getElementById('slip-modal').classList.add('hidden')" class="w-full bg-slate-800 text-white py-2 rounded-xl text-xs font-bold">ปิด</button>
         </div>
     </div>
 
@@ -413,125 +339,41 @@
         const SHOP_ID = (urlParams.get('shop') || 'demo-course').toLowerCase();
         const SUPER_ADMIN_EMAIL = 'admingeno@ss.com';
         const EXPECTED_EMAIL = `${SHOP_ID}@ss.com`;
-        const MAX_DOC_BYTES = 1.6 * 1024 * 1024; // ~1.6 MB
-
-        let hubPaymentConfig = {
-            promptpayId: '0855750995',
-            accountName: 'Sapsong HUB'
-        };
-
-        // ดึงค่าพร้อมเพย์และชื่อบัญชีกลางจาก Super Admin แบบเรียลไทม์
-        db.ref('sapsong_hub_config').on('value', (snap) => {
-            const cfg = snap.val() || {};
-            hubPaymentConfig = {
-                promptpayId: cfg.promptpayId || '0855750995',
-                accountName: cfg.accountName || 'Sapsong HUB'
-            };
-            const ppEl = document.getElementById('crn-pp-display');
-            const accEl = document.getElementById('crn-acc-display');
-            if (ppEl) ppEl.innerText = hubPaymentConfig.promptpayId;
-            if (accEl) accEl.innerText = hubPaymentConfig.accountName;
-            if (!document.getElementById('course-renew-modal').classList.contains('hidden')) {
-                renderCourseRenewQR();
-            }
-        });
 
         document.getElementById('link-student').href = `course.html?shop=${SHOP_ID}`;
         document.getElementById('login-email').placeholder = EXPECTED_EMAIL;
 
         const CHANNEL_META = {
             phone: { icon: '📞', label: 'เบอร์โทร' },
-            facebook: { icon: '📘', label: 'Facebook' },
             line: { icon: '💬', label: 'LINE' },
+            facebook: { icon: '📘', label: 'Facebook' },
             ig: { icon: '📸', label: 'IG' },
             other: { icon: '🔗', label: 'ลิงก์/อื่นๆ' }
         };
 
-        const defaultCover = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='180' viewBox='0 0 300 180'%3E%3Crect width='300' height='180' fill='%23eef2ff'/%3E%3Ccircle cx='150' cy='90' r='34' fill='%234f46e5'/%3E%3Cpolygon points='142,75 166,90 142,105' fill='%23ffffff'/%3E%3C/svg%3E";
+        let hubPaymentConfig = { promptpayId: '0855750995', accountName: 'Sapsong HUB' };
+        db.ref('sapsong_hub_config').on('value', snap => {
+            const cfg = snap.val() || {};
+            hubPaymentConfig = {
+                promptpayId: cfg.promptpayId || '0855750995',
+                accountName: cfg.accountName || 'Sapsong HUB'
+            };
+            if (!document.getElementById('course-renew-modal').classList.contains('hidden')) renderCourseRenewQR();
+        });
 
-        let courseMeta = { id: SHOP_ID, name: SHOP_ID, allowFree90d: false };
-        let configData = { shopLogo: '', instName: SHOP_ID, promptpayId: '0855750995', accountName: SHOP_ID, contacts: [], autoUnlockSlip: true };
+        let courseMeta = { id: SHOP_ID, name: SHOP_ID, allowFree30d: false };
+        let configData = {
+            shopLogo: '', academyName: SHOP_ID, promptpayId: '0855750995',
+            accountName: SHOP_ID, announcement: '', contacts: [], autoUnlockSlip: false
+        };
         let draftContacts = [];
-        let courses = [], orders = [], students = {};
-        let currentCoverBase64 = '';
-        let previewDocData = { dataUrl: '', name: '' };
-        let fullDocData = { dataUrl: '', name: '' };
+        let courses = [];
+        let orders = [];
+        let orderFilter = 'pending';
         let listenersStarted = false;
+        let draftCoverImg = '';
         let crnSlipBase64 = '';
         let crnSlipRef = '';
-
-        function toggleVideoGuide() {
-            document.getElementById('video-guide-box').classList.toggle('hidden');
-        }
-
-        function handleDocFileUpload(event, target) {
-            const file = event.target.files[0];
-            if (!file) return;
-            if (file.size > MAX_DOC_BYTES) {
-                alert('ไฟล์ใหญ่เกิน ~1.6 MB ครับ กรุณาย่อไฟล์ PDF หรือลดจำนวนหน้าก่อนอัปโหลดลงระบบ');
-                event.target.value = '';
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = ev => {
-                const payload = { dataUrl: ev.target.result, name: file.name };
-                if (target === 'preview') {
-                    previewDocData = payload;
-                    document.getElementById('preview-file-badge').innerText = `✅ เลือกแล้ว: ${file.name} (${Math.round(file.size / 1024)} KB)`;
-                } else {
-                    fullDocData = payload;
-                    document.getElementById('full-file-badge').innerText = `✅ เลือกแล้ว: ${file.name} (${Math.round(file.size / 1024)} KB)`;
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function addContactItem() {
-            const channel = document.getElementById('new-contact-channel').value;
-            const labelInp = document.getElementById('new-contact-label');
-            const valInp = document.getElementById('new-contact-value');
-            const value = valInp.value.trim();
-            if (!value) return alert('กรุณากรอกเบอร์โทร / @ไอดี / ลิงก์ครับ');
-
-            const meta = CHANNEL_META[channel] || CHANNEL_META.other;
-            const label = labelInp.value.trim() || (channel === 'phone' ? `โทร ${value}` : meta.label);
-
-            draftContacts.push({
-                id: 'ct-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-                channel,
-                label,
-                value
-            });
-
-            labelInp.value = '';
-            valInp.value = '';
-            renderAdminContacts();
-        }
-
-        function removeContactItem(id) {
-            draftContacts = draftContacts.filter(c => c.id !== id);
-            renderAdminContacts();
-        }
-
-        function renderAdminContacts() {
-            const box = document.getElementById('admin-contacts-list');
-            if (!draftContacts || draftContacts.length === 0) {
-                box.innerHTML = `<p class="text-[11px] text-slate-400 text-center py-2">ยังไม่มีช่องทางติดต่อ กด "+ เพิ่ม" เพื่อเพิ่ม Facebook, LINE, IG หรือเบอร์โทรได้เลยครับ</p>`;
-                return;
-            }
-            box.innerHTML = draftContacts.map(c => {
-                const meta = CHANNEL_META[c.channel] || CHANNEL_META.other;
-                return `
-                    <div class="flex justify-between items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 text-xs">
-                        <div class="truncate">
-                            <span class="font-bold text-slate-800">${meta.icon} ${c.label}</span>
-                            <span class="text-slate-500 ml-1.5 font-mono">${c.value}</span>
-                        </div>
-                        <button type="button" onclick="removeContactItem('${c.id}')" class="text-red-600 hover:bg-red-50 px-2 py-1 rounded-lg font-bold shrink-0">ลบ</button>
-                    </div>
-                `;
-            }).join('');
-        }
 
         auth.onAuthStateChanged(user => {
             const email = user && user.email ? user.email.toLowerCase() : '';
@@ -573,13 +415,15 @@
             document.getElementById('sapsong-lock-overlay').classList.remove('hidden');
         }
 
+        const courseBaseRef = db.ref(`courses_data/${SHOP_ID}`);
+
         function startListeners() {
             if (listenersStarted) return;
             listenersStarted = true;
 
             db.ref('sapsong_hub_shops/' + SHOP_ID).on('value', snap => {
                 const m = snap.val();
-                if (!m) return showLock('ไม่พบข้อมูลในระบบ', `รหัส "${SHOP_ID}" ยังไม่ได้ลงทะเบียนใน Sapsong HUB`);
+                if (!m) return showLock('ไม่พบสถาบันในระบบ', `รหัส "${SHOP_ID}" ยังไม่ได้ลงทะเบียนใน Sapsong HUB`);
                 courseMeta = m;
                 if (m.isSuspended) return showLock('บัญชีถูกระงับชั่วคราว', `ระบบของ "${m.name}" ถูกระงับการใช้งาน`);
                 if (m.planKey !== 'lifetime' && isExpired(m.expireDate)) return showLock('แพ็กเกจหมดอายุแล้ว', `หมดอายุเมื่อวันที่ ${m.expireDate}`);
@@ -588,136 +432,293 @@
                 document.getElementById('nav-expire').innerText = m.planKey === 'lifetime' ? '♾️ ตลอดชีพ' : `หมดอายุ: ${m.expireDate}`;
             });
 
-            const courseRef = db.ref(`courses_data/${SHOP_ID}`);
-
-            courseRef.child('config').on('value', snap => {
+            courseBaseRef.child('config').on('value', snap => {
                 const cfg = snap.val() || {};
                 const loadedContacts = Array.isArray(cfg.contacts) ? cfg.contacts.filter(c => c && c.value) : [];
                 configData = {
                     shopLogo: cfg.shopLogo || '',
-                    instName: cfg.instName || SHOP_ID,
+                    academyName: cfg.academyName || courseMeta.name || SHOP_ID,
                     promptpayId: cfg.promptpayId || '0855750995',
-                    accountName: cfg.accountName || SHOP_ID,
+                    accountName: cfg.accountName || cfg.academyName || SHOP_ID,
+                    announcement: cfg.announcement || '',
                     contacts: loadedContacts,
-                    autoUnlockSlip: cfg.autoUnlockSlip !== undefined ? cfg.autoUnlockSlip : true
+                    autoUnlockSlip: false
                 };
                 draftContacts = loadedContacts.map(c => ({ ...c }));
                 renderAdminContacts();
                 applyLogoUI(configData.shopLogo);
-                document.getElementById('set-inst-name').value = configData.instName;
+                document.getElementById('set-academy-name').value = configData.academyName;
                 document.getElementById('set-promptpay').value = configData.promptpayId;
                 document.getElementById('set-acc-name').value = configData.accountName;
-                document.getElementById('set-auto-unlock').checked = configData.autoUnlockSlip;
+                document.getElementById('set-announcement').value = configData.announcement;
             });
 
-            courseRef.child('courses').on('value', snap => {
+            courseBaseRef.child('courses').on('value', snap => {
                 const raw = snap.val() || [];
                 courses = Array.isArray(raw) ? raw : Object.values(raw);
                 renderCourses();
-                renderStudents();
-                renderCourseRevenue();
             });
 
-            courseRef.child('students').on('value', snap => {
-                students = snap.val() || {};
-                renderStudents();
-            });
-
-            courseRef.child('orders').on('value', snap => {
-                const rawOrders = snap.val() || {};
-                orders = Object.entries(rawOrders).map(([k, v]) => ({ ...v, key: k })).reverse();
+            courseBaseRef.child('orders').on('value', snap => {
+                const raw = snap.val() || {};
+                orders = Object.entries(raw).map(([k, v]) => ({ ...v, key: k })).reverse();
                 renderOrders();
-                renderCourseRevenue();
+                renderRevenue();
             });
         }
 
-        function formatDateKey(ts) {
-            if (!ts) return '';
-            const d = new Date(Number(ts));
-            if (isNaN(d.getTime())) return '';
-            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        function switchTab(tab) {
+            ['orders', 'courses', 'revenue', 'settings'].forEach(t => {
+                document.getElementById('view-' + t).classList.add('hidden');
+                document.getElementById('tab-' + t).className = "px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs";
+            });
+            document.getElementById('view-' + tab).classList.remove('hidden');
+            document.getElementById('tab-' + tab).className = "px-3 py-2 bg-amber-400 text-slate-950 font-bold rounded-xl text-xs";
         }
 
-        function renderCourseRevenue() {
-            const now = new Date();
-            const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-            const monthStr = todayStr.substring(0, 7);
-            const yearStr = todayStr.substring(0, 4);
+        // ================= ตรวจสลิป & ปลดล็อกคอร์ส =================
+        function setOrderFilter(f) {
+            orderFilter = f;
+            ['pending', 'approved', 'all'].forEach(k => {
+                document.getElementById('of-' + k).className = (k === f)
+                    ? 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white'
+                    : 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700';
+            });
+            renderOrders();
+        }
 
-            let sumToday = 0, sumMonth = 0, sumYear = 0, countApproved = 0;
-            const byItemMap = new Map();
+        function setOrderStatus(key, status) {
+            courseBaseRef.child(`orders/${key}/status`).set(status);
+        }
 
-            orders.forEach(o => {
-                const amt = Number(o.amount || 0);
-                if (o.status === 'approved') {
-                    countApproved++;
-                    const dStr = o.date || formatDateKey(o.createdAt);
-                    if (dStr === todayStr) sumToday += amt;
-                    if (dStr && dStr.startsWith(monthStr)) sumMonth += amt;
-                    if (dStr && dStr.startsWith(yearStr)) sumYear += amt;
+        function deleteOrder(key) {
+            if (confirm('ยืนยันการลบคำสั่งซื้อนี้?')) courseBaseRef.child(`orders/${key}`).remove();
+        }
 
-                    const mapKey = String(o.itemId || o.itemTitle || 'unknown');
-                    const matchedCourse = courses.find(c => String(c.id) === String(o.itemId));
-                    const title = o.itemTitle || (matchedCourse ? matchedCourse.title : mapKey);
-                    const type = o.itemType || (matchedCourse ? matchedCourse.type : 'video');
-                    const prev = byItemMap.get(mapKey) || { title, type, count: 0, revenue: 0 };
-                    prev.count += 1;
-                    prev.revenue += amt;
-                    byItemMap.set(mapKey, prev);
-                }
+        function openSlip(src) {
+            document.getElementById('slip-modal-img').src = src;
+            document.getElementById('slip-modal').classList.remove('hidden');
+        }
+
+        function renderOrders() {
+            const pendingCnt = orders.filter(o => o.status === 'pending_review' || o.status === 'pending').length;
+            document.getElementById('badge-pending').innerText = pendingCnt;
+
+            const list = orders.filter(o => {
+                if (orderFilter === 'pending') return o.status === 'pending_review' || o.status === 'pending';
+                if (orderFilter === 'approved') return o.status === 'approved' || o.status === 'paid';
+                return true;
             });
 
-            document.getElementById('crev-today').innerText = `${sumToday.toLocaleString()} บ.`;
-            document.getElementById('crev-month').innerText = `${sumMonth.toLocaleString()} บ.`;
-            document.getElementById('crev-year').innerText = `${sumYear.toLocaleString()} บ.`;
-            document.getElementById('crev-count').innerText = `${countApproved.toLocaleString()} รายการ`;
-
-            const byItemBody = document.getElementById('crev-by-item-table');
-            const byItemArr = Array.from(byItemMap.values()).sort((a, b) => b.revenue - a.revenue);
-            if (byItemArr.length === 0) {
-                byItemBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-400">ยังไม่มีรายรับแยกตามรายวิชาหรือไฟล์</td></tr>`;
-            } else {
-                byItemBody.innerHTML = byItemArr.map(row => `
-                    <tr>
-                        <td class="p-3">
-                            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full ${row.type === 'file' ? 'bg-amber-100 text-amber-900' : 'bg-indigo-100 text-indigo-800'}">
-                                ${row.type === 'file' ? '📄 ไฟล์เรียน' : '🎬 วิดีโอ'}
-                            </span>
-                        </td>
-                        <td class="p-3 font-bold text-slate-800">${row.title}</td>
-                        <td class="p-3 text-center font-semibold text-slate-700">${row.count.toLocaleString()} ครั้ง</td>
-                        <td class="p-3 text-right font-bold text-emerald-600">${row.revenue.toLocaleString()} บ.</td>
-                    </tr>
-                `).join('');
-            }
-
-            const tbody = document.getElementById('crev-table');
-            if (orders.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">ยังไม่มีประวัติการชำระเงิน</td></tr>`;
+            const grid = document.getElementById('orders-grid');
+            if (list.length === 0) {
+                grid.innerHTML = `<div class="col-span-full bg-white p-8 rounded-2xl border text-center text-slate-400 text-sm">ไม่มีรายการคำสั่งซื้อในหมวดนี้</div>`;
                 return;
             }
 
+            grid.innerHTML = list.map(o => {
+                const isApproved = o.status === 'approved' || o.status === 'paid';
+                const isRejected = o.status === 'rejected';
+                const badge = isApproved
+                    ? `<span class="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full text-xs font-bold">✅ ปลดล็อกแล้ว</span>`
+                    : (isRejected
+                        ? `<span class="bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full text-xs font-bold">❌ ปฏิเสธแล้ว</span>`
+                        : `<span class="bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full text-xs font-bold">🔍 รอผู้สอนตรวจสลิป</span>`);
+
+                return `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border space-y-2.5">
+                        <div class="flex justify-between items-start gap-2">
+                            <div>
+                                <span class="font-mono text-xs text-slate-400">#${o.orderId || o.key.slice(-6)} • ${o.createdAt ? new Date(o.createdAt).toLocaleString('th-TH') : ''}</span>
+                                <h4 class="font-bold text-slate-800 text-base mt-0.5">${o.courseTitle || '-'}</h4>
+                                <p class="text-xs text-slate-600">👤 ${o.studentName || '-'} (<span class="font-mono font-bold">${o.studentPhone || '-'}</span>)</p>
+                            </div>
+                            <div class="text-right space-y-1 shrink-0">
+                                ${badge}
+                                <p class="font-bold text-indigo-700 text-base">${Number(o.amount || 0).toLocaleString()} ฿</p>
+                            </div>
+                        </div>
+
+                        ${o.slipTransRef ? `<p class="text-[11px] text-blue-700 font-semibold">🤖 QR Ref: ${o.slipTransRef.slice(-10)}</p>` : ''}
+
+                        <div class="flex flex-wrap gap-2 pt-2 border-t">
+                            ${o.slipImage ? `<button onclick="openSlip('${o.slipImage}')" class="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-xl text-xs font-bold">🔍 ดูสลิป</button>` : ''}
+                            ${!isApproved
+                                ? `<button onclick="setOrderStatus('${o.key}', 'approved')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded-xl text-xs font-bold">✅ ยืนยัน & ปลดล็อกคอร์ส</button>`
+                                : `<button onclick="setOrderStatus('${o.key}', 'pending_review')" class="bg-amber-100 text-amber-900 px-3 py-1.5 rounded-xl text-xs font-bold">🔒 ยกเลิกสิทธิ์</button>`
+                            }
+                            ${!isApproved && !isRejected ? `<button onclick="setOrderStatus('${o.key}', 'rejected')" class="bg-red-50 text-red-700 px-3 py-1.5 rounded-xl text-xs font-bold">❌ ปฏิเสธ</button>` : ''}
+                            <button onclick="deleteOrder('${o.key}')" class="bg-red-100 text-red-700 px-3 py-1.5 rounded-xl text-xs font-bold">ลบ</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ================= จัดการคอร์สเรียน & ไฟล์ชีท =================
+        function handleCoverUpload(e) {
+            const f = e.target.files[0]; if (!f) return;
+            const r = new FileReader();
+            r.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    const c = document.createElement('canvas'); c.width = 480; c.height = 300;
+                    c.getContext('2d').drawImage(img, 0, 0, 480, 300);
+                    draftCoverImg = c.toDataURL('image/jpeg', 0.8);
+                    const p = document.getElementById('c-cover-preview'); p.src = draftCoverImg; p.classList.remove('hidden');
+                };
+                img.src = ev.target.result;
+            };
+            r.readAsDataURL(f);
+        }
+
+        function saveCourseForm() {
+            const editId = document.getElementById('edit-course-id').value;
+            const title = document.getElementById('inp-c-title').value.trim();
+            const type = document.getElementById('inp-c-type').value;
+            const price = Math.max(0, Number(document.getElementById('inp-c-price').value) || 0);
+            const videoUrl = document.getElementById('inp-c-video').value.trim();
+            const fileUrl = document.getElementById('inp-c-file').value.trim();
+            const description = document.getElementById('inp-c-desc').value.trim();
+            const active = document.getElementById('inp-c-active').checked;
+            if (!title) return alert('กรุณากรอกชื่อคอร์สเรียนหรือไฟล์ชีทครับ');
+
+            if (editId) {
+                const idx = courses.findIndex(c => String(c.id) === String(editId));
+                if (idx !== -1) {
+                    courses[idx] = {
+                        ...courses[idx], title, type, price, videoUrl, fileUrl, description, active,
+                        coverImage: draftCoverImg || courses[idx].coverImage || ''
+                    };
+                }
+            } else {
+                courses.push({
+                    id: 'crs-' + Date.now(), title, type, price, videoUrl, fileUrl, description, active,
+                    coverImage: draftCoverImg
+                });
+            }
+
+            courseBaseRef.child('courses').set(courses).then(() => {
+                resetCourseForm();
+                alert('บันทึกคอร์สเรียนเรียบร้อยแล้วครับ');
+            });
+        }
+
+        function editCourse(id) {
+            const c = courses.find(x => String(x.id) === String(id));
+            if (!c) return;
+            document.getElementById('edit-course-id').value = c.id;
+            document.getElementById('inp-c-title').value = c.title || '';
+            document.getElementById('inp-c-type').value = c.type || 'video';
+            document.getElementById('inp-c-price').value = c.price || 0;
+            document.getElementById('inp-c-video').value = c.videoUrl || '';
+            document.getElementById('inp-c-file').value = c.fileUrl || '';
+            document.getElementById('inp-c-desc').value = c.description || '';
+            document.getElementById('inp-c-active').checked = c.active !== false;
+            draftCoverImg = c.coverImage || '';
+            const p = document.getElementById('c-cover-preview');
+            if (draftCoverImg) { p.src = draftCoverImg; p.classList.remove('hidden'); } else p.classList.add('hidden');
+            document.getElementById('course-form-title').innerText = `✏️ แก้ไขคอร์ส: ${c.title}`;
+            document.getElementById('btn-cancel-course').classList.remove('hidden');
+        }
+
+        function resetCourseForm() {
+            document.getElementById('edit-course-id').value = '';
+            document.getElementById('inp-c-title').value = '';
+            document.getElementById('inp-c-price').value = '299';
+            document.getElementById('inp-c-video').value = '';
+            document.getElementById('inp-c-file').value = '';
+            document.getElementById('inp-c-desc').value = '';
+            document.getElementById('inp-c-active').checked = true;
+            draftCoverImg = '';
+            document.getElementById('c-cover-preview').classList.add('hidden');
+            document.getElementById('course-form-title').innerText = '➕ เพิ่มคอร์สเรียน / ไฟล์ชีทใหม่';
+            document.getElementById('btn-cancel-course').classList.add('hidden');
+        }
+
+        function deleteCourse(id) {
+            if (confirm('ยืนยันการลบคอร์สเรียนนี้?')) {
+                courses = courses.filter(c => String(c.id) !== String(id));
+                courseBaseRef.child('courses').set(courses);
+            }
+        }
+
+        function renderCourses() {
+            document.getElementById('course-count').innerText = courses.length;
+            const list = document.getElementById('courses-list');
+            if (courses.length === 0) {
+                list.innerHTML = `<p class="text-slate-400 text-sm col-span-full text-center py-6">ยังไม่มีคอร์สเรียน เพิ่มคอร์สด้านบนได้เลยครับ</p>`;
+                return;
+            }
+            list.innerHTML = courses.map(c => `
+                <div class="rounded-2xl border overflow-hidden bg-white flex flex-col justify-between ${c.active === false ? 'opacity-60' : ''}">
+                    <div>
+                        ${c.coverImage
+                            ? `<img src="${c.coverImage}" class="w-full h-32 object-cover bg-slate-100">`
+                            : `<div class="w-full h-28 bg-indigo-50 flex items-center justify-center text-3xl">${c.type === 'file' ? '📄' : '🎬'}</div>`
+                        }
+                        <div class="p-3.5 space-y-1">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">${c.type === 'file' ? '📄 ไฟล์ชีท' : '🎬 วิดีโอ'}</span>
+                                <span class="font-bold text-indigo-700">${Number(c.price || 0) > 0 ? `${Number(c.price).toLocaleString()} บ.` : 'ฟรี'}</span>
+                            </div>
+                            <h4 class="font-bold text-slate-800 text-sm">${c.title}</h4>
+                            ${c.description ? `<p class="text-[11px] text-slate-500 line-clamp-2">${c.description}</p>` : ''}
+                        </div>
+                    </div>
+                    <div class="p-3 pt-0 flex gap-1.5">
+                        <button onclick="editCourse('${c.id}')" class="flex-1 bg-amber-100 text-amber-900 py-1.5 rounded-xl text-xs font-bold">แก้ไข</button>
+                        <button onclick="deleteCourse('${c.id}')" class="bg-red-100 text-red-700 px-3 py-1.5 rounded-xl text-xs font-bold">ลบ</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ================= สรุปรายรับ =================
+        function renderRevenue() {
+            const now = new Date();
+            const monthStr = now.toISOString().slice(0, 7);
+            const yearStr = now.toISOString().slice(0, 4);
+            let sumMonth = 0, sumYear = 0, sumTotal = 0, cnt = 0;
+
+            orders.forEach(o => {
+                if (o.status === 'approved' || o.status === 'paid') {
+                    const amt = Number(o.amount || 0);
+                    sumTotal += amt;
+                    cnt++;
+                    if (o.createdAt) {
+                        const dStr = new Date(o.createdAt).toISOString();
+                        if (dStr.startsWith(monthStr)) sumMonth += amt;
+                        if (dStr.startsWith(yearStr)) sumYear += amt;
+                    }
+                }
+            });
+
+            document.getElementById('crev-month').innerText = `${sumMonth.toLocaleString()} บ.`;
+            document.getElementById('crev-year').innerText = `${sumYear.toLocaleString()} บ.`;
+            document.getElementById('crev-total').innerText = `${sumTotal.toLocaleString()} บ.`;
+            document.getElementById('crev-count').innerText = `${cnt} รายการ`;
+
+            const tbody = document.getElementById('crev-table');
+            if (orders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">ยังไม่มีประวัติการสั่งซื้อ</td></tr>`;
+                return;
+            }
             tbody.innerHTML = orders.map(o => {
-                const isApproved = o.status === 'approved';
-                const timeTxt = o.createdAt ? new Date(Number(o.createdAt)).toLocaleString('th-TH') : (o.date || '-');
-                const amt = Number(o.amount || 0);
+                const isApp = o.status === 'approved' || o.status === 'paid';
                 return `
                     <tr>
-                        <td class="p-3 font-mono font-bold text-slate-700">${o.orderId || o.key.slice(-6)}</td>
-                        <td class="p-3 text-xs text-slate-500">${timeTxt}</td>
-                        <td class="p-3 font-medium">${o.studentName || o.username || '-'} <span class="text-xs text-slate-400">(@${o.username || ''})</span></td>
-                        <td class="p-3">${o.itemType === 'file' ? '📄' : '🎬'} ${o.itemTitle || '-'}</td>
-                        <td class="p-3">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${isApproved ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">
-                                ${isApproved ? '🔓 ปลดล็อกแล้ว (นับรายรับ)' : '⏳ รอตรวจสอบ'}
-                            </span>
-                        </td>
-                        <td class="p-3 text-right font-bold ${isApproved ? 'text-emerald-600' : 'text-slate-500'}">${amt.toLocaleString()} บ.</td>
+                        <td class="p-3 text-slate-500">${o.createdAt ? new Date(o.createdAt).toLocaleString('th-TH') : '-'}</td>
+                        <td class="p-3 font-semibold">${o.studentName || '-'} <span class="text-slate-400 font-mono">(${o.studentPhone || '-'})</span></td>
+                        <td class="p-3">${o.courseTitle || '-'}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${isApp ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${isApp ? 'ปลดล็อกแล้ว' : 'รอตรวจ/อื่นๆ'}</span></td>
+                        <td class="p-3 text-right font-bold">${Number(o.amount || 0).toLocaleString()} บ.</td>
                     </tr>
                 `;
             }).join('');
         }
 
+        // ================= ตั้งค่าสถาบัน & ช่องทางติดต่อ =================
         function applyLogoUI(b64) {
             const lBox = document.getElementById('login-logo-box'), nLogo = document.getElementById('nav-logo'),
                   sPrev = document.getElementById('set-logo-preview'), sPh = document.getElementById('set-logo-ph');
@@ -731,185 +732,46 @@
             r.readAsDataURL(f);
         }
 
+        function addContactItem() {
+            const channel = document.getElementById('new-contact-channel').value;
+            const labelInp = document.getElementById('new-contact-label');
+            const valInp = document.getElementById('new-contact-value');
+            const value = valInp.value.trim();
+            if (!value) return alert('กรุณากรอกเบอร์โทร / @ไอดี / ลิงก์ครับ');
+            const meta = CHANNEL_META[channel] || CHANNEL_META.other;
+            const label = labelInp.value.trim() || (channel === 'phone' ? `โทร ${value}` : meta.label);
+            draftContacts.push({ id: 'ct-' + Date.now().toString(36), channel, label, value });
+            labelInp.value = ''; valInp.value = '';
+            renderAdminContacts();
+        }
+
+        function removeContactItem(id) { draftContacts = draftContacts.filter(c => c.id !== id); renderAdminContacts(); }
+
+        function renderAdminContacts() {
+            const box = document.getElementById('admin-contacts-list');
+            if (!draftContacts || draftContacts.length === 0) {
+                box.innerHTML = `<p class="text-[11px] text-slate-400 text-center py-2">ยังไม่มีช่องทางติดต่อ</p>`;
+                return;
+            }
+            box.innerHTML = draftContacts.map(c => {
+                const meta = CHANNEL_META[c.channel] || CHANNEL_META.other;
+                return `<div class="flex justify-between items-center gap-2 bg-white px-3 py-2 rounded-xl border text-xs"><div class="truncate"><span class="font-bold text-slate-800">${meta.icon} ${c.label}</span> <span class="text-slate-500 font-mono">${c.value}</span></div><button type="button" onclick="removeContactItem('${c.id}')" class="text-red-600 font-bold px-2">ลบ</button></div>`;
+            }).join('');
+        }
+
         function saveCourseSettings() {
-            configData.instName = document.getElementById('set-inst-name').value.trim() || SHOP_ID;
+            configData.academyName = document.getElementById('set-academy-name').value.trim() || SHOP_ID;
             configData.promptpayId = document.getElementById('set-promptpay').value.trim();
-            configData.accountName = document.getElementById('set-acc-name').value.trim() || configData.instName;
+            configData.accountName = document.getElementById('set-acc-name').value.trim() || configData.academyName;
+            configData.announcement = document.getElementById('set-announcement').value.trim();
             configData.contacts = draftContacts.map(c => ({ ...c }));
-            configData.autoUnlockSlip = document.getElementById('set-auto-unlock').checked;
-            db.ref(`courses_data/${SHOP_ID}/config`).set(configData).then(() => alert('บันทึกการตั้งค่าเรียบร้อยแล้วครับ'));
+            configData.autoUnlockSlip = false;
+            courseBaseRef.child('config').set(configData)
+                .then(() => alert('บันทึกการตั้งค่าสถาบันเรียบร้อยแล้วครับ'))
+                .catch(err => alert('บันทึกไม่สำเร็จ: ' + err.message));
         }
 
-        function toggleItemTypeFields() {
-            const type = document.getElementById('inp-item-type').value;
-            document.getElementById('video-fields-box').classList.toggle('hidden', type !== 'video');
-            document.getElementById('file-fields-box').classList.toggle('hidden', type !== 'file');
-        }
-
-        function handleCoverUpload(e) {
-            const f = e.target.files[0]; if (!f) return;
-            const r = new FileReader();
-            r.onload = ev => { const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); const w = 480, h = Math.round((img.height/img.width)*480)||270; c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h); currentCoverBase64 = c.toDataURL('image/jpeg', 0.8); }; img.src = ev.target.result; };
-            r.readAsDataURL(f);
-        }
-
-        function addLessonRow(title = '', videoUrl = '', docUrl = '', isFree = false) {
-            const div = document.createElement('div');
-            div.className = 'lesson-row bg-white p-3 rounded-xl border border-indigo-100 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center';
-            div.innerHTML = `<input type="text" class="ls-title sm:col-span-3 px-2.5 py-1.5 border rounded-lg text-xs" placeholder="ชื่อตอน" value="${title}"><input type="text" class="ls-video sm:col-span-4 px-2.5 py-1.5 border rounded-lg text-xs" placeholder="ลิงก์ YouTube / Drive / วิดีโอ" value="${videoUrl}"><input type="text" class="ls-doc sm:col-span-3 px-2.5 py-1.5 border rounded-lg text-xs" placeholder="ลิงก์ชีท (ไม่บังคับ)" value="${docUrl}"><div class="sm:col-span-2 flex items-center justify-between gap-1"><label class="text-[11px] flex items-center gap-1 cursor-pointer"><input type="checkbox" class="ls-free" ${isFree?'checked':''}> ฟรี</label><button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-500 text-xs font-bold px-1.5">✕</button></div>`;
-            document.getElementById('lessons-container').appendChild(div);
-        }
-
-        function saveCourseForm() {
-            const editId = document.getElementById('edit-course-id').value;
-            const type = document.getElementById('inp-item-type').value;
-            const title = document.getElementById('inp-course-title').value.trim();
-            const price = Number(document.getElementById('inp-course-price').value) || 0;
-            const desc = document.getElementById('inp-course-desc').value.trim();
-            if (!title) return alert('กรุณากรอกชื่อวิชาหรือชื่อไฟล์ครับ');
-
-            let lessons = [];
-            let previewFileData = '';
-            let previewFileName = '';
-            let fullFileData = '';
-            let fullFileName = '';
-
-            if (type === 'video') {
-                document.querySelectorAll('#lessons-container .lesson-row').forEach((row, idx) => {
-                    const lTitle = row.querySelector('.ls-title').value.trim(), lVideo = row.querySelector('.ls-video').value.trim();
-                    if (lTitle && lVideo) lessons.push({ id: `ls-${idx+1}`, title: lTitle, videoUrl: lVideo, docUrl: row.querySelector('.ls-doc').value.trim(), isFree: row.querySelector('.ls-free').checked });
-                });
-            } else {
-                const existing = editId ? courses.find(c => String(c.id) === String(editId)) : null;
-                previewFileData = previewDocData.dataUrl || (existing && existing.previewFileData) || '';
-                previewFileName = previewDocData.name || (existing && existing.previewFileName) || '';
-                fullFileData = fullDocData.dataUrl || (existing && existing.fullFileData) || '';
-                fullFileName = fullDocData.name || (existing && existing.fullFileName) || `${title}.pdf`;
-
-                if (!fullFileData) return alert('กรุณาอัปโหลดไฟล์ฉบับเต็มก่อนบันทึกครับ');
-            }
-
-            if (editId) {
-                const idx = courses.findIndex(c => String(c.id) === String(editId));
-                if (idx !== -1) {
-                    courses[idx] = {
-                        ...courses[idx],
-                        type, title, price, desc, lessons,
-                        previewFileData, previewFileName,
-                        fullFileData, fullFileName,
-                        cover: currentCoverBase64 || courses[idx].cover || defaultCover
-                    };
-                }
-            } else {
-                courses.push({
-                    id: 'itm-' + Date.now(),
-                    type, title, price, desc, lessons,
-                    previewFileData, previewFileName,
-                    fullFileData, fullFileName,
-                    cover: currentCoverBase64 || defaultCover
-                });
-            }
-            db.ref(`courses_data/${SHOP_ID}/courses`).set(courses).then(() => { resetCourseForm(); alert('บันทึกเรียบร้อยแล้วครับ'); });
-        }
-
-        function editCourse(id) {
-            const c = courses.find(x => String(x.id) === String(id)); if (!c) return;
-            document.getElementById('edit-course-id').value = c.id;
-            document.getElementById('inp-item-type').value = c.type || 'video';
-            toggleItemTypeFields();
-            document.getElementById('inp-course-title').value = c.title;
-            document.getElementById('inp-course-price').value = c.price;
-            document.getElementById('inp-course-desc').value = c.desc || '';
-
-            previewDocData = { dataUrl: '', name: '' };
-            fullDocData = { dataUrl: '', name: '' };
-            document.getElementById('inp-preview-file').value = '';
-            document.getElementById('inp-full-file').value = '';
-            document.getElementById('preview-file-badge').innerText = c.previewFileData ? `✅ มีไฟล์ตัวอย่างอยู่แล้ว: ${c.previewFileName || 'preview.pdf'}` : 'ยังไม่ได้เลือกไฟล์ตัวอย่าง';
-            document.getElementById('full-file-badge').innerText = c.fullFileData ? `✅ มีไฟล์ฉบับเต็มอยู่แล้ว: ${c.fullFileName || 'document.pdf'}` : 'ยังไม่ได้เลือกไฟล์ฉบับเต็ม';
-
-            currentCoverBase64 = c.cover || '';
-            document.getElementById('lessons-container').innerHTML = '';
-            (c.lessons || []).forEach(ls => addLessonRow(ls.title, ls.videoUrl, ls.docUrl, ls.isFree));
-            document.getElementById('course-form-title').innerText = '✏️ แก้ไขข้อมูล';
-            document.getElementById('btn-cancel-course').classList.remove('hidden');
-        }
-
-        function resetCourseForm() {
-            document.getElementById('edit-course-id').value = '';
-            document.getElementById('inp-item-type').value = 'video';
-            toggleItemTypeFields();
-            document.getElementById('inp-course-title').value = '';
-            document.getElementById('inp-course-price').value = '';
-            document.getElementById('inp-course-desc').value = '';
-            document.getElementById('inp-preview-file').value = '';
-            document.getElementById('inp-full-file').value = '';
-            document.getElementById('preview-file-badge').innerText = 'ยังไม่ได้เลือกไฟล์ตัวอย่าง';
-            document.getElementById('full-file-badge').innerText = 'ยังไม่ได้เลือกไฟล์ฉบับเต็ม';
-            previewDocData = { dataUrl: '', name: '' };
-            fullDocData = { dataUrl: '', name: '' };
-            document.getElementById('lessons-container').innerHTML = '';
-            currentCoverBase64 = '';
-            document.getElementById('course-form-title').innerText = '➕ เพิ่มวิชาเรียน หรือ ไฟล์เรียนสำหรับขาย';
-            document.getElementById('btn-cancel-course').classList.add('hidden');
-        }
-
-        function deleteCourse(id) { if (confirm('ยืนยันการลบ?')) { courses = courses.filter(c => String(c.id) !== String(id)); db.ref(`courses_data/${SHOP_ID}/courses`).set(courses); } }
-
-        function renderCourses() {
-            document.getElementById('course-count').innerText = courses.length;
-            const el = document.getElementById('courses-list');
-            if (courses.length === 0) { el.innerHTML = `<p class="text-slate-400 text-sm col-span-2 text-center py-6">ยังไม่มีวิชาหรือไฟล์เรียน</p>`; return; }
-            el.innerHTML = courses.map(c => {
-                const isFile = c.type === 'file';
-                const subInfo = isFile
-                    ? (c.fullFileData ? `📄 ไฟล์พร้อมใช้ (${c.fullFileName || 'PDF'})` : '⚠️ ยังไม่มีไฟล์ฉบับเต็ม')
-                    : `🎬 ${(c.lessons || []).length} ตอนเรียน`;
-                return `<div class="border rounded-2xl overflow-hidden bg-slate-50 flex flex-col justify-between"><div><img src="${c.cover||defaultCover}" class="w-full h-36 object-cover"><div class="p-3.5"><span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isFile?'bg-amber-100 text-amber-900':'bg-indigo-100 text-indigo-800'}">${isFile?'📄 ไฟล์เรียน':'🎬 วิดีโอ'}</span><div class="flex justify-between mt-1"><h4 class="font-bold text-slate-800 text-sm">${c.title}</h4><span class="font-bold text-indigo-700 text-sm">${c.price===0?'ฟรี':c.price+' บ.'}</span></div><p class="text-xs text-slate-500 mt-1">${c.desc||''}</p><p class="text-[11px] font-semibold text-emerald-700 mt-2">${subInfo}</p></div></div><div class="px-3.5 pb-3.5 flex gap-2"><button onclick="editCourse('${c.id}')" class="flex-1 bg-indigo-100 text-indigo-800 py-1.5 rounded-xl text-xs font-bold">แก้ไข</button><button onclick="deleteCourse('${c.id}')" class="bg-red-100 text-red-700 px-3 py-1.5 rounded-xl text-xs font-bold">ลบ</button></div></div>`;
-            }).join('');
-        }
-
-        function approveOrderAndUnlock(orderKey, username, itemId, approve) {
-            db.ref(`courses_data/${SHOP_ID}/orders/${orderKey}/status`).set(approve ? 'approved' : 'pending');
-            if (username && itemId) {
-                const ref = db.ref(`courses_data/${SHOP_ID}/students/${username}/unlockedItems/${itemId}`);
-                if (approve) ref.set(true); else ref.remove();
-            }
-        }
-
-        function openSlip(imgSrc) { document.getElementById('slip-modal-img').src = imgSrc; document.getElementById('slip-modal').classList.remove('hidden'); }
-
-        function renderOrders() {
-            document.getElementById('order-count').innerText = `${orders.length} รายการ`;
-            const el = document.getElementById('orders-list');
-            if (orders.length === 0) { el.innerHTML = `<p class="text-slate-400 text-sm col-span-2 text-center py-8 bg-white rounded-2xl">ยังไม่มีรายการซื้อ</p>`; return; }
-            el.innerHTML = orders.map(o => `<div class="bg-white p-4 rounded-2xl shadow-sm border space-y-2.5"><div class="flex justify-between items-start"><div><span class="font-mono text-xs text-slate-500">${o.orderId||''}</span><h4 class="font-bold text-slate-800 text-sm">${o.studentName} (@${o.username})</h4><p class="text-xs text-indigo-700 font-semibold">${o.itemTitle} • ${o.amount} บาท</p></div><span class="px-2.5 py-1 rounded-full text-xs font-bold ${o.status==='approved'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-800'}">${o.status==='approved'?'🔓 ปลดล็อกแล้ว':'⏳ รอตรวจ'}</span></div><div class="flex gap-2 pt-2 border-t">${o.slipImage?`<button onclick="openSlip('${o.slipImage}')" class="bg-slate-100 text-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold">🔍 ดูสลิป</button>`:''}${o.status!=='approved'?`<button onclick="approveOrderAndUnlock('${o.key}','${o.username}','${o.itemId}',true)" class="flex-1 bg-emerald-600 text-white py-1.5 rounded-xl text-xs font-bold">✅ ปลดล็อก</button>`:`<button onclick="approveOrderAndUnlock('${o.key}','${o.username}','${o.itemId}',false)" class="bg-red-100 text-red-700 px-3 py-1.5 rounded-xl text-xs font-bold">ล็อกกลับ</button>`}</div></div>`).join('');
-        }
-
-        function renderStudents() {
-            const arr = Object.values(students || {});
-            document.getElementById('student-count').innerText = `${arr.length} บัญชี`;
-            const el = document.getElementById('students-list');
-            if (arr.length === 0) { el.innerHTML = `<p class="text-slate-400 text-sm col-span-2 text-center py-8 bg-white rounded-2xl">ยังไม่มีผู้เรียน</p>`; return; }
-            el.innerHTML = arr.map(st => {
-                const unlockedIds = Object.keys(st.unlockedItems || {});
-                const unlockedNames = unlockedIds.map(id => {
-                    const found = courses.find(c => String(c.id) === String(id));
-                    return found ? found.title : id;
-                });
-                return `<div class="bg-white p-4 rounded-2xl shadow-sm border space-y-1.5"><h4 class="font-bold text-slate-800 text-sm">${st.fullName} <span class="font-mono text-xs text-indigo-600">(@${st.username})</span></h4><p class="text-xs text-slate-500">โทร: ${st.phone} • รหัสผ่าน: <span class="font-mono font-bold text-slate-700">${st.password}</span></p><p class="text-xs text-emerald-700 font-semibold">🔓 ปลดล็อกแล้ว ${unlockedIds.length} รายการ</p><p class="text-xs text-slate-600 bg-slate-50 p-2 rounded-xl">${unlockedNames.length > 0 ? '🔓 ' + unlockedNames.join(', ') : 'ยังไม่ได้ปลดล็อกวิชาหรือไฟล์ใดๆ'}</p></div>`;
-            }).join('');
-        }
-
-        function switchTab(tab) {
-            ['orders', 'courses', 'students', 'revenue', 'settings'].forEach(t => {
-                document.getElementById('view-' + t).classList.add('hidden');
-                document.getElementById('tab-' + t).className = "px-3 py-2 bg-indigo-800 text-white rounded-xl text-xs";
-            });
-            document.getElementById('view-' + tab).classList.remove('hidden');
-            document.getElementById('tab-' + tab).className = "px-3 py-2 bg-amber-400 text-slate-950 font-bold rounded-xl text-xs";
-        }
-
+        // ================= ต่ออายุแพ็กเกจ (ฟรี 1 เดือน / 30 วัน) =================
         function crc16(data) {
             let crc = 0xFFFF;
             for (let i = 0; i < data.length; i++) { crc ^= data.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) crc = ((crc & 0x8000) !== 0) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF; }
@@ -926,11 +788,19 @@
             return p + crc16(p);
         }
 
-        function buildCourseRenewPresetOptions() {
+        function openCourseRenewModal() {
+            crnSlipBase64 = ''; crnSlipRef = '';
+            document.getElementById('crn-slip-input').value = '';
+            document.getElementById('crn-slip-prev').classList.add('hidden');
+            document.getElementById('crn-slip-status').classList.add('hidden');
+            document.getElementById('crn-info').innerText = `${configData.academyName || courseMeta.name || SHOP_ID} (${SHOP_ID})`;
+            document.getElementById('crn-pp-display').innerText = hubPaymentConfig.promptpayId;
+            document.getElementById('crn-acc-display').innerText = hubPaymentConfig.accountName;
+
             const sel = document.getElementById('crn-preset');
             let opts = '';
-            if (courseMeta && courseMeta.allowFree90d === true) {
-                opts += `<option value="90|0">🎁 ฟรี 3 เดือน (90 วัน — 0 บ.)</option>`;
+            if (courseMeta && (courseMeta.allowFree30d === true || courseMeta.allowFree90d === true)) {
+                opts += `<option value="30|0">🎁 ทดลองฟรี 1 เดือน (30 วัน — 0 บ.)</option>`;
             }
             opts += `
                 <option value="30|299">1 เดือน (299 บ.)</option>
@@ -938,17 +808,6 @@
                 <option value="365|2990">1 ปี (2,990 บ.)</option>
             `;
             sel.innerHTML = opts;
-        }
-
-        function openCourseRenewModal() {
-            crnSlipBase64 = ''; crnSlipRef = '';
-            document.getElementById('crn-slip-input').value = '';
-            document.getElementById('crn-slip-prev').classList.add('hidden');
-            document.getElementById('crn-slip-status').classList.add('hidden');
-            document.getElementById('crn-inst-info').innerText = `${configData.instName || courseMeta.name || SHOP_ID} (${SHOP_ID})`;
-            document.getElementById('crn-pp-display').innerText = hubPaymentConfig.promptpayId;
-            document.getElementById('crn-acc-display').innerText = hubPaymentConfig.accountName;
-            buildCourseRenewPresetOptions();
             onCourseRenewPresetChange();
             document.getElementById('course-renew-modal').classList.remove('hidden');
         }
@@ -961,7 +820,7 @@
 
         function renderCourseRenewQR() {
             const amt = Number(document.getElementById('crn-amount').value) || 0;
-            const box = document.getElementById('rn-qr-box');
+            const box = document.getElementById('crn-qr-box');
             const slipWrap = document.getElementById('crn-slip-wrap');
             box.innerHTML = '';
             if (amt > 0) {
@@ -969,7 +828,7 @@
                 new QRCode(box, { text: buildPromptPayQR(hubPaymentConfig.promptpayId, amt), width: 150, height: 150 });
             } else {
                 slipWrap.classList.add('hidden');
-                box.innerHTML = `<p class="text-xs font-bold text-emerald-700 py-4 px-2">🎁 สิทธิ์พิเศษจาก Super Admin: ฟรี 3 เดือน (0 บาท — ไม่ต้องโอนเงิน)</p>`;
+                box.innerHTML = `<p class="text-xs font-bold text-emerald-700 py-4 px-2">🎁 สิทธิ์ทดลองฟรี 1 เดือน (30 วัน — 0 บาท)</p>`;
             }
         }
 
@@ -983,7 +842,7 @@
             r.onload = ev => {
                 const img = new Image();
                 img.onload = () => {
-                    const sc = document.createElement('canvas'); const max = 1000;
+                    const sc = document.createElement('canvas'); const max = 800;
                     let sw = img.width, sh = img.height;
                     if (sw > max || sh > max) { if (sw > sh) { sh = Math.round(sh*max/sw); sw = max; } else { sw = Math.round(sw*max/sh); sh = max; } }
                     sc.width = sw; sc.height = sh;
@@ -992,18 +851,18 @@
 
                     const vc = document.createElement('canvas'); const w = 500, h = Math.round((img.height/img.width)*500) || 500;
                     vc.width = w; vc.height = h; vc.getContext('2d').drawImage(img, 0, 0, w, h);
-                    crnSlipBase64 = vc.toDataURL('image/jpeg', 0.75);
+                    crnSlipBase64 = vc.toDataURL('image/jpeg', 0.72);
                     const prev = document.getElementById('crn-slip-prev'); prev.src = crnSlipBase64; prev.classList.remove('hidden');
 
                     if (qr && qr.data) {
                         const m = qr.data.match(/02\d{2}([A-Za-z0-9]{10,})/);
                         crnSlipRef = m ? m[1] : qr.data.slice(-16);
-                        stBox.className = 'p-2 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800';
-                        stBox.innerText = `✅ อ่าน QR สลิปได้ (Ref: ${crnSlipRef.slice(-8)})`;
+                        stBox.className = 'p-2 rounded-lg text-xs font-bold bg-blue-100 text-blue-900';
+                        stBox.innerText = `✅ พบ QR สลิป (Ref: ${crnSlipRef.slice(-8)}) • ส่งแล้วรอ HUB ยืนยัน`;
                     } else {
                         crnSlipRef = '';
                         stBox.className = 'p-2 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800';
-                        stBox.innerText = '⚠️ แนบสลิปแล้ว (HUB จะตรวจสลิปให้)';
+                        stBox.innerText = '⚠️ แนบสลิปแล้ว รอ HUB ตรวจสอบ';
                     }
                 };
                 img.src = ev.target.result;
@@ -1015,14 +874,13 @@
             const [daysStr] = document.getElementById('crn-preset').value.split('|');
             const days = Number(daysStr) || 30;
             const amount = Number(document.getElementById('crn-amount').value) || 0;
-            if (amount === 0 && (!courseMeta || courseMeta.allowFree90d !== true)) {
-                return alert('บัญชีนี้ยังไม่ได้รับสิทธิ์ต่ออายุฟรี 3 เดือนจาก Super Admin ครับ');
-            }
+            const hasTrial = courseMeta && (courseMeta.allowFree30d === true || courseMeta.allowFree90d === true);
+            if (amount === 0 && !hasTrial) return alert('บัญชีนี้ยังไม่ได้รับสิทธิ์ทดลองฟรี 1 เดือนครับ');
             if (amount > 0 && !crnSlipBase64) return alert('กรุณาแนบสลิปโอนเงินก่อนครับ');
 
             db.ref('sapsong_hub_renewals').push({
                 shopId: SHOP_ID,
-                shopName: configData.instName || courseMeta.name || SHOP_ID,
+                shopName: configData.academyName || courseMeta.name || SHOP_ID,
                 bizType: 'course',
                 days, amount,
                 slipImage: crnSlipBase64,
@@ -1032,8 +890,6 @@
             }).then(() => {
                 document.getElementById('course-renew-modal').classList.add('hidden');
                 alert('ส่งคำขอต่ออายุให้ Sapsong HUB เรียบร้อยแล้วครับ!');
-            }).catch(err => {
-                alert('ส่งคำขอไม่สำเร็จ: ' + err.message);
             });
         }
 
