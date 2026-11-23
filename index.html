@@ -85,7 +85,7 @@
         </button>
     </div>
 
-    <!-- Modal เลือกกลุ่มท็อปปิ้ง / ท็อปปิ้ง / หมายเหตุเมนู -->
+    <!-- Modal เลือกขนาด (ที่ร้านเพิ่มเอง) / กลุ่มท็อปปิ้ง / หมายเหตุเมนู -->
     <div id="item-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div onclick="event.stopPropagation()" class="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[88vh] overflow-y-auto shadow-2xl">
             <div class="flex justify-between items-start gap-2 border-b pb-3">
@@ -94,6 +94,15 @@
                     <p id="im-price" class="text-sm font-bold text-orange-600">0 บาท</p>
                 </div>
                 <button onclick="document.getElementById('item-modal').classList.add('hidden')" class="text-2xl font-bold text-slate-400 px-2">&times;</button>
+            </div>
+
+            <!-- ขนาดที่ร้านตั้งไว้ (แสดงเมื่อเมนูนั้นมีการเพิ่มขนาด) -->
+            <div id="im-size-wrap" class="hidden space-y-1.5 bg-orange-50/70 p-3 rounded-2xl border border-orange-200">
+                <div class="flex justify-between items-center">
+                    <p class="text-xs font-bold text-orange-950">📏 เลือกขนาด</p>
+                    <span class="text-[10px] text-orange-700">เลือกได้ 1 ขนาด</span>
+                </div>
+                <div id="im-size-buttons" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs"></div>
             </div>
 
             <!-- กลุ่มท็อปปิ้ง (toppingGroups + toppings) -->
@@ -209,9 +218,15 @@
                 </div>
             </div>
 
-            <div class="flex justify-between items-center pt-2 border-t">
-                <span class="text-sm font-bold text-slate-700">ยอดรวมสุทธิ</span>
-                <span id="cart-modal-total" class="text-xl font-bold text-orange-600">0 บาท</span>
+            <div class="pt-2 border-t space-y-1">
+                <div id="cart-fee-row" class="hidden flex justify-between items-center text-xs text-orange-700 font-semibold">
+                    <span>🛵 ค่าจัดส่งไรเดอร์</span>
+                    <span id="cart-modal-fee">0 บาท</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-bold text-slate-700">ยอดรวมสุทธิ</span>
+                    <span id="cart-modal-total" class="text-xl font-bold text-orange-600">0 บาท</span>
+                </div>
             </div>
 
             <button id="btn-submit-order" onclick="submitOrder()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition">
@@ -220,7 +235,7 @@
         </div>
     </div>
 
-    <!-- Modal ติดตามสถานะออเดอร์ของฉัน -->
+    <!-- Modal ติดตามสถานะออเดอร์ของฉัน & ดูบิลออนไลน์ -->
     <div id="my-orders-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/75 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div onclick="event.stopPropagation()" class="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[88vh] overflow-y-auto shadow-2xl">
             <div class="flex justify-between items-center border-b pb-2.5">
@@ -228,6 +243,14 @@
                 <button onclick="document.getElementById('my-orders-modal').classList.add('hidden')" class="text-2xl font-bold text-slate-400 px-2">&times;</button>
             </div>
             <div id="my-orders-list" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- Modal บิลออนไลน์ -->
+    <div id="online-bill-modal" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-sm w-full p-5 space-y-3 shadow-2xl border max-h-[90vh] overflow-y-auto">
+            <div id="online-bill-content" class="space-y-2.5 text-xs text-slate-800"></div>
+            <button type="button" onclick="document.getElementById('online-bill-modal').classList.add('hidden')" class="w-full bg-slate-800 text-white py-2.5 rounded-xl text-xs font-bold">ปิดบิล</button>
         </div>
     </div>
 
@@ -249,6 +272,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const SHOP_ID = (urlParams.get('shop') || 'pangnawat').toLowerCase();
         const INITIAL_TABLE = urlParams.get('table') || '';
+        const INITIAL_BILL_ID = urlParams.get('bill') || '';
         const MY_ORDERS_STORAGE_KEY = `sapsong_my_orders_${SHOP_ID}`;
 
         const CHANNEL_STYLE = {
@@ -269,11 +293,12 @@
         let enableTables = false;
         let isStoreOpen = true;
         let isDeliveryOpen = true;
-        let paymentConfig = { promptpayId: '0855750995', accountName: SHOP_ID, shopLogo: '', shopName: SHOP_ID, contacts: [] };
+        let paymentConfig = { promptpayId: '0855750995', accountName: SHOP_ID, shopLogo: '', shopName: SHOP_ID, deliveryFee: 0, contacts: [] };
 
         let selectedCategory = 'ALL';
         let cart = [];
         let activeMenu = null;
+        let activeSize = null;
         let activeQty = 1;
         let orderType = INITIAL_TABLE ? 'dinein' : 'pickup';
         let payMethod = 'promptpay';
@@ -369,6 +394,7 @@
             paymentConfig = {
                 ...paymentConfig,
                 ...cfg,
+                deliveryFee: Number(cfg.deliveryFee || 0),
                 contacts: Array.isArray(cfg.contacts) ? cfg.contacts : []
             };
             if (cfg.shopName) {
@@ -383,6 +409,7 @@
             document.getElementById('pay-acc-name').innerText = paymentConfig.accountName || paymentConfig.shopName || SHOP_ID;
             document.getElementById('pay-pp-id').innerText = paymentConfig.promptpayId || '-';
             renderContacts();
+            updateCartUI();
         });
 
         shopRef.child('isStoreOpen').on('value', snap => {
@@ -405,6 +432,7 @@
                 btn.disabled = false;
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
+            updateCartUI();
         });
 
         shopRef.child('categories').on('value', snap => {
@@ -443,6 +471,17 @@
                 return `<option value="${val}" ${String(val) === String(INITIAL_TABLE) ? 'selected' : ''}>โต๊ะ ${val}</option>`;
             }).join('') || `<option value="1">โต๊ะ 1</option>`;
         });
+
+        // รองรับเปิดดูบิลออนไลน์ผ่าน URL (?shop=...&bill=...)
+        if (INITIAL_BILL_ID) {
+            shopRef.child('orders').once('value', snap => {
+                const raw = snap.val() || {};
+                const found = Object.entries(raw)
+                    .map(([k, v]) => ({ ...v, key: k }))
+                    .find(o => String(o.orderId) === String(INITIAL_BILL_ID) || String(o.key) === String(INITIAL_BILL_ID));
+                if (found) showOnlineBill(found);
+            });
+        }
 
         function renderCategories() {
             const wrap = document.getElementById('category-tabs');
@@ -490,16 +529,59 @@
             `).join('');
         }
 
-        // ================= ระบบกลุ่มท็อปปิ้ง (toppingGroups) =================
+        // ================= ขนาด (ที่ร้านเพิ่มเอง) & กลุ่มท็อปปิ้ง =================
+        function getMenuSizes(m) {
+            if (!m) return [];
+            if (Array.isArray(m.sizes) && m.sizes.length > 0) {
+                return m.sizes
+                    .map(s => ({ name: String(s.name || '').trim(), price: Number(s.price || 0) || 0 }))
+                    .filter(s => s.name);
+            }
+            return [];
+        }
+
+        function selectItemSizeObj(idx) {
+            const sizes = getMenuSizes(activeMenu);
+            if (!sizes.length) {
+                activeSize = null;
+                return updateItemModalSubtotal();
+            }
+            activeSize = sizes[idx] || sizes[0];
+            document.querySelectorAll('.im-sz-btn').forEach((btn, i) => {
+                btn.className = (i === (idx || 0))
+                    ? 'im-sz-btn py-2 px-2.5 rounded-xl font-bold border-2 border-orange-500 bg-white text-orange-800 text-center'
+                    : 'im-sz-btn py-2 px-2.5 rounded-xl font-bold border border-slate-200 bg-white text-slate-600 text-center';
+            });
+            updateItemModalSubtotal();
+        }
+
         function openItemModal(menuIdx) {
             if (!isStoreOpen) return alert('ขณะนี้ร้านปิดรับออเดอร์ชั่วคราวครับ');
             activeMenu = menus[menuIdx];
             if (!activeMenu) return;
             activeQty = 1;
+            activeSize = null;
+
             document.getElementById('im-name').innerText = activeMenu.name;
             document.getElementById('im-price').innerText = `${Number(activeMenu.price || 0).toLocaleString()} บาท`;
             document.getElementById('im-note').value = '';
             document.getElementById('im-qty').innerText = '1';
+
+            const sizes = getMenuSizes(activeMenu);
+            const szWrap = document.getElementById('im-size-wrap');
+            const szBtns = document.getElementById('im-size-buttons');
+            if (sizes.length > 0) {
+                szBtns.innerHTML = sizes.map((s, i) => `
+                    <button type="button" onclick="selectItemSizeObj(${i})" class="im-sz-btn py-2 px-2.5 rounded-xl font-bold border border-slate-200 bg-white text-slate-600 text-center">
+                        ${s.name} <span class="block text-[10px] font-normal ${s.price > 0 ? 'text-orange-600' : 'text-slate-400'}">${s.price > 0 ? `+${s.price} บ.` : 'ปกติ'}</span>
+                    </button>
+                `).join('');
+                szWrap.classList.remove('hidden');
+                selectItemSizeObj(0);
+            } else {
+                szWrap.classList.add('hidden');
+                updateItemModalSubtotal();
+            }
 
             const topWrap = document.getElementById('im-toppings-wrap');
             let html = '';
@@ -573,7 +655,7 @@
 
         function updateItemModalSubtotal() {
             if (!activeMenu) return;
-            let extra = 0;
+            let extra = activeSize ? Number(activeSize.price || 0) : 0;
             document.querySelectorAll('.im-top-inp:checked').forEach(el => extra += Number(el.dataset.price || 0));
             const sub = (Number(activeMenu.price || 0) + extra) * activeQty;
             document.getElementById('im-subtotal').innerText = sub.toLocaleString();
@@ -596,9 +678,14 @@
                 extra += Number(el.dataset.price || 0);
             });
             const note = document.getElementById('im-note').value.trim();
-            const unitPrice = Number(activeMenu.price || 0) + extra;
+            const sizeExtra = activeSize ? Number(activeSize.price || 0) : 0;
+            const unitPrice = Number(activeMenu.price || 0) + sizeExtra + extra;
+            const sizeTag = activeSize ? `[${activeSize.name}]` : '';
+            const topTag = chosenTops.length ? ` (+${chosenTops.join(', ')})` : '';
+
             cart.push({
-                name: activeMenu.name + (chosenTops.length ? ` (+${chosenTops.join(', ')})` : ''),
+                name: `${activeMenu.name}${sizeTag ? ' ' + sizeTag : ''}${topTag}`,
+                size: activeSize ? activeSize.name : '',
                 qty: activeQty,
                 price: unitPrice,
                 total: unitPrice * activeQty,
@@ -614,16 +701,36 @@
             if (cart.length === 0) document.getElementById('cart-modal').classList.add('hidden');
         }
 
-        function getCartTotal() {
+        function getCartItemsSubtotal() {
             return cart.reduce((sum, it) => sum + Number(it.total || 0), 0);
+        }
+
+        function getActiveDeliveryFee() {
+            return (orderType === 'delivery' && isDeliveryOpen && cart.length > 0)
+                ? (Number(paymentConfig.deliveryFee || 0) || 0)
+                : 0;
+        }
+
+        function getCartTotal() {
+            return getCartItemsSubtotal() + getActiveDeliveryFee();
         }
 
         function updateCartUI() {
             const qty = cart.reduce((s, it) => s + Number(it.qty || 1), 0);
+            const fee = getActiveDeliveryFee();
             const total = getCartTotal();
+
             document.getElementById('hdr-cart-count').innerText = qty;
             document.getElementById('bar-cart-qty').innerText = `${qty} รายการ`;
             document.getElementById('bar-cart-total').innerText = `${total.toLocaleString()} บาท`;
+
+            const feeRow = document.getElementById('cart-fee-row');
+            if (fee > 0) {
+                document.getElementById('cart-modal-fee').innerText = `${fee.toLocaleString()} บาท`;
+                feeRow.classList.remove('hidden');
+            } else {
+                feeRow.classList.add('hidden');
+            }
             document.getElementById('cart-modal-total').innerText = `${total.toLocaleString()} บาท`;
             document.getElementById('floating-cart-bar').classList.toggle('hidden', qty === 0);
 
@@ -649,9 +756,9 @@
         function openCartModal() {
             if (cart.length === 0) return alert('ยังไม่มีรายการในตะกร้าครับ');
             if (orderType === 'delivery' && !isDeliveryOpen) orderType = 'pickup';
-            updateCartUI();
             setOrderType(orderType);
             setPayMethod(payMethod);
+            updateCartUI();
             document.getElementById('cart-modal').classList.remove('hidden');
         }
 
@@ -670,6 +777,7 @@
             });
             document.getElementById('delivery-box').classList.toggle('hidden', type !== 'delivery');
             document.getElementById('dinein-box').classList.toggle('hidden', type !== 'dinein');
+            updateCartUI();
         }
 
         function setPayMethod(method) {
@@ -794,7 +902,7 @@
             r.readAsDataURL(file);
         }
 
-        // ================= ประวัติ & ติดตามออเดอร์ของฉัน =================
+        // ================= ประวัติออเดอร์ของฉัน & บิลออนไลน์ =================
         function getMySavedOrders() {
             try { return JSON.parse(localStorage.getItem(MY_ORDERS_STORAGE_KEY) || '[]'); }
             catch (e) { return []; }
@@ -811,13 +919,51 @@
             document.getElementById('hdr-myorder-count').innerText = getMySavedOrders().length;
         }
 
+        function showOnlineBill(o) {
+            if (!o) return;
+            const shopTitle = paymentConfig.shopName || SHOP_ID;
+            const typeText = o.orderType === 'delivery'
+                ? `🛵 จัดส่ง (${o.deliveryAddress || 'ตามหมุด'})`
+                : (o.orderType === 'dinein' ? `🍽️ ทานที่ร้าน โต๊ะ ${o.tableNo || '-'}` : '🛍️ รับเองที่ร้าน');
+            const itemsHtml = Array.isArray(o.items)
+                ? o.items.map(it => `<div class="flex justify-between gap-2"><span>${it.name} x${it.qty || 1}</span><span class="font-semibold">${Number(it.total || 0).toLocaleString()} บ.</span></div>`).join('')
+                : '';
+
+            document.getElementById('online-bill-content').innerHTML = `
+                <div class="text-center border-b border-dashed pb-2.5">
+                    <h3 class="font-bold text-base text-slate-900">${shopTitle}</h3>
+                    <p class="text-[11px] text-slate-500">บิลออนไลน์ / ใบสรุปรายการสั่งซื้อ</p>
+                    <p class="font-mono text-[11px] text-slate-400 mt-0.5">#${o.orderId || ''} • ${o.createdAt ? new Date(o.createdAt).toLocaleString('th-TH') : ''}</p>
+                </div>
+                <div class="space-y-1 border-b border-dashed pb-2">
+                    ${o.customerName ? `<div><strong>ผู้สั่ง:</strong> ${o.customerName} ${o.customerPhone ? `(${o.customerPhone})` : ''}</div>` : ''}
+                    <div><strong>รับสินค้า:</strong> ${typeText}</div>
+                    ${o.note ? `<div class="text-amber-800"><strong>หมายเหตุ:</strong> ${o.note}</div>` : ''}
+                </div>
+                <div class="space-y-1 border-b border-dashed pb-2.5">
+                    ${itemsHtml}
+                    ${Number(o.deliveryFee || 0) > 0 ? `<div class="flex justify-between text-orange-700"><span>🛵 ค่าจัดส่ง</span><span>${Number(o.deliveryFee).toLocaleString()} บ.</span></div>` : ''}
+                </div>
+                <div class="flex justify-between items-center text-sm font-bold pt-1">
+                    <span>ยอดรวมสุทธิ</span>
+                    <span class="text-base text-orange-600">${Number(o.total || 0).toLocaleString()} บาท</span>
+                </div>
+            `;
+            document.getElementById('online-bill-modal').classList.remove('hidden');
+        }
+
+        function openSavedOrderBill(idx) {
+            const list = getMySavedOrders();
+            if (list[idx]) showOnlineBill(list[idx]);
+        }
+
         function openMyOrdersModal() {
             const list = getMySavedOrders();
             const wrap = document.getElementById('my-orders-list');
             if (list.length === 0) {
                 wrap.innerHTML = `<p class="text-center text-slate-400 text-sm py-8">ยังไม่มีประวัติการสั่งซื้อจากอุปกรณ์นี้</p>`;
             } else {
-                wrap.innerHTML = list.map(o => `
+                wrap.innerHTML = list.map((o, idx) => `
                     <div class="bg-slate-50 p-3.5 rounded-2xl border space-y-2 text-xs">
                         <div class="flex justify-between items-center">
                             <span class="font-mono font-bold text-slate-800">#${o.orderId}</span>
@@ -827,9 +973,10 @@
                         </div>
                         <div class="text-slate-600 space-y-0.5">
                             ${(o.items || []).map(it => `<div>• ${it.name} x${it.qty} (${Number(it.total).toLocaleString()} บ.)</div>`).join('')}
+                            ${Number(o.deliveryFee || 0) > 0 ? `<div class="text-orange-700 font-semibold">🛵 ค่าส่ง: ${Number(o.deliveryFee).toLocaleString()} บ.</div>` : ''}
                         </div>
                         <div class="flex justify-between items-center pt-1.5 border-t font-bold">
-                            <span class="text-slate-500">${new Date(o.createdAt).toLocaleString('th-TH')}</span>
+                            <button type="button" onclick="openSavedOrderBill(${idx})" class="bg-white border border-slate-300 text-slate-800 px-2.5 py-1 rounded-lg text-[11px] font-bold">🧾 ดูบิล</button>
                             <span class="text-orange-600 text-sm">${Number(o.total).toLocaleString()} บาท</span>
                         </div>
                     </div>
@@ -870,6 +1017,7 @@
             btn.disabled = true;
             btn.innerText = 'กำลังส่งออเดอร์...';
 
+            const deliveryFee = getActiveDeliveryFee();
             const orderPayload = {
                 orderId: 'ORD-' + Date.now().toString().slice(-6),
                 orderType,
@@ -882,6 +1030,7 @@
                 deliveryLng: orderType === 'delivery' ? deliveryLng : null,
                 deliveryMapUrl: orderType === 'delivery' ? deliveryMapUrl : '',
                 deliveryStatus: orderType === 'delivery' ? 'waiting' : '',
+                deliveryFee,
                 note: document.getElementById('inp-order-note').value.trim(),
                 items: cart,
                 total: getCartTotal(),
@@ -898,6 +1047,10 @@
                     orderId: orderPayload.orderId,
                     orderType: orderPayload.orderType,
                     tableNo: orderPayload.tableNo,
+                    customerName: orderPayload.customerName,
+                    customerPhone: orderPayload.customerPhone,
+                    note: orderPayload.note,
+                    deliveryFee: orderPayload.deliveryFee,
                     items: orderPayload.items,
                     total: orderPayload.total,
                     createdAt: orderPayload.createdAt
