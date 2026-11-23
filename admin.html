@@ -140,7 +140,7 @@
                             <input type="text" id="inp-menu-name" placeholder="เช่น ข้าวกะเพราหมูกรอบ" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">ราคาหลัก (บาท) *</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">ราคาปกติ (กรณีไม่มีขนาด) *</label>
                             <input type="number" id="inp-menu-price" placeholder="60" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
                         <div>
@@ -153,15 +153,15 @@
                         </div>
                     </div>
 
-                    <!-- เพิ่ม/ลบขนาดได้เองตามต้องการ -->
+                    <!-- เพิ่ม/ลบขนาดได้เองตามต้องการ (คิดราคาตามขนาดที่เลือกตรงๆ) -->
                     <div class="bg-orange-50/60 border border-orange-200 p-3.5 rounded-2xl space-y-2.5">
-                        <div class="flex justify-between items-center">
-                            <label class="text-xs font-bold text-orange-950">📏 ตัวเลือกขนาด (เพิ่ม/ลบได้เองตามต้องการ)</label>
-                            <span class="text-[10px] text-orange-700">เช่น เล็ก, กลาง, ใหญ่, พิเศษ, จัมโบ้</span>
+                        <div class="flex justify-between items-center gap-2 flex-wrap">
+                            <label class="text-xs font-bold text-orange-950">📏 ตัวเลือกขนาด (เพิ่ม/ลบได้เอง • คิดราคาตามขนาดตรงๆ)</label>
+                            <span class="text-[10px] text-orange-700">เช่น เล็ก 59 บ., กลาง 89 บ., ใหญ่ 119 บ.</span>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
                             <input type="text" id="inp-new-size-name" placeholder="ชื่อขนาด (เช่น เล็ก, กลาง, ใหญ่, พิเศษ)" class="sm:col-span-6 px-3 py-2 border rounded-xl text-xs font-semibold bg-white outline-none">
-                            <input type="number" id="inp-new-size-price" placeholder="ราคาบวกเพิ่ม (บาท)" min="0" value="0" onkeyup="if(event.key==='Enter') addDraftSize()" class="sm:col-span-4 px-3 py-2 border rounded-xl text-xs font-bold bg-white outline-none">
+                            <input type="number" id="inp-new-size-price" placeholder="ราคาของขนาดนี้ (บาท)" min="0" value="0" onkeyup="if(event.key==='Enter') addDraftSize()" class="sm:col-span-4 px-3 py-2 border rounded-xl text-xs font-bold bg-white outline-none">
                             <button type="button" onclick="addDraftSize()" class="sm:col-span-2 bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-xl text-xs font-bold">+ เพิ่ม</button>
                         </div>
                         <div id="admin-draft-sizes-list" class="flex flex-wrap gap-2"></div>
@@ -1090,12 +1090,12 @@
         function renderDraftSizes() {
             const box = document.getElementById('admin-draft-sizes-list');
             if (!draftMenuSizes.length) {
-                box.innerHTML = `<span class="text-[11px] text-slate-400">ยังไม่ได้เพิ่มขนาด (ใช้ราคาหลักของเมนูได้เลย)</span>`;
+                box.innerHTML = `<span class="text-[11px] text-slate-400">ยังไม่ได้เพิ่มขนาด (ใช้ราคาปกติของเมนูได้เลย)</span>`;
                 return;
             }
             box.innerHTML = draftMenuSizes.map((s, idx) => `
                 <span class="bg-white border border-orange-300 px-3 py-1 rounded-xl text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    ${s.name} <span class="text-orange-600">${Number(s.price || 0) > 0 ? `+${Number(s.price)} บ.` : 'ปกติ'}</span>
+                    ${s.name} <span class="text-orange-600">${Number(s.price || 0).toLocaleString()} บ.</span>
                     <button type="button" onclick="removeDraftSize(${idx})" class="text-red-500 font-bold ml-1">✕</button>
                 </span>
             `).join('');
@@ -1194,7 +1194,7 @@
             document.getElementById('menus-list').innerHTML = menus.map((m, i) => {
                 const szList = Array.isArray(m.sizes) ? m.sizes : [];
                 const szText = szList.length
-                    ? `ขนาด: ${szList.map(s => `${s.name}${Number(s.price || 0) > 0 ? ` +${Number(s.price)}บ.` : ''}`).join(', ')}`
+                    ? `ขนาด: ${szList.map(s => `${s.name} ${Number(s.price || 0).toLocaleString()}บ.`).join(', ')}`
                     : '';
                 return `
                     <div class="p-3 rounded-2xl border flex items-center gap-3 ${m.available === false ? 'bg-slate-50 opacity-60' : 'bg-white'}">
